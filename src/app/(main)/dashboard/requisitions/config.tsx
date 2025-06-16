@@ -134,20 +134,22 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'closed' },
     },
-    {
-      key: 'missingOrderDate',
-      title: 'Missing Order Date',
-      filter: { column: 'order_date', isNull: true },
-      thresholds: { warning: { gt: 0 } },
-      clickFilter: undefined,
-    },
-    {
-      key: 'missingDueDate',
-      title: 'Missing Due Date',
-      filter: { column: 'due_date', isNull: true },
-      thresholds: { warning: { gt: 0 } },
-      clickFilter: undefined,
-    },
+{
+  key: 'missingOrderDate',
+  title: 'Missing Order Date',
+  filter: { column: 'order_date', isNull: true },
+  thresholds: { warning: { gt: 0 } },
+  clickFilter: { type: 'issue', value: 'missing_order_date' }, // ✅ Add this
+},
+
+{
+  key: 'missingDueDate',
+  title: 'Missing Due Date',
+  filter: { column: 'due_date', isNull: true },
+  thresholds: { warning: { gt: 0 } },
+  clickFilter: { type: 'issue', value: 'missing_due_date' },
+},
+
   ],
 
   // Data Quality Checks (used in ChartMissingData)

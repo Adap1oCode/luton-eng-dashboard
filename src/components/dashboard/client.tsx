@@ -198,7 +198,12 @@ function DashboardClient({ config, metrics, records }: Props) {
         return <Comp key={i} {...props} />
       })}
 
-      <DataTable data={filteredData} columns={config.tableColumns} rowIdKey={config.rowIdKey} />
+<DataTable
+  key={filteredData.length + filters.map(f => `${f.type}:${f.value}`).join('|')}
+  data={filteredData}
+  columns={config.tableColumns}
+  rowIdKey={config.rowIdKey}
+/>
     </div>
   )
 }
