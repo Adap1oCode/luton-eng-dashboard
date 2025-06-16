@@ -1,4 +1,4 @@
-// ✅ FINAL version of section-cards.tsx — now fully dynamic and safe
+// ✅ FINAL version of section-cards.tsx — fully dynamic, safe, and now with full debug logging
 
 'use client'
 
@@ -47,11 +47,16 @@ export type MetricTile = {
   thresholds?: Thresholds
   trend?: string
   direction?: 'up' | 'down'
+  clickFilter?: {
+    type: string
+    value: string
+  }
 }
 
 type Props = {
   config: MetricTile[]
   records?: Record<string, any>[]
+  onClickFilter?: (type: string, value: string) => void
 }
 
 function isDateString(val: any): boolean {
@@ -99,10 +104,12 @@ function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | '
   return undefined
 }
 
-export default function SectionCards({ config, records }: Props) {
+export default function SectionCards({ config, records, onClickFilter }: Props) {
+  console.log('[DEBUG] SectionCards render start')
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {config.map((tile, i) => {
+        console.log('[DEBUG] Rendering tile:', tile.key)
         let value: number | string | null = tile.value ?? 0
         let status: 'ok' | 'warning' | 'danger' | undefined
 
@@ -129,8 +136,18 @@ export default function SectionCards({ config, records }: Props) {
           }
         }
 
+        const handleClick = () => {
+          console.log('[DEBUG] handleClick triggered for tile:', tile.key)
+          if (tile.clickFilter && onClickFilter) {
+            console.log('[CLICK] Tile clicked:', tile.key, tile.clickFilter)
+            onClickFilter(tile.clickFilter.type, tile.clickFilter.value)
+          } else {
+            console.log('[SKIP] No clickFilter or onClickFilter for tile:', tile.key)
+          }
+        }
+
         return (
-          <Card key={i} className="@container/card">
+          <Card key={i} onClick={handleClick} className="@container/card cursor-pointer">
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

@@ -30,18 +30,24 @@ export type DashboardTile = {
   key: string
   title: string
   subtitle?: string
+  matchKey?: string
   value?: number | string | null
-  filter?: TileFilter
+  filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] }
   percentage?: {
-    numerator: TileFilter
-    denominator: TileFilter
+    numerator: TileFilter | { and: TileFilter[] }
+    denominator: TileFilter | { and: TileFilter[] }
   }
   average?: {
     start: string
     end: string
   }
   thresholds?: Thresholds
-  matchKey?: string
+  trend?: string
+  direction?: 'up' | 'down'
+  clickFilter?: {
+    type: string
+    value: string
+  }
 }
 
 export type DashboardColumn = {

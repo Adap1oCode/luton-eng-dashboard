@@ -22,95 +22,132 @@ export const requisitionsConfig: DashboardConfig = {
 
   // Summary Tiles (Top-Level Metrics)
   summary: [
-  {
-    key: 'totalAllTime',
-    title: 'Total Requisitions',
-    subtitle: 'All Time',
-    matchKey: 'totalAllTime',
-  },
-  {
-    key: 'issued',
-    title: 'Issued',
-    subtitle: 'Current',
-    matchKey: 'issued',
-  },
-  {
-    key: 'inProgress',
-    title: 'In Progress',
-    subtitle: 'Current',
-    matchKey: 'inProgress',
-  },
-  {
-    key: 'completed',
-    title: 'Completed',
-    subtitle: 'Current',
-    matchKey: 'completed',
-  },
-  {
-    key: 'cancelled',
-    title: 'Cancelled',
-    subtitle: 'Current',
-    matchKey: 'cancelled',
-  },
-  {
-    key: 'late',
-    title: 'Late',
-    subtitle: 'Due date passed',
-    filter: {
-      and: [
-        { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
-        {
-          or: [
-            { column: 'status', not_contains: 'complete' },
-            { column: 'status', not_contains: 'cancelled' },
-          ],
-        },
-      ],
+    {
+      key: 'totalAllTime',
+      title: 'Total Requisitions',
+      subtitle: 'All Time',
+      matchKey: 'totalAllTime',
+      value: undefined,
+      filter: undefined,
+      percentage: undefined,
+      average: undefined,
+      thresholds: undefined,
+      clickFilter: undefined,
     },
-    thresholds: {
-      danger: { gt: 0 },
+    {
+      key: 'issued',
+      title: 'Issued',
+      subtitle: 'Current',
+      filter: { column: 'status', contains: 'issued' },
+      thresholds: {},
+      clickFilter: { type: 'status', value: 'issued' },
     },
-  },
-  {
-    key: 'old_open_reqs',
-    title: 'Old Open Reqs',
-    subtitle: 'Created before 31 Jan 2025',
-    filter: {
-      and: [
-        { column: 'order_date', lt: '2025-01-31' },
-        {
-          or: [
-            { column: 'status', contains: 'issued' },
-            { column: 'status', contains: 'in progress' },
-          ],
-        },
-      ],
+    {
+      key: 'inProgress',
+      title: 'In Progress',
+      subtitle: 'Current',
+      filter: { column: 'status', contains: 'in progress' },
+      thresholds: {},
+      clickFilter: { type: 'status', value: 'in progress' },
     },
-    thresholds: {
-      danger: { gt: 0 },
+    {
+      key: 'completed',
+      title: 'Completed',
+      subtitle: 'Current',
+      filter: { column: 'status', contains: 'complete' },
+      thresholds: {},
+      clickFilter: { type: 'status', value: 'complete' },
     },
-  },
-  {
-    key: 'avgTimeToClose',
-    title: 'Avg Time to Close',
-    subtitle: 'Days between Order & Due',
-    average: {
-      start: 'order_date',
-      end: 'due_date',
+    {
+      key: 'cancelled',
+      title: 'Cancelled',
+      subtitle: 'Current',
+      filter: { column: 'status', contains: 'cancel' },
+      thresholds: {},
+      clickFilter: { type: 'status', value: 'cancel' },
     },
-    thresholds: {
-      warning: { gt: 7 },
-      danger: { gt: 14 },
+    {
+      key: 'late',
+      title: 'Late',
+      subtitle: 'Due date passed',
+      filter: {
+        and: [
+          { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
+          {
+            or: [
+              { column: 'status', not_contains: 'complete' },
+              { column: 'status', not_contains: 'cancel' },
+            ],
+          },
+        ],
+      },
+      thresholds: { danger: { gt: 0 } },
+      clickFilter: { type: 'status', value: 'late' },
     },
-  },
-],
+    {
+      key: 'old_open_reqs',
+      title: 'Old Open Reqs',
+      subtitle: 'Created before 31 Jan 2025',
+      filter: {
+        and: [
+          { column: 'order_date', lt: '2025-01-31' },
+          {
+            or: [
+              { column: 'status', contains: 'issued' },
+              { column: 'status', contains: 'in progress' },
+            ],
+          },
+        ],
+      },
+      thresholds: { danger: { gt: 0 } },
+      clickFilter: undefined,
+    },
+    {
+      key: 'avgTimeToClose',
+      title: 'Avg Time to Close',
+      subtitle: 'Days between Order & Due',
+      average: {
+        start: 'order_date',
+        end: 'due_date',
+      },
+      thresholds: {
+        warning: { gt: 7 },
+        danger: { gt: 14 },
+      },
+      clickFilter: undefined,
+    },
+  ],
 
   // Trend Cards (SectionCards)
   trends: [
-    { key: 'totalReqs', title: 'Total Reqs' },
-    { key: 'closedReqs', title: 'Closed - Pick Complete' },
-    { key: 'missingOrderDate', title: 'Missing Order Date' },
-    { key: 'missingDueDate', title: 'Missing Due Date' },
+    {
+      key: 'totalReqs',
+      title: 'Total Reqs',
+      filter: { column: 'status', isNull: false },
+      thresholds: {},
+      clickFilter: undefined,
+    },
+    {
+      key: 'closedReqs',
+      title: 'Closed - Pick Complete',
+      filter: { column: 'status', contains: 'closed' },
+      thresholds: {},
+      clickFilter: { type: 'status', value: 'closed' },
+    },
+    {
+      key: 'missingOrderDate',
+      title: 'Missing Order Date',
+      filter: { column: 'order_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickFilter: undefined,
+    },
+    {
+      key: 'missingDueDate',
+      title: 'Missing Due Date',
+      filter: { column: 'due_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickFilter: undefined,
+    },
   ],
 
   // Data Quality Checks (used in ChartMissingData)
