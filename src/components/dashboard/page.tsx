@@ -1,5 +1,6 @@
 import DashboardClient from '@/components/dashboard/client'
 import type { DashboardConfig, ClientDashboardConfig } from '@/components/dashboard/types'
+import { resolveDateRange } from '@/components/dashboard/shared/resolve-date-range'
 
 type Props = {
   config: DashboardConfig
@@ -11,15 +12,16 @@ type Props = {
 }
 
 export default async function GenericDashboardPage({ config, searchParams }: Props) {
-  const range = searchParams?.range ?? config.range
-  const from = searchParams?.from
-  const to = searchParams?.to
+  const range = searchParams?.range ?? config.range ?? '3m'
 
-  // ✅ Backward-compatible: support both 1-arg and 3-arg fetch functions
-const metrics = config.fetchMetrics
-  ? await config.fetchMetrics(range, from, to)
-  : { summary: [], trends: [] }
+  const { fromDate, toDate } = resolveDateRange(range, searchParams?.from, searchParams?.to)
 
+  const from = searchParams?.from ?? fromDate
+  const to = searchParams?.to ?? toDate
+
+  const metrics = config.fetchMetrics
+    ? await config.fetchMetrics(range, from, to)
+    : { summary: [], trends: [] }
 
   const records =
     config.fetchRecords.length === 1

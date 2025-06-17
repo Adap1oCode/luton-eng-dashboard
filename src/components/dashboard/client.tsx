@@ -72,7 +72,7 @@ function isInRange(date: string, from?: string, to?: string): boolean {
   return d >= new Date(from) && d <= new Date(to)
 }
 
-function DashboardClient({ config, metrics, records }: Props) {
+export default function DashboardClient({ config, metrics, records }: Props) {
   const [filters, setFilters] = useState<{ type: string; value: string }[]>([])
 
   const handleFilter = (type: string) => (values: string[]) => {
@@ -90,6 +90,17 @@ function DashboardClient({ config, metrics, records }: Props) {
   const rangeFilteredRecords = records.filter((r) =>
     r.order_date && isInRange(r.order_date, from, to)
   )
+
+  const previousRangeFilteredRecords = records.filter((r) => {
+    if (!r.order_date || !from || !to) return false
+    const currentFrom = new Date(from)
+    const currentTo = new Date(to)
+    const diff = currentTo.getTime() - currentFrom.getTime()
+    const prevFrom = new Date(currentFrom.getTime() - diff)
+    const prevTo = new Date(currentFrom.getTime() - 1)
+    const orderDate = new Date(r.order_date)
+    return orderDate >= prevFrom && orderDate <= prevTo
+  })
 
   const filteredData =
     filters.length === 0
@@ -117,77 +128,111 @@ function DashboardClient({ config, metrics, records }: Props) {
 
         const props: any = {}
 
-        if (w.component === 'SectionCards' || w.component === 'SummaryCards') {
-          const group = w.group ?? 'tiles'
-          const configTiles: any[] =
-            group === 'summary'
-              ? config.summary ?? []
-              : group === 'trends'
-              ? config.trends ?? []
-              : config.tiles ?? []
+        const group = w.group ?? 'tiles'
+        const configTiles: any[] =
+          group === 'summary'
+            ? config.summary ?? []
+            : group === 'trends'
+            ? config.trends ?? []
+            : config.tiles ?? []
 
-          const metricTiles: any[] = metrics[group] ?? []
+        const metricTiles: any[] = metrics[group] ?? []
 
-          props.config = configTiles.map((tile) => {
-            const match = metricTiles.find(
-              (m: any) => m.key === tile.matchKey || m.key === tile.key
-            )
+        props.config = configTiles.map((tile) => {
+          const match = metricTiles.find(
+            (m: any) => m.key === tile.matchKey || m.key === tile.key
+          )
 
-            let value: number | string | null = tile.value ?? 0
+          let value: number | string | null = tile.value ?? 0
+          let previous = 0
+          let trend: string | undefined
+          let direction: 'up' | 'down' | undefined
 
-            const dataset = tile.noRangeFilter ? records : rangeFilteredRecords
+          const dataset =
+  tile.noRangeFilter || !rangeFilteredRecords.length ? records : rangeFilteredRecords
 
-            if (tile.percentage) {
-              const num = dataset.filter((r) => evaluateFilter(r, tile.percentage!.numerator)).length
-              const denom = dataset.filter((r) => evaluateFilter(r, tile.percentage!.denominator)).length || 1
-              value = parseFloat(((num / denom) * 100).toFixed(1))
-            } else if (tile.average) {
-              const valid = dataset.filter(
-                (r) =>
-                  isDateString(r[tile.average!.start]) &&
-                  isDateString(r[tile.average!.end])
-              )
-              const deltas = valid.map((r) => {
-                const diff =
-                  new Date(r[tile.average!.end]).getTime() - new Date(r[tile.average!.start]).getTime()
-                return diff / (1000 * 60 * 60 * 24)
-              })
-              value = deltas.length
-                ? parseFloat((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1))
-                : 0
+          const previousDataset =
+  tile.noRangeFilter || !previousRangeFilteredRecords.length ? records : previousRangeFilteredRecords
+
+
+          if (tile.filter) {
+            const matches = dataset.filter((r) => evaluateFilter(r, tile.filter))
+            const prevMatches = previousDataset.filter((r) => evaluateFilter(r, tile.filter))
+            value = matches.length
+            previous = prevMatches.length
+
+            if (previous > 0) {
+              const delta = ((Number(value) - previous) / previous) * 100
+              trend = `${Math.abs(delta).toFixed(1)}%`
+              direction = delta >= 0 ? 'up' : 'down'
+            } else if (value > 0) {
+              trend = `+${value}`
+              direction = 'up'
             } else {
-              const matches = tile.filter
-                ? dataset.filter((r) => evaluateFilter(r, tile.filter))
-                : dataset
-              value = matches.length
+              trend = undefined
+              direction = undefined
             }
-
-            return {
-              ...tile,
-              value,
-              trend: match?.trend,
-              direction: match?.direction,
-              subtitle: tile.subtitle ?? match?.subtitle,
-            }
-          })
-
-          props.records = records
-          props.onClickFilter = handleClickFilter
-        } else {
-          if (w.filterType === 'issue') {
-            props.data = records.map((row) => ({
-              ...row,
-              issue: getIssues(row, config.dataQuality ?? []),
-            }))
-          } else {
-            props.data = records
+          } else if (tile.percentage) {
+            const num = dataset.filter((r) =>
+              evaluateFilter(r, tile.percentage!.numerator)
+            ).length
+            const denom =
+              dataset.filter((r) =>
+                evaluateFilter(r, tile.percentage!.denominator)
+              ).length || 1
+            value = parseFloat(((num / denom) * 100).toFixed(1))
+            trend = undefined
+            direction = undefined
+          } else if (tile.average) {
+            const valid = dataset.filter(
+              (r) =>
+                isDateString(r[tile.average!.start]) &&
+                isDateString(r[tile.average!.end])
+            )
+            const deltas = valid.map((r) => {
+              const diff =
+                new Date(r[tile.average!.end]).getTime() -
+                new Date(r[tile.average!.start]).getTime()
+              return diff / (1000 * 60 * 60 * 24)
+            })
+            value = deltas.length
+              ? parseFloat((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1))
+              : 0
+            trend = undefined
+            direction = undefined
           }
 
-          if (w.filterType) props.onFilterChange = handleFilter(w.filterType)
-
-          if (w.component === 'ChartMissingData') {
-            props.rules = config.dataQuality ?? []
+          return {
+            ...tile,
+            value,
+            trend,
+            direction,
+            subtitle: tile.subtitle ?? match?.subtitle,
           }
+        })
+
+        props.records = records
+        props.rangeFilteredRecords = rangeFilteredRecords
+        props.previousRecords = previousRangeFilteredRecords
+        props.from = from
+        props.to = to
+        props.onClickFilter = handleClickFilter
+
+        if (w.filterType) props.onFilterChange = handleFilter(w.filterType)
+        if (w.component === 'ChartMissingData') {
+          props.rules = config.dataQuality ?? []
+        }
+
+        if (
+          w.component === 'ChartMissingData' ||
+          w.component === 'ChartByStatus' ||
+          w.component === 'ChartByCreator' ||
+          w.component === 'ChartByProject'
+        ) {
+          props.data = records.map((row) => ({
+            ...row,
+            issue: getIssues(row, config.dataQuality ?? []),
+          }))
         }
 
         return <Comp key={i} {...props} />
@@ -202,5 +247,3 @@ function DashboardClient({ config, metrics, records }: Props) {
     </div>
   )
 }
-
-export default DashboardClient

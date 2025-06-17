@@ -4,7 +4,7 @@ import type { DashboardConfig } from '@/components/dashboard/types'
 export const requisitionsConfig: DashboardConfig = {
   id: 'requisitions',
   title: 'Requisitions Dashboard',
-  range: '12m',
+  range: '3m',
   rowIdKey: 'requisition_order_number',
 
   fetchRecords: getRequisitions,
