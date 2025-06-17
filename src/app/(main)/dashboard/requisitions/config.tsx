@@ -22,44 +22,51 @@ export const requisitionsConfig: DashboardConfig = {
   title: 'Total Requisitions',
   subtitle: 'All Time',
   matchKey: 'totalAllTime',
+  filter: { column: 'status', isNull: false },
+  thresholds: {},
   noRangeFilter: true,
 },
+
     {
       key: 'issued',
       title: 'Issued',
-      subtitle: 'Current',
+      subtitle: 'All Time',
       filter: { column: 'status', contains: 'issued' },
       thresholds: {},
       clickFilter: { type: 'status', value: 'issued' },
+      noRangeFilter: true,
     },
     {
       key: 'inProgress',
       title: 'In Progress',
-      subtitle: 'Current',
+      subtitle: 'All Time',
       filter: { column: 'status', contains: 'in progress' },
       thresholds: {},
       clickFilter: { type: 'status', value: 'in progress' },
+      noRangeFilter: true,
     },
     {
       key: 'completed',
       title: 'Completed',
-      subtitle: 'Current',
+      subtitle: 'All Time',
       filter: { column: 'status', contains: 'complete' },
       thresholds: {},
       clickFilter: { type: 'status', value: 'complete' },
+      noRangeFilter: true,
     },
     {
       key: 'cancelled',
       title: 'Cancelled',
-      subtitle: 'Current',
+      subtitle: 'All Time',
       filter: { column: 'status', contains: 'cancel' },
       thresholds: {},
       clickFilter: { type: 'status', value: 'cancel' },
+      noRangeFilter: true,
     },
     {
       key: 'late',
       title: 'Late',
-      subtitle: 'Due date passed',
+      subtitle: 'All Time',
       filter: {
         and: [
           { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
@@ -73,11 +80,12 @@ export const requisitionsConfig: DashboardConfig = {
       },
       thresholds: { danger: { gt: 0 } },
       clickFilter: { type: 'status', value: 'late' },
+      noRangeFilter: true,
     },
     {
       key: 'old_open_reqs',
-      title: 'Old Open Reqs',
-      subtitle: 'Created before 31 Jan 2025',
+      title: 'Previous Requistions',
+      subtitle: 'All Time',
       filter: {
         and: [
           { column: 'order_date', lt: '2025-01-31' },
@@ -90,6 +98,7 @@ export const requisitionsConfig: DashboardConfig = {
         ],
       },
       thresholds: { danger: { gt: 0 } },
+      noRangeFilter: true,
     },
     {
       key: 'avgTimeToClose',
@@ -103,6 +112,7 @@ export const requisitionsConfig: DashboardConfig = {
         warning: { gt: 7 },
         danger: { gt: 14 },
       },
+      noRangeFilter: true,
     },
   ],
 

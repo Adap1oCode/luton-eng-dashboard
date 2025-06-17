@@ -1,5 +1,3 @@
-// ✅ FINAL version of summary-cards.tsx — fully dynamic + fallback safe
-
 'use client'
 
 import {
@@ -137,7 +135,7 @@ export default function SummaryCards({ config, records, onClickFilter }: Props) 
         }
 
         const percent =
-          totalValue && tile.key !== 'totalAllTime' && typeof value === 'number'
+          totalValue && typeof value === 'number'
             ? parseFloat(((value / totalValue) * 100).toFixed(1))
             : null
 
