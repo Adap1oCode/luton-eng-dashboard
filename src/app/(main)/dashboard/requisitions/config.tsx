@@ -1,18 +1,14 @@
-import { getRequisitionMetrics, getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
+import { getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
 import type { DashboardConfig } from '@/components/dashboard/types'
 
 export const requisitionsConfig: DashboardConfig = {
-  // Basic Config
   id: 'requisitions',
   title: 'Requisitions Dashboard',
   range: '12m',
   rowIdKey: 'requisition_order_number',
 
-  // Data Sources
   fetchRecords: getRequisitions,
-  fetchMetrics: getRequisitionMetrics,
 
-  // Filter Mapping
   filters: {
     status: 'status',
     creator: 'created_by',
@@ -20,20 +16,14 @@ export const requisitionsConfig: DashboardConfig = {
     issue: true,
   },
 
-  // Summary Tiles (Top-Level Metrics)
   summary: [
-    {
-      key: 'totalAllTime',
-      title: 'Total Requisitions',
-      subtitle: 'All Time',
-      matchKey: 'totalAllTime',
-      value: undefined,
-      filter: undefined,
-      percentage: undefined,
-      average: undefined,
-      thresholds: undefined,
-      clickFilter: undefined,
-    },
+{
+  key: 'totalAllTime',
+  title: 'Total Requisitions',
+  subtitle: 'All Time',
+  matchKey: 'totalAllTime',
+  noRangeFilter: true,
+},
     {
       key: 'issued',
       title: 'Issued',
@@ -100,7 +90,6 @@ export const requisitionsConfig: DashboardConfig = {
         ],
       },
       thresholds: { danger: { gt: 0 } },
-      clickFilter: undefined,
     },
     {
       key: 'avgTimeToClose',
@@ -114,18 +103,16 @@ export const requisitionsConfig: DashboardConfig = {
         warning: { gt: 7 },
         danger: { gt: 14 },
       },
-      clickFilter: undefined,
     },
   ],
 
-  // Trend Cards (SectionCards)
   trends: [
     {
       key: 'totalReqs',
       title: 'Total Reqs',
       filter: { column: 'status', isNull: false },
       thresholds: {},
-      clickFilter: undefined,
+      clickFilter: { type: 'status', value: 'all' },
     },
     {
       key: 'closedReqs',
@@ -134,25 +121,22 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'closed' },
     },
-{
-  key: 'missingOrderDate',
-  title: 'Missing Order Date',
-  filter: { column: 'order_date', isNull: true },
-  thresholds: { warning: { gt: 0 } },
-  clickFilter: { type: 'issue', value: 'missing_order_date' }, // ✅ Add this
-},
-
-{
-  key: 'missingDueDate',
-  title: 'Missing Due Date',
-  filter: { column: 'due_date', isNull: true },
-  thresholds: { warning: { gt: 0 } },
-  clickFilter: { type: 'issue', value: 'missing_due_date' },
-},
-
+    {
+      key: 'missingOrderDate',
+      title: 'Missing Order Date',
+      filter: { column: 'order_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickFilter: { type: 'issue', value: 'missing_order_date' },
+    },
+    {
+      key: 'missingDueDate',
+      title: 'Missing Due Date',
+      filter: { column: 'due_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickFilter: { type: 'issue', value: 'missing_due_date' },
+    },
   ],
 
-  // Data Quality Checks (used in ChartMissingData)
   dataQuality: [
     {
       key: 'missing_due_date',
@@ -194,10 +178,8 @@ export const requisitionsConfig: DashboardConfig = {
     },
   ],
 
-  // Tile Overrides (currently unused but placeholder)
   tiles: [],
 
-  // Widget Components
   widgets: [
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
@@ -208,7 +190,6 @@ export const requisitionsConfig: DashboardConfig = {
     { component: 'ChartByProject', filterType: 'project' },
   ],
 
-  // Table Columns
   tableColumns: [
     { accessorKey: 'requisition_order_number', header: 'Req Number' },
     { accessorKey: 'status', header: 'Status' },

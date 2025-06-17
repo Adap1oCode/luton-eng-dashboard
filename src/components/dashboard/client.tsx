@@ -43,10 +43,6 @@ function evaluateFilter(row: Record<string, any>, filter?: any): boolean {
     const field = row[f.column]
     const fieldIsDate = isDateString(field)
 
-    if (f.column === 'status' && f.contains) {
-      console.log('[EVAL FILTER]', f.contains, '| ROW VALUE:', field)
-    }
-
     if (f.eq !== undefined) return field === f.eq
     if (f.contains !== undefined) return typeof field === 'string' && field.toLowerCase().includes(f.contains.toLowerCase())
     if (f.not_contains !== undefined) return typeof field === 'string' && !field.toLowerCase().includes(f.not_contains.toLowerCase())
@@ -70,6 +66,12 @@ function evaluateFilter(row: Record<string, any>, filter?: any): boolean {
   return match(filter)
 }
 
+function isInRange(date: string, from?: string, to?: string): boolean {
+  if (!date || !from || !to) return false
+  const d = new Date(date)
+  return d >= new Date(from) && d <= new Date(to)
+}
+
 function DashboardClient({ config, metrics, records }: Props) {
   const [filters, setFilters] = useState<{ type: string; value: string }[]>([])
 
@@ -82,6 +84,12 @@ function DashboardClient({ config, metrics, records }: Props) {
     console.log('[CLICK] Tile clicked:', { type, value })
     setFilters([{ type, value }])
   }
+
+  const { from, to } = config
+
+  const rangeFilteredRecords = records.filter((r) =>
+    r.order_date && isInRange(r.order_date, from, to)
+  )
 
   const filteredData =
     filters.length === 0
@@ -127,44 +135,31 @@ function DashboardClient({ config, metrics, records }: Props) {
 
             let value: number | string | null = tile.value ?? 0
 
-            if (tile.key === 'issued') {
-              console.log('[TILE FILTER STARTED]', tile.key, tile.filter)
-            }
+            const dataset = tile.noRangeFilter ? records : rangeFilteredRecords
 
-            if (records) {
-              if (tile.percentage) {
-                const num = records.filter((r) => evaluateFilter(r, tile.percentage!.numerator)).length
-                const denom = records.filter((r) => evaluateFilter(r, tile.percentage!.denominator)).length || 1
-                value = parseFloat(((num / denom) * 100).toFixed(1))
-              } else if (tile.average) {
-                const valid = records.filter(
-                  (r) =>
-                    isDateString(r[tile.average!.start]) &&
-                    isDateString(r[tile.average!.end])
-                )
-                const deltas = valid.map((r) => {
-                  const diff =
-                    new Date(r[tile.average!.end]).getTime() - new Date(r[tile.average!.start]).getTime()
-                  return diff / (1000 * 60 * 60 * 24)
-                })
-                value = deltas.length
-                  ? parseFloat((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1))
-                  : 0
-              } else if (tile.filter) {
-                const matches = records.filter((r) => {
-                  const result = evaluateFilter(r, tile.filter)
-                  if (tile.key === 'issued') {
-                    console.log('[ISSUED FILTER RESULT]', result, '| Status:', r.status)
-                  }
-                  return result
-                })
-                if (tile.key === 'issued') {
-                  console.log('[ISSUED FILTER MATCHES]', matches.length)
-                }
-                value = matches.length
-              } else if (match?.value !== undefined) {
-                value = match.value
-              }
+            if (tile.percentage) {
+              const num = dataset.filter((r) => evaluateFilter(r, tile.percentage!.numerator)).length
+              const denom = dataset.filter((r) => evaluateFilter(r, tile.percentage!.denominator)).length || 1
+              value = parseFloat(((num / denom) * 100).toFixed(1))
+            } else if (tile.average) {
+              const valid = dataset.filter(
+                (r) =>
+                  isDateString(r[tile.average!.start]) &&
+                  isDateString(r[tile.average!.end])
+              )
+              const deltas = valid.map((r) => {
+                const diff =
+                  new Date(r[tile.average!.end]).getTime() - new Date(r[tile.average!.start]).getTime()
+                return diff / (1000 * 60 * 60 * 24)
+              })
+              value = deltas.length
+                ? parseFloat((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1))
+                : 0
+            } else {
+              const matches = tile.filter
+                ? dataset.filter((r) => evaluateFilter(r, tile.filter))
+                : dataset
+              value = matches.length
             }
 
             return {
@@ -198,12 +193,12 @@ function DashboardClient({ config, metrics, records }: Props) {
         return <Comp key={i} {...props} />
       })}
 
-<DataTable
-  key={filteredData.length + filters.map(f => `${f.type}:${f.value}`).join('|')}
-  data={filteredData}
-  columns={config.tableColumns}
-  rowIdKey={config.rowIdKey}
-/>
+      <DataTable
+        key={filteredData.length + filters.map((f) => `${f.type}:${f.value}`).join('|')}
+        data={filteredData}
+        columns={config.tableColumns}
+        rowIdKey={config.rowIdKey}
+      />
     </div>
   )
 }

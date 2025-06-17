@@ -2,19 +2,35 @@ import DashboardClient from '@/components/dashboard/client'
 import type { DashboardConfig, ClientDashboardConfig } from '@/components/dashboard/types'
 
 type Props = {
-  config: DashboardConfig // ✅ Keep full type here for server-side usage
+  config: DashboardConfig
+  searchParams?: {
+    range?: string
+    from?: string
+    to?: string
+  }
 }
 
-export default async function GenericDashboardPage({ config }: Props) {
-  const metrics = await config.fetchMetrics(config.range)
-  const records = await config.fetchRecords(config.range)
+export default async function GenericDashboardPage({ config, searchParams }: Props) {
+  const range = searchParams?.range ?? config.range
+  const from = searchParams?.from
+  const to = searchParams?.to
 
-  // ✅ Remove server-only functions before passing to client
-  const { fetchMetrics, fetchRecords, ...clientConfig } = config as DashboardConfig
+  // ✅ Backward-compatible: support both 1-arg and 3-arg fetch functions
+const metrics = config.fetchMetrics
+  ? await config.fetchMetrics(range, from, to)
+  : { summary: [], trends: [] }
+
+
+  const records =
+    config.fetchRecords.length === 1
+      ? await config.fetchRecords(range)
+      : await config.fetchRecords(range, from, to)
+
+  const { fetchMetrics, fetchRecords, ...clientConfig } = config
 
   return (
     <DashboardClient
-      config={clientConfig as ClientDashboardConfig}
+      config={{ ...clientConfig, range, from, to } as ClientDashboardConfig}
       metrics={metrics}
       records={records}
     />

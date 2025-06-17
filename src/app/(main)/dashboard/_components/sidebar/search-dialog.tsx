@@ -1,76 +1,122 @@
-"use client";
-import * as React from "react";
+'use client'
 
-import { ChartPie, Grid2X2, ChartLine, ShoppingBag, BookA, Forklift, Search } from "lucide-react";
+import * as React from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { format, subMonths } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
 
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-
-const searchItems = [
-  { group: "Dashboards", icon: ChartPie, label: "Default" },
-  { group: "Dashboards", icon: Grid2X2, label: "CRM", disabled: true },
-  { group: "Dashboards", icon: ChartLine, label: "Analytics", disabled: true },
-  { group: "Dashboards", icon: ShoppingBag, label: "E-Commerce", disabled: true },
-  { group: "Dashboards", icon: BookA, label: "Academy", disabled: true },
-  { group: "Dashboards", icon: Forklift, label: "Logistics", disabled: true },
-  { group: "Authentication", label: "Login v1" },
-  { group: "Authentication", label: "Register v1" },
-];
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 export function SearchDialog() {
-  const [open, setOpen] = React.useState(false);
-  React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const preset = searchParams.get('range') ?? '3m'
+  const paramFrom = searchParams.get('from')
+  const paramTo = searchParams.get('to')
+
+  const [from, setFrom] = React.useState<Date | undefined>(paramFrom ? new Date(paramFrom) : undefined)
+  const [to, setTo] = React.useState<Date | undefined>(paramTo ? new Date(paramTo) : undefined)
+
+  const applyCustomRange = (fromDate: Date, toDate: Date) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('range', 'custom')
+    params.set('from', format(fromDate, 'yyyy-MM-dd'))
+    params.set('to', format(toDate, 'yyyy-MM-dd'))
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  const handleDateChange = (key: 'from' | 'to', date: Date | undefined) => {
+    if (key === 'from') setFrom(date)
+    else setTo(date)
+
+    const effectiveFrom = key === 'from' ? date : from
+    const effectiveTo = key === 'to' ? date : to
+
+    if (effectiveFrom && effectiveTo) {
+      applyCustomRange(effectiveFrom, effectiveTo)
+    }
+  }
+
+  const handlePreset = (value: string) => {
+    const today = new Date()
+    let fromDate: Date
+    const toDate = today
+
+    if (value === '3m') fromDate = subMonths(today, 3)
+    else if (value === '6m') fromDate = subMonths(today, 6)
+    else fromDate = subMonths(today, 12)
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('range', value)
+    params.set('from', format(fromDate, 'yyyy-MM-dd'))
+    params.set('to', format(toDate, 'yyyy-MM-dd'))
+    router.push(`${pathname}?${params.toString()}`)
+
+    setFrom(fromDate)
+    setTo(toDate)
+  }
+
+  const DateInput = ({
+    label,
+    value,
+    onSelect,
+  }: {
+    label: string
+    value: Date | undefined
+    onSelect: (date: Date) => void
+  }) => {
+    const [open, setOpen] = React.useState(false)
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <CalendarIcon className="size-4" />
+            {value ? format(value, 'dd MMM yyyy') : `Select ${label}`}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={(date) => {
+              if (date) onSelect(date)
+              setOpen(false)
+            }}
+            initialFocus
+            required
+          />
+        </PopoverContent>
+      </Popover>
+    )
+  }
 
   return (
-    <>
-      <div
-        className="text-muted-foreground flex cursor-pointer items-center gap-2 text-sm"
-        onClick={() => setOpen(true)}
+    <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-sm">
+      <DateInput label="From" value={from} onSelect={(date) => handleDateChange('from', date)} />
+      <DateInput label="To" value={to} onSelect={(date) => handleDateChange('to', date)} />
+
+      <ToggleGroup
+        type="single"
+        value={preset !== 'custom' ? preset : undefined}
+        onValueChange={(val) => val && handlePreset(val)}
+        className="bg-muted px-2 py-1 rounded-md border"
       >
-        <Search className="size-4" />
-        Search
-        <kbd className="bg-muted inline-flex h-5 items-center gap-1 rounded border px-1.5 text-[10px] font-medium select-none">
-          <span className="text-xs">⌘</span>J
-        </kbd>
-      </div>
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search dashboards, users, and more…" />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {[...new Set(searchItems.map((item) => item.group))].map((group, i) => (
-            <React.Fragment key={group}>
-              {i !== 0 && <CommandSeparator />}
-              <CommandGroup heading={group} key={group}>
-                {searchItems
-                  .filter((item) => item.group === group)
-                  .map((item) => (
-                    <CommandItem className="!py-1.5" key={item.label} onSelect={() => setOpen(false)}>
-                      {item.icon && <item.icon />}
-                      <span>{item.label}</span>
-                      {/* {item.shortcut && <CommandShortcut>{item.shortcut}</CommandShortcut>} */}
-                    </CommandItem>
-                  ))}
-              </CommandGroup>
-            </React.Fragment>
-          ))}
-        </CommandList>
-      </CommandDialog>
-    </>
-  );
+        <ToggleGroupItem value="3m" className="text-xs px-3 py-1">
+          Last 3M
+        </ToggleGroupItem>
+        <ToggleGroupItem value="6m" className="text-xs px-3 py-1">
+          Last 6M
+        </ToggleGroupItem>
+        <ToggleGroupItem value="12m" className="text-xs px-3 py-1">
+          Last 12M
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  )
 }

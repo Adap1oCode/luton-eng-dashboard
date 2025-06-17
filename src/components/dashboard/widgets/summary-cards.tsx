@@ -43,11 +43,13 @@ export type SummaryTile = {
     end: string
   }
   thresholds?: Thresholds
+  clickFilter?: { type: string; value: string }
 }
 
 type Props = {
   config: SummaryTile[]
   records?: Record<string, any>[]
+  onClickFilter?: (type: string, value: string) => void
 }
 
 function isDateString(val: any): boolean {
@@ -101,7 +103,7 @@ const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
   danger: 'bg-red-500',
 }
 
-export default function SummaryCards({ config, records }: Props) {
+export default function SummaryCards({ config, records, onClickFilter }: Props) {
   const totalTile = config.find((t) => t.key === 'totalAllTime')
   const totalValue = typeof totalTile?.value === 'number' ? totalTile.value : undefined
 
@@ -139,8 +141,18 @@ export default function SummaryCards({ config, records }: Props) {
             ? parseFloat(((value / totalValue) * 100).toFixed(1))
             : null
 
+        const handleClick = () => {
+          if (tile.clickFilter && onClickFilter) {
+            onClickFilter(tile.clickFilter.type, tile.clickFilter.value)
+          }
+        }
+
         return (
-          <Card key={i} className="@container/card relative">
+          <Card
+            key={i}
+            className="@container/card relative cursor-pointer"
+            onClick={tile.clickFilter && onClickFilter ? handleClick : undefined}
+          >
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

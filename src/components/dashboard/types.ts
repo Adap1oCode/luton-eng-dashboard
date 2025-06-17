@@ -1,8 +1,10 @@
+// types.ts
+
 export type DashboardWidget = {
   component: string
   filterType?: string
   key?: string
-  group?: string // ✅ Added to support grouped tiles (e.g. 'summary', 'trends')
+  group?: string // ✅ Supports grouped tiles like 'summary', 'trends'
 }
 
 export type TileCondition =
@@ -10,7 +12,7 @@ export type TileCondition =
       column: string
       eq?: string | number
       contains?: string
-        not_contains?: string // ✅ Add this line
+      not_contains?: string
       lt?: number | string
       gt?: number | string
       isNull?: boolean
@@ -48,7 +50,11 @@ export type DashboardTile = {
     type: string
     value: string
   }
+
+  /** ✅ Optional flag to include all records, not range-filtered ones */
+  noRangeFilter?: boolean
 }
+
 
 export type DashboardColumn = {
   accessorKey: string
@@ -77,14 +83,20 @@ export type DataQualityRule = {
   pattern?: string
 }
 
+export type DashboardFetchFunction = (
+  range: string,
+  from?: string,
+  to?: string
+) => Promise<any>
+
 export type DashboardConfig = {
   id: string
   title: string
   range: '3m' | '6m' | '12m'
   rowIdKey: string
 
-  fetchRecords: (range: string) => Promise<any[]>
-  fetchMetrics: (range: string) => Promise<any>
+  fetchRecords: DashboardFetchFunction
+  fetchMetrics?: DashboardFetchFunction
 
   filters: {
     status?: string
@@ -95,12 +107,19 @@ export type DashboardConfig = {
   }
 
   tiles: DashboardTile[]
-  summary?: DashboardTile[] // ✅ Now allowed as part of config
-  trends?: DashboardTile[]  // ✅ Now allowed as part of config
-  dataQuality?: DataQualityRule[] // ✅ Optional data quality definitions
+  summary?: DashboardTile[]
+  trends?: DashboardTile[]
+  dataQuality?: DataQualityRule[]
 
   widgets: DashboardWidget[]
   tableColumns: DashboardColumn[]
 }
 
-export type ClientDashboardConfig = Omit<DashboardConfig, 'fetchRecords' | 'fetchMetrics'>
+export type ClientDashboardConfig = Omit<
+  DashboardConfig,
+  'fetchRecords' | 'fetchMetrics'
+> & {
+  range: string
+  from?: string
+  to?: string
+}
