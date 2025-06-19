@@ -25,6 +25,31 @@
 import { getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
 import type { DashboardConfig } from '@/components/dashboard/types'
 
+const chartWidgets = [
+  {
+    key: 'created_vs_due',
+    component: 'ChartAreaInteractive',
+    title: 'Created vs Due Over Time',
+    group: 'timeline',
+    fields: [
+      { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
+      { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
+    ]
+  },
+  {
+    key: 'lateness_breakdown',
+    component: 'ChartAreaInteractive',
+    title: 'Lateness Breakdown by Due Date',
+    description: 'Tracks how overdue items are, grouped by when they were due',
+    group: 'timeline',
+    fields: [
+      { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
+      { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
+      { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
+    ]
+  }
+]
+
 export const requisitionsConfig: DashboardConfig = {
   id: 'requisitions',
   title: 'Requisitions Dashboard',
@@ -231,28 +256,7 @@ export const requisitionsConfig: DashboardConfig = {
   widgets: [
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
-    {
-      key: 'created_vs_due',
-      component: 'ChartAreaInteractive',
-      title: 'Created vs Due Over Time',
-      group: 'timeline',
-      fields: [
-        { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
-        { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
-      ],
-    },
-    {
-      key: 'lateness_breakdown',
-      component: 'ChartAreaInteractive',
-      title: 'Lateness Breakdown by Due Date',
-      description: 'Tracks how overdue items are, grouped by when they were due',
-      group: 'timeline',
-      fields: [
-        { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
-        { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
-        { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
-      ],
-    },
+    ...chartWidgets,
     { component: 'ChartMissingData', filterType: 'issue' },
     { component: 'ChartByStatus', filterType: 'status' },
     { component: 'ChartByCreator', filterType: 'creator' },

@@ -9,7 +9,7 @@ import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartMissingData from '@/components/dashboard/widgets/chart-missing-data'
 import { DataTable } from '@/components/dashboard/widgets/data-table'
-import { getIssues, type IssueType } from '@/components/dashboard/data-quality'
+import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 
 import type { ClientDashboardConfig } from '@/components/dashboard/types'
 
@@ -47,8 +47,7 @@ export default function DashboardClient({ config, metrics, records }: Props) {
     : records.filter((row) =>
         filters.every((f) => {
           if (f.type === 'issue') {
-            return getIssues(row).includes(f.value as IssueType)
-          }
+return evaluateDataQuality(row, config.dataQuality ?? []).includes(f.value)          }
           const field = config.filters[f.type] as string | undefined
           if (!field) return true
           return row[field] === f.value
@@ -77,7 +76,7 @@ export default function DashboardClient({ config, metrics, records }: Props) {
           if (w.filterType) props.onFilterChange = handleFilter(w.filterType)
         }
 
-        return <Comp key={i} {...props} />
+return <Comp key={i} widget={w} {...props} />
       })}
 
       <DataTable data={filteredData} columns={config.tableColumns} />

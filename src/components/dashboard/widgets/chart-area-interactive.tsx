@@ -24,12 +24,44 @@ import {
 
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { getTimeBuckets, ChartField } from './chart-utils'
-import { requisitionsConfig } from '@/app/(main)/dashboard/requisitions/config'
+import { getTimeBuckets } from './chart-utils'
 
-type DataItem = {
-  [key: string]: any
+// 🔧 Define inline mock toggle data for now
+type DataItem = { [key: string]: any }
+type Field = {
+  key: string
+  label: string
+  type: string
+  band?: string
+  color: string
 }
+type Widget = {
+  key: string
+  title: string
+  description?: string
+  fields: Field[]
+}
+
+const toggleWidgets: Widget[] = [
+  {
+    key: 'created_vs_due',
+    title: 'Created vs Due',
+    fields: [
+      { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
+      { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
+    ],
+  },
+  {
+    key: 'lateness_breakdown',
+    title: 'Lateness Breakdown',
+    description: 'Tracks how overdue items are, grouped by when they were due',
+    fields: [
+      { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
+      { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
+      { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
+    ],
+  },
+]
 
 type Props = {
   data: DataItem[]
@@ -37,7 +69,6 @@ type Props = {
   to?: string
 }
 
-// ✅ General-purpose accessorMap by type + optional band
 const accessorMap: Record<string, (row: DataItem, band?: string) => string | null | undefined> = {
   created: (row) => row?.order_date ?? null,
   due: (row) => row?.due_date ?? null,
@@ -62,19 +93,12 @@ export default function ChartAreaInteractive({ data, from, to }: Props) {
 
   if (!Array.isArray(data) || data.length === 0 || !from || !to) return null
 
-  const timelineWidgets = requisitionsConfig.widgets.filter(
-    (w) => w.component === 'ChartAreaInteractive' && w.group === 'timeline'
-  )
+  const [activeKey, setActiveKey] = React.useState<string>(toggleWidgets[0]?.key ?? '')
 
-  const [activeKey, setActiveKey] = React.useState<string>(
-    timelineWidgets[0]?.key ?? ''
-  )
-
-  const widget = timelineWidgets.find((w) => w.key === activeKey)
+  const widget = toggleWidgets.find((w) => w.key === activeKey)
   if (!widget || !widget.fields) return null
 
-  // ✅ Inject accessors using type + optional band
-  const fields = widget.fields.map((f: any) => ({
+  const fields = widget.fields.map((f) => ({
     ...f,
     accessor: (row: DataItem) => accessorMap[f.type]?.(row, f.band),
   }))
@@ -96,17 +120,17 @@ export default function ChartAreaInteractive({ data, from, to }: Props) {
               <CardDescription>{widget.description}</CardDescription>
             )}
           </div>
-          {timelineWidgets.length > 1 && (
+          {toggleWidgets.length > 1 && (
             <ToggleGroup
               type="single"
               value={activeKey}
-              onValueChange={(val) => setActiveKey(val ?? timelineWidgets[0]?.key ?? '')}
+              onValueChange={(val) => setActiveKey(val ?? toggleWidgets[0]?.key ?? '')}
               variant="outline"
             >
-              {timelineWidgets.map((w) => (
+              {toggleWidgets.map((w) => (
                 <ToggleGroupItem
                   key={w.key}
-                  value={w.key ?? ''}
+                  value={w.key}
                   disabled={!w.key}
                 >
                   {w.title || w.key || 'Unnamed'}
@@ -118,7 +142,6 @@ export default function ChartAreaInteractive({ data, from, to }: Props) {
       </CardHeader>
 
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-4">
-        {/* Summary block */}
         <div className="mb-2 flex justify-end gap-4 text-xs text-muted-foreground px-2">
           {summary.map((s) => (
             <div key={s.key} className="flex items-center gap-1">
@@ -128,7 +151,6 @@ export default function ChartAreaInteractive({ data, from, to }: Props) {
           ))}
         </div>
 
-        {/* Legend */}
         <div className="mb-2 flex justify-end gap-4 text-sm text-muted-foreground px-2">
           {fields.map((f) => (
             <div key={f.key} className="flex items-center gap-2">
