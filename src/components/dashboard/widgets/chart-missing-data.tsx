@@ -36,6 +36,7 @@ import {
 
 import type { Requisition } from '@/app/(main)/dashboard/requisitions/_components/data'
 
+
 const CHART_COLORS = [
   'var(--chart-1)',
   'var(--chart-2)',
