@@ -102,6 +102,8 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
         // 👇 ChartAreaInteractive expects `data`
         if (w.component === 'ChartAreaInteractive') {
           commonProps.data = records
+          commonProps.config = w
+
         }
 
         // 👇 Other chart widgets use `records`
