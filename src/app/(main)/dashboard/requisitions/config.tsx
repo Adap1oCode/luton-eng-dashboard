@@ -34,7 +34,7 @@ const chartWidgets = [
     toggles: [
       {
         key: 'created_vs_due',
-        title: 'Created vs Due',
+        title: 'Created vs Due - Dynamic',
         fields: [
           { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
           { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
@@ -261,7 +261,7 @@ export const requisitionsConfig: DashboardConfig = {
   widgets: [
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
-{ component: 'ChartAreaInteractive', key: 'requisition_trends', group: 'timeline' },
+     ...chartWidgets,
     { component: 'ChartMissingData', filterType: 'issue' },
     { component: 'ChartByStatus', filterType: 'status' },
     { component: 'ChartByCreator', filterType: 'creator' },
