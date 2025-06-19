@@ -34,8 +34,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 
-import type { IssueType } from '../shared/get-issues'
-import type { Requisition } from './data'
+import type { Requisition } from '@/app/(main)/dashboard/requisitions/_components/data'
 
 const CHART_COLORS = [
   'var(--chart-1)',

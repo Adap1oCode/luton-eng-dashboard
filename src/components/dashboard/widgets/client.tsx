@@ -9,7 +9,7 @@ import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartMissingData from '@/components/dashboard/widgets/chart-missing-data'
 import { DataTable } from '@/components/dashboard/widgets/data-table'
-import { getIssues, type IssueType } from '@/components/dashboard/shared/get-issues'
+import { getIssues, type IssueType } from '@/components/dashboard/data-quality'
 
 import type { ClientDashboardConfig } from '@/components/dashboard/types'
 

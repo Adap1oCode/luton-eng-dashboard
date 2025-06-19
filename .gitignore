@@ -15,19 +15,22 @@
 
 # production
 /build
+/dist             # ⬅️ Compiled TypeScript output — should be ignored
 
 # misc
 .DS_Store
 *.pem
 *.sh
 
-# debug
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env
+.env.*.local      # Matches `.env.local`, `.env.dev.local`, etc.
+.env.local        # Explicitly ignore your actual local env
 
 # vercel
 .vercel

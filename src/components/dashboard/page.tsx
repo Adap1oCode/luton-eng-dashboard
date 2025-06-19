@@ -1,23 +1,28 @@
+'use server'
+
 import DashboardClient from '@/components/dashboard/client'
 import type { DashboardConfig, ClientDashboardConfig } from '@/components/dashboard/types'
-import { resolveDateRange } from '@/components/dashboard/shared/resolve-date-range'
+import { resolveDateRange } from '@/components/dashboard/resolve-date-range'
+import { headers } from 'next/headers'
 
 type Props = {
   config: DashboardConfig
-  searchParams?: {
-    range?: string
-    from?: string
-    to?: string
-  }
 }
 
-export default async function GenericDashboardPage({ config, searchParams }: Props) {
-  const range = searchParams?.range ?? config.range ?? '3m'
+export default async function GenericDashboardPage({ config }: Props) {
+  const header = await headers()
+  const fullUrl = header.get('x-url') ?? ''
+  const url = new URL(fullUrl, 'http://localhost') // required fallback for SSR parsing
 
-  const { fromDate, toDate } = resolveDateRange(range, searchParams?.from, searchParams?.to)
+  const range = url.searchParams.get('range') ?? config.range ?? '3m'
+  const fromParam = url.searchParams.get('from') ?? undefined
+  const toParam = url.searchParams.get('to') ?? undefined
 
-  const from = searchParams?.from ?? fromDate
-  const to = searchParams?.to ?? toDate
+  const { fromDate, toDate } = resolveDateRange(range, fromParam, toParam)
+  const from = fromParam ?? fromDate
+  const to = toParam ?? toDate
+
+  console.log('✅ GenericDashboardPage: range', range, 'from', from, 'to', to)
 
   const metrics = config.fetchMetrics
     ? await config.fetchMetrics(range, from, to)
@@ -35,6 +40,8 @@ export default async function GenericDashboardPage({ config, searchParams }: Pro
       config={{ ...clientConfig, range, from, to } as ClientDashboardConfig}
       metrics={metrics}
       records={records}
+      from={from}
+      to={to}
     />
   )
 }

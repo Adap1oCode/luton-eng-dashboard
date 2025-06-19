@@ -78,8 +78,8 @@ function formatStatusLine(direction?: 'up' | 'down'): string {
 export default function SectionCards({ config, from, to, onClickFilter }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs">
-    {config.map((tile, i) => {
-        const current = typeof tile.value === 'number' ? tile.value : 0
+      {config.map((tile, i) => {
+        const current = typeof tile.value === 'number' ? tile.value : tile.value ?? '—'
         const trend = tile.trend
         const direction = tile.direction
 
@@ -96,7 +96,7 @@ export default function SectionCards({ config, from, to, onClickFilter }: Props)
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {typeof current === 'number' ? current.toLocaleString() : current ?? '—'}
+                {typeof current === 'number' ? current.toLocaleString() : current}
               </CardTitle>
               {trend && direction && (
                 <CardAction>

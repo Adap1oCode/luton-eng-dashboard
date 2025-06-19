@@ -1,17 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-
-import { authMiddleware } from "./middleware/auth-middleware";
+import { NextRequest, NextResponse } from 'next/server'
+import { authMiddleware } from './middleware/auth-middleware'
 
 export function middleware(req: NextRequest) {
-  // authMiddleware
+  // Optional: apply authentication middleware
   // const response = authMiddleware(req)
   // if (response) {
   //   return response
   // }
 
-  return NextResponse.next();
+  const res = NextResponse.next()
+
+  // 🔁 Inject the full request URL so server components can parse query params like ?range=
+  res.headers.set('x-url', req.nextUrl.toString())
+
+  return res
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/auth/login"],
-};
+  matcher: ['/dashboard/:path*', '/auth/login'],
+}

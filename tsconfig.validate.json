@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/lib/validate-tiles.ts"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "noEmit": false,
+    "jsx": "preserve"
+  }
+}

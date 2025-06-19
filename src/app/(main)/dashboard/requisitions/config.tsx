@@ -17,16 +17,15 @@ export const requisitionsConfig: DashboardConfig = {
   },
 
   summary: [
-{
-  key: 'totalAllTime',
-  title: 'Total Requisitions',
-  subtitle: 'All Time',
-  matchKey: 'totalAllTime',
-  filter: { column: 'status', isNull: false },
-  thresholds: {},
-  noRangeFilter: true,
-},
-
+    {
+      key: 'totalAllTime',
+      title: 'Total Requisitions',
+      subtitle: 'All Time',
+      matchKey: 'totalAllTime',
+      filter: { column: 'status', isNull: false },
+      thresholds: {},
+      noRangeFilter: true,
+    },
     {
       key: 'issued',
       title: 'Issued',
@@ -71,7 +70,7 @@ export const requisitionsConfig: DashboardConfig = {
         and: [
           { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
           {
-            or: [
+            and: [
               { column: 'status', not_contains: 'complete' },
               { column: 'status', not_contains: 'cancel' },
             ],
@@ -122,7 +121,6 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Total Reqs',
       filter: { column: 'status', isNull: false },
       thresholds: {},
-      clickFilter: { type: 'status', value: 'all' },
     },
     {
       key: 'closedReqs',
@@ -193,7 +191,30 @@ export const requisitionsConfig: DashboardConfig = {
   widgets: [
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
-    { component: 'ChartAreaInteractive' },
+
+    {
+      key: 'created_vs_due',
+      component: 'ChartAreaInteractive',
+      title: 'Created vs Due Over Time',
+      group: 'timeline',
+      fields: [
+        { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
+        { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
+      ],
+    },
+    {
+      key: 'lateness_breakdown',
+      component: 'ChartAreaInteractive',
+      title: 'Lateness Breakdown by Due Date',
+      description: 'Tracks how overdue items are, grouped by when they were due',
+      group: 'timeline',
+      fields: [
+        { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
+        { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
+        { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
+      ],
+    },
+
     { component: 'ChartMissingData', filterType: 'issue' },
     { component: 'ChartByStatus', filterType: 'status' },
     { component: 'ChartByCreator', filterType: 'creator' },

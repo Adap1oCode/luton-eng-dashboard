@@ -13,13 +13,13 @@ export type Requisition = {
 }
 
 export async function getRequisitions(
-  _range: string,
+  _range: string, // retained for signature consistency
   _from?: string,
   _to?: string
 ): Promise<Requisition[]> {
   const { data, error } = await supabase
     .from('requisitions')
-    .select('*') // ✅ Pull everything, no filters
+    .select('*') // ✅ No filtering — always get full dataset
 
   if (error || !data) return []
 

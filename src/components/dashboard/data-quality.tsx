@@ -1,9 +1,11 @@
-export type IssueType = string // made dynamic to support config-driven keys
+export type IssueType = string
 
-export function getIssues(row: Record<string, any>, rules: any[] = []): IssueType[] {
+export function evaluateDataQuality(row: Record<string, any>, rules: any[] = []): IssueType[] {
   const issues: IssueType[] = []
 
   for (const rule of rules) {
+    if (!rule || !rule.column || !rule.key || !rule.type) continue
+
     const { key, column, type, value, pattern } = rule
     const field = row[column]
 
@@ -12,11 +14,11 @@ export function getIssues(row: Record<string, any>, rules: any[] = []): IssueTyp
         if (field === null || field === undefined || field === '') issues.push(key)
         break
       case 'is_not_null':
-        if (field !== null && field !== undefined && field !== '') continue
+        if (field !== null && field !== undefined && field !== '') break
         issues.push(key)
         break
       case 'regex':
-        if (typeof field === 'string' && !new RegExp(pattern).test(field)) issues.push(key)
+        if (typeof field !== 'string' || !new RegExp(pattern).test(field)) issues.push(key)
         break
       case 'equals':
         if (field !== value) issues.push(key)
@@ -43,7 +45,7 @@ export function getIssues(row: Record<string, any>, rules: any[] = []): IssueTyp
         if (Array.isArray(value) && value.includes(field)) issues.push(key)
         break
       case 'contains':
-        if (typeof field === 'string' && !field.includes(value)) issues.push(key)
+        if (typeof field !== 'string' || !field.includes(value)) issues.push(key)
         break
       case 'not_contains':
         if (typeof field === 'string' && field.includes(value)) issues.push(key)

@@ -1,10 +1,20 @@
 // types.ts
 
 export type DashboardWidget = {
+  key?: string
+  group?: string
+  title?: string
+  description?: string
   component: string
   filterType?: string
-  key?: string
-  group?: string // ✅ Supports grouped tiles like 'summary', 'trends'
+fields?: {
+  key: string
+  label: string
+  color: string
+  accessor?: (row: any) => string | null | undefined
+  type?: string
+  band?: string
+}[]
 }
 
 export type TileCondition =

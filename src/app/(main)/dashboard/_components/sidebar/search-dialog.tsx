@@ -22,12 +22,27 @@ export function SearchDialog() {
   const [from, setFrom] = React.useState<Date | undefined>(paramFrom ? new Date(paramFrom) : undefined)
   const [to, setTo] = React.useState<Date | undefined>(paramTo ? new Date(paramTo) : undefined)
 
+  React.useEffect(() => {
+    if (!paramFrom || !paramTo) {
+      const today = new Date()
+      let fromDate: Date
+
+      if (preset === '3m') fromDate = subMonths(today, 3)
+      else if (preset === '6m') fromDate = subMonths(today, 6)
+      else fromDate = subMonths(today, 12)
+
+      setFrom(fromDate)
+      setTo(today)
+    }
+  }, [])
+
   const applyCustomRange = (fromDate: Date, toDate: Date) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('range', 'custom')
     params.set('from', format(fromDate, 'yyyy-MM-dd'))
     params.set('to', format(toDate, 'yyyy-MM-dd'))
     router.push(`${pathname}?${params.toString()}`)
+    router.refresh() // ✅ Ensure data is refreshed on manual date change
   }
 
   const handleDateChange = (key: 'from' | 'to', date: Date | undefined) => {
@@ -56,6 +71,7 @@ export function SearchDialog() {
     params.set('from', format(fromDate, 'yyyy-MM-dd'))
     params.set('to', format(toDate, 'yyyy-MM-dd'))
     router.push(`${pathname}?${params.toString()}`)
+    router.refresh() // ✅ Ensure data is refreshed on preset click
 
     setFrom(fromDate)
     setTo(toDate)

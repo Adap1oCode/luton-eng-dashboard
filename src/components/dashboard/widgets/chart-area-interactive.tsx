@@ -5,7 +5,8 @@ import {
   AreaChart,
   Area,
   CartesianGrid,
-  XAxis
+  XAxis,
+  YAxis,
 } from 'recharts'
 
 import {
@@ -14,152 +15,159 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardAction,
 } from '@/components/ui/card'
-
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
 
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@/components/ui/toggle-group'
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { getTimeBuckets, ChartField } from './chart-utils'
+import { requisitionsConfig } from '@/app/(main)/dashboard/requisitions/config'
 
 type DataItem = {
-  order_date?: string | null
-  due_date?: string | null
+  [key: string]: any
 }
 
-function getWeekStart(date: Date): Date {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const day = d.getUTCDay()
-  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1)
-  const weekStart = new Date(d.setUTCDate(diff))
-  weekStart.setUTCHours(0, 0, 0, 0)
-  return weekStart
+type Props = {
+  data: DataItem[]
+  from?: string
+  to?: string
 }
 
-function formatLabel(date: Date) {
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-  })
+// ✅ General-purpose accessorMap by type + optional band
+const accessorMap: Record<string, (row: DataItem, band?: string) => string | null | undefined> = {
+  created: (row) => row?.order_date ?? null,
+  due: (row) => row?.due_date ?? null,
+  lateness: (row, band) => {
+    const status = row?.status?.toLowerCase()
+    const dueStr = row?.due_date
+    if (!dueStr || status?.includes('complete') || status?.includes('cancel')) return null
+
+    const due = new Date(dueStr)
+    const today = new Date()
+    const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (band === '1-7' && diff > 0 && diff <= 7) return dueStr
+    if (band === '8-30' && diff > 7 && diff <= 30) return dueStr
+    if (band === '30+' && diff > 30) return dueStr
+    return null
+  },
 }
 
-export default function ChartAreaInteractive({ data }: { data: DataItem[] }) {
-  if (!Array.isArray(data) || data.length === 0) return null
-
+export default function ChartAreaInteractive({ data, from, to }: Props) {
   const isMobile = useIsMobile()
-  const [range, setRange] = React.useState<'90d' | '180d' | 'all'>('90d')
 
-  const today = new Date()
-  const start = new Date(today)
-  if (range === '90d') start.setDate(today.getDate() - 90)
-  else if (range === '180d') start.setDate(today.getDate() - 180)
-  else start.setFullYear(today.getFullYear() - 1)
+  if (!Array.isArray(data) || data.length === 0 || !from || !to) return null
 
-  const weekMap: Map<string, { date: Date; created: number; due: number }> = new Map()
-  const iter = new Date(getWeekStart(start))
-  const maxDate = new Date(today)
-  maxDate.setUTCHours(0, 0, 0, 0)
+  const timelineWidgets = requisitionsConfig.widgets.filter(
+    (w) => w.component === 'ChartAreaInteractive' && w.group === 'timeline'
+  )
 
-  while (iter <= maxDate) {
-    const key = iter.toISOString().slice(0, 10)
-    weekMap.set(key, { date: new Date(iter), created: 0, due: 0 })
-    iter.setUTCDate(iter.getUTCDate() + 7)
-  }
+  const [activeKey, setActiveKey] = React.useState<string>(
+    timelineWidgets[0]?.key ?? ''
+  )
 
-  for (const row of data) {
-    if (row.order_date) {
-      const createdWeek = getWeekStart(new Date(row.order_date))
-      const key = createdWeek.toISOString().slice(0, 10)
-      if (weekMap.has(key)) weekMap.get(key)!.created += 1
-    }
-    if (row.due_date) {
-      const dueWeek = getWeekStart(new Date(row.due_date))
-      const key = dueWeek.toISOString().slice(0, 10)
-      if (weekMap.has(key)) weekMap.get(key)!.due += 1
-    }
-  }
+  const widget = timelineWidgets.find((w) => w.key === activeKey)
+  if (!widget || !widget.fields) return null
 
-  const chartData = Array.from(weekMap.values()).map((entry) => ({
-    label: formatLabel(entry.date),
-    created: entry.created,
-    due: entry.due,
+  // ✅ Inject accessors using type + optional band
+  const fields = widget.fields.map((f: any) => ({
+    ...f,
+    accessor: (row: DataItem) => accessorMap[f.type]?.(row, f.band),
   }))
 
-  const chartConfig = {
-    created: { label: 'Created', color: 'var(--chart-1)' },
-    due: { label: 'Due', color: 'var(--chart-2)' },
-  }
+  const chartData = getTimeBuckets(data, { from, to, fields })
+
+  const summary = fields.map((f) => {
+    const total = chartData.reduce((sum, row) => sum + (row[f.key] || 0), 0)
+    return { key: f.key, label: f.label, color: f.color, total }
+  })
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Records Over Time</CardTitle>
-        <CardDescription>Created and Due per week</CardDescription>
-        <CardAction>
-          <ToggleGroup
-            type="single"
-            value={range}
-            onValueChange={(val) => val && setRange(val as '90d' | '180d' | 'all')}
-            variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
-          >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="180d">Last 6 months</ToggleGroupItem>
-            <ToggleGroupItem value="all">Last 12 months</ToggleGroupItem>
-          </ToggleGroup>
-
-          <Select value={range} onValueChange={(val) => val && setRange(val as '90d' | '180d' | 'all')}>
-            <SelectTrigger className="flex w-40 @[767px]/card:hidden" size="sm" aria-label="Select a range">
-              <SelectValue placeholder="Last 3 months" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">Last 3 months</SelectItem>
-              <SelectItem value="180d" className="rounded-lg">Last 6 months</SelectItem>
-              <SelectItem value="all" className="rounded-lg">Last 12 months</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardAction>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <CardTitle>{widget.title || 'Records Over Time'}</CardTitle>
+            {widget.description && (
+              <CardDescription>{widget.description}</CardDescription>
+            )}
+          </div>
+          {timelineWidgets.length > 1 && (
+            <ToggleGroup
+              type="single"
+              value={activeKey}
+              onValueChange={(val) => setActiveKey(val ?? timelineWidgets[0]?.key ?? '')}
+              variant="outline"
+            >
+              {timelineWidgets.map((w) => (
+                <ToggleGroupItem
+                  key={w.key}
+                  value={w.key ?? ''}
+                  disabled={!w.key}
+                >
+                  {w.title || w.key || 'Unnamed'}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          )}
+        </div>
       </CardHeader>
 
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer config={chartConfig} className="aspect-auto h-[260px] w-full">
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-4">
+        {/* Summary block */}
+        <div className="mb-2 flex justify-end gap-4 text-xs text-muted-foreground px-2">
+          {summary.map((s) => (
+            <div key={s.key} className="flex items-center gap-1">
+              <span className="font-medium text-foreground">{s.total}</span>
+              <span>{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="mb-2 flex justify-end gap-4 text-sm text-muted-foreground px-2">
+          {fields.map((f) => (
+            <div key={f.key} className="flex items-center gap-2">
+              <div className="h-2 w-4 rounded-sm" style={{ backgroundColor: f.color }} />
+              {f.label}
+            </div>
+          ))}
+        </div>
+
+        <ChartContainer
+          config={Object.fromEntries(fields.map((f) => [f.key, { label: f.label, color: f.color }]))}
+          className="aspect-auto h-[260px] w-full"
+        >
           <AreaChart data={chartData}>
             <defs>
-              <linearGradient id="fillCreated" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-created)" stopOpacity={1.0} />
-                <stop offset="95%" stopColor="var(--color-created)" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="fillDue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-due)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-due)" stopOpacity={0.1} />
-              </linearGradient>
+              {fields.map((f) => (
+                <linearGradient key={f.key} id={`fill-${f.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={f.color} stopOpacity={1.0} />
+                  <stop offset="95%" stopColor={f.color} stopOpacity={0.1} />
+                </linearGradient>
+              ))}
             </defs>
-            <CartesianGrid vertical={false} />
+
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={16}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={32}
+              tick={{ fontSize: 12 }}
             />
             <ChartTooltip
-              cursor={false}
+              cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
               defaultIndex={isMobile ? -1 : 10}
               content={
                 <ChartTooltipContent
@@ -168,8 +176,15 @@ export default function ChartAreaInteractive({ data }: { data: DataItem[] }) {
                 />
               }
             />
-            <Area dataKey="created" type="monotone" fill="url(#fillCreated)" stroke="var(--color-created)" />
-            <Area dataKey="due" type="monotone" fill="url(#fillDue)" stroke="var(--color-due)" />
+            {fields.map((f) => (
+              <Area
+                key={f.key}
+                dataKey={f.key}
+                type="monotone"
+                fill={`url(#fill-${f.key})`}
+                stroke={f.color}
+              />
+            ))}
           </AreaChart>
         </ChartContainer>
       </CardContent>
