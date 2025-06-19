@@ -63,6 +63,7 @@ export type DashboardTile = {
 
   /** ✅ Optional flag to include all records, not range-filtered ones */
   noRangeFilter?: boolean
+    sql?: string // ✅ ADDED for validator
 }
 
 
@@ -91,6 +92,8 @@ export type DataQualityRule = {
     | 'not_contains'
   value?: any
   pattern?: string
+  sql?: string // ✅ ADDED for validator
+
 }
 
 export type DashboardFetchFunction = (

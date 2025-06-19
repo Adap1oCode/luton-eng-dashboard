@@ -1,3 +1,27 @@
+/**
+ * ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+ * ┃ 📊 CONFIG STRUCTURE — VALIDATION RULES                   
+ * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ * 
+ * ✅ summary[]:
+ * - Required: key, title, filter or average, noRangeFilter, thresholds
+ * - NEW: sql (Raw SQL string for validator comparison)
+ * 
+ * ✅ trends[]:
+ * - Required: key, title, filter, thresholds
+ * - NEW: sql
+ * 
+ * ✅ dataQuality[]:
+ * - Required: key, column, type
+ * - NEW: sql (auto-generated if type = is_null or regex)
+ * 
+ * ⚠️ NOTE:
+ * - sql must match the tile’s frontend logic (filter or average)
+ * - Do not include `expected` in config — validator calculates live
+ * 
+ * 🔪 This file powers both the frontend UI and the tile validator script.
+ */
+
 import { getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
 import type { DashboardConfig } from '@/components/dashboard/types'
 
@@ -6,7 +30,6 @@ export const requisitionsConfig: DashboardConfig = {
   title: 'Requisitions Dashboard',
   range: '3m',
   rowIdKey: 'requisition_order_number',
-
   fetchRecords: getRequisitions,
 
   filters: {
@@ -25,6 +48,7 @@ export const requisitionsConfig: DashboardConfig = {
       filter: { column: 'status', isNull: false },
       thresholds: {},
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     },
     {
       key: 'issued',
@@ -34,6 +58,7 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'issued' },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%issued%'"
     },
     {
       key: 'inProgress',
@@ -43,6 +68,7 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'in progress' },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%in progress%'"
     },
     {
       key: 'completed',
@@ -52,6 +78,7 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'complete' },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%complete%'"
     },
     {
       key: 'cancelled',
@@ -61,6 +88,7 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: {},
       clickFilter: { type: 'status', value: 'cancel' },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%cancel%'"
     },
     {
       key: 'late',
@@ -80,6 +108,7 @@ export const requisitionsConfig: DashboardConfig = {
       thresholds: { danger: { gt: 0 } },
       clickFilter: { type: 'status', value: 'late' },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date < CURRENT_DATE AND status NOT ILIKE '%complete%' AND status NOT ILIKE '%cancel%'"
     },
     {
       key: 'old_open_reqs',
@@ -98,6 +127,7 @@ export const requisitionsConfig: DashboardConfig = {
       },
       thresholds: { danger: { gt: 0 } },
       noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date < '2025-01-31' AND (status ILIKE '%issued%' OR status ILIKE '%in progress%')"
     },
     {
       key: 'avgTimeToClose',
@@ -112,7 +142,8 @@ export const requisitionsConfig: DashboardConfig = {
         danger: { gt: 14 },
       },
       noRangeFilter: true,
-    },
+      sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
+    }
   ],
 
   trends: [
@@ -121,6 +152,7 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Total Reqs',
       filter: { column: 'status', isNull: false },
       thresholds: {},
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     },
     {
       key: 'closedReqs',
@@ -128,6 +160,7 @@ export const requisitionsConfig: DashboardConfig = {
       filter: { column: 'status', contains: 'closed' },
       thresholds: {},
       clickFilter: { type: 'status', value: 'closed' },
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%closed%'"
     },
     {
       key: 'missingOrderDate',
@@ -135,6 +168,7 @@ export const requisitionsConfig: DashboardConfig = {
       filter: { column: 'order_date', isNull: true },
       thresholds: { warning: { gt: 0 } },
       clickFilter: { type: 'issue', value: 'missing_order_date' },
+      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
     },
     {
       key: 'missingDueDate',
@@ -142,7 +176,8 @@ export const requisitionsConfig: DashboardConfig = {
       filter: { column: 'due_date', isNull: true },
       thresholds: { warning: { gt: 0 } },
       clickFilter: { type: 'issue', value: 'missing_due_date' },
-    },
+      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
+    }
   ],
 
   dataQuality: [
@@ -151,39 +186,44 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Due Date',
       column: 'due_date',
       type: 'is_null',
+      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
     },
     {
       key: 'missing_order_date',
       label: 'Missing Order Date',
       column: 'order_date',
       type: 'is_null',
+      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
     },
     {
       key: 'missing_created_by',
       label: 'Missing Created By',
       column: 'created_by',
       type: 'is_null',
+      sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
     },
     {
       key: 'missing_project_number',
       label: 'Missing Project Number',
       column: 'project_number',
       type: 'is_null',
+      sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
     },
     {
       key: 'missing_warehouse',
       label: 'Missing Warehouse',
       column: 'warehouse',
       type: 'is_null',
+      sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
     },
     {
       key: 'invalid_requisition_order_number',
       label: 'Invalid Requisition Order Number',
       column: 'requisition_order_number',
       type: 'regex',
-      pattern:
-        '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$',
-    },
+      pattern: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$",
+      sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
+    }
   ],
 
   tiles: [],
@@ -191,7 +231,6 @@ export const requisitionsConfig: DashboardConfig = {
   widgets: [
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
-
     {
       key: 'created_vs_due',
       component: 'ChartAreaInteractive',
@@ -214,7 +253,6 @@ export const requisitionsConfig: DashboardConfig = {
         { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
       ],
     },
-
     { component: 'ChartMissingData', filterType: 'issue' },
     { component: 'ChartByStatus', filterType: 'status' },
     { component: 'ChartByCreator', filterType: 'creator' },
@@ -230,4 +268,4 @@ export const requisitionsConfig: DashboardConfig = {
     { accessorKey: 'due_date', header: 'Due Date' },
     { accessorKey: 'warehouse', header: 'Warehouse' },
   ],
-}
+};
