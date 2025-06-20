@@ -216,6 +216,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Due Date',
       column: 'due_date',
       type: 'is_null',
+      group: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
     },
     {
@@ -223,6 +224,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Order Date',
       column: 'order_date',
       type: 'is_null',
+      group: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
     },
     {
@@ -230,6 +232,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Created By',
       column: 'created_by',
       type: 'is_null',
+      group: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
     },
     {
@@ -237,6 +240,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Project Number',
       column: 'project_number',
       type: 'is_null',
+      group: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
     },
     {
@@ -244,6 +248,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Warehouse',
       column: 'warehouse',
       type: 'is_null',
+      group: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
     },
     {
@@ -251,6 +256,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Invalid Requisition Order Number',
       column: 'requisition_order_number',
       type: 'regex',
+      group: 'default',
       pattern: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$",
       sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
     }
@@ -262,7 +268,18 @@ export const requisitionsConfig: DashboardConfig = {
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
      ...chartWidgets,
-    { component: 'ChartMissingData', filterType: 'issue' },
+         {
+      component: 'ChartBar',
+      filterType: 'issue',
+      title: 'Data Quality Issues',
+      description: 'Breakdown of validation issues found in current dataset',
+      layout: 'horizontal',
+      rulesKey: 'default',
+      yAxis: { width: 160, fontSize: 12 },
+      xAxis: { hide: true },
+      debug: true, // ✅ Add this
+
+    },
     { component: 'ChartByStatus', filterType: 'status' },
     { component: 'ChartByCreator', filterType: 'creator' },
     { component: 'ChartByProject', filterType: 'project' },

@@ -8,7 +8,7 @@ import ChartAreaInteractive from "@/components/dashboard/widgets/chart-area-inte
 import ChartByCreator from "@/components/dashboard/widgets/chart-by-creator";
 import ChartByProject from "@/components/dashboard/widgets/chart-by-project";
 import ChartByStatus from "@/components/dashboard/widgets/chart-by-status";
-import ChartMissingData from "@/components/dashboard/widgets/chart-missing-data";
+import ChartBar from "@/components/dashboard/widgets/chart-bar";
 import { DataTable } from "@/components/dashboard/widgets/data-table";
 import SectionCards from "@/components/dashboard/widgets/section-cards";
 
@@ -18,7 +18,7 @@ const widgetMap: Record<string, any> = {
   ChartByStatus,
   ChartByCreator,
   ChartByProject,
-  ChartMissingData,
+  ChartBar,
 };
 
 type Props = {
