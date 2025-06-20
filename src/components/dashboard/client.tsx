@@ -8,7 +8,7 @@ import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-inte
 import ChartByStatus from '@/components/dashboard/widgets/chart-by-status'
 import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
-import ChartMissingData from '@/components/dashboard/widgets/chart-missing-data'
+import ChartBar from '@/components/dashboard/widgets/chart-bar'
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { buildTiles } from '@/components/dashboard/client/build-tiles'
 import { applyDataFilters } from '@/components/dashboard/client/data-filters'
@@ -21,7 +21,7 @@ const widgetMap: Record<string, any> = {
   ChartByStatus,
   ChartByCreator,
   ChartByProject,
-  ChartMissingData,
+  ChartBar,
 }
 
 type Props = {
@@ -85,7 +85,6 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           onClickFilter: handleClickFilter,
         }
 
-        // 👇 Only add tile config to tile-based widgets
         if (
           w.component === 'SummaryCards' ||
           w.component === 'SectionCards'
@@ -99,29 +98,30 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           )
         }
 
-        // 👇 ChartAreaInteractive expects `data`
         if (w.component === 'ChartAreaInteractive') {
           commonProps.data = records
           commonProps.config = w
-
         }
 
-        // 👇 Other chart widgets use `records`
         if (
-          w.component === 'ChartMissingData' ||
+          w.component === 'ChartBar' ||
           w.component === 'ChartByStatus' ||
           w.component === 'ChartByCreator' ||
           w.component === 'ChartByProject'
         ) {
-          commonProps.records = records
-          commonProps.data = records.map((row) => ({
+          const evaluated = records.map((row) => ({
             ...row,
             issue: evaluateDataQuality(row, config.dataQuality ?? []),
           }))
-        }
 
-        if (w.component === 'ChartMissingData') {
-          commonProps.rules = config.dataQuality ?? []
+          commonProps.records = records
+          commonProps.data = evaluated
+
+          if (w.component === 'ChartBar') {
+            commonProps.rules = config.dataQuality ?? []
+            commonProps.title = 'Data Quality Issues'
+            commonProps.config = { key: 'issue', column: 'issue' }
+          }
         }
 
         if (w.filterType) {

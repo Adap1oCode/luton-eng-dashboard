@@ -1,22 +1,69 @@
 // types.ts
 
+// ✅ Toggle group for ChartAreaInteractive
+export type ToggleGroup = {
+  key: string
+  title: string
+  description?: string
+  fields: {
+    key: string
+    label: string
+    type: string
+    color: string
+    band?: string
+  }[]
+}
+
+export type AxisConfig = boolean | { hide?: boolean; fontSize?: number; width?: number }
+
+
+// ✅ Widget config block for dashboard layout
 export type DashboardWidget = {
   key?: string
   group?: string
   title?: string
   description?: string
   component: string
+  debug?: boolean
+
+  // Used for chart filtering (e.g., status, project, issue)
   filterType?: string
-fields?: {
-  key: string
-  label: string
-  color: string
-  accessor?: (row: any) => string | null | undefined
-  type?: string
-  band?: string
-}[]
+  clickable?: boolean              // ✅ enable click-to-filter (default: false)
+
+  // Layout control for charts
+  layout?: 'horizontal' | 'vertical'
+  xAxis?: AxisConfig
+  yAxis?: AxisConfig
+
+  // Reference to group of rules for validator-based charts
+  rulesKey?: string
+
+  // Interactive toggle-based charts
+  toggles?: ToggleGroup[]
+  rulesGroup?: string // ⛔ deprecated
+
+  // Optional visual behavior
+  sortBy?: 'value' | 'label'
+  limit?: number
+  hideLegend?: boolean
+
+  // Simple static field definition
+  fields?: {
+    key: string
+    label: string
+    color?: string
+    accessor?: (row: any) => string | null | undefined
+    type?: string
+    band?: string
+  }[]
+
+  // ✅ NEW: for evaluated rule-based charts like ChartBar
+  column?: string
+  rules?: any[]
 }
 
+
+// ✅ Tile-level condition rules
 export type TileCondition =
   | {
       column: string
@@ -30,6 +77,7 @@ export type TileCondition =
   | { and: TileCondition[] }
   | { or: TileCondition[] }
 
+// ✅ Metric / tile-specific filter block
 export type TileFilter = TileCondition
 
 export type Thresholds = {
@@ -38,12 +86,14 @@ export type Thresholds = {
   danger?: { lt?: number; gt?: number }
 }
 
+// ✅ Tiles for summaries, sections, and trends
 export type DashboardTile = {
   key: string
   title: string
   subtitle?: string
   matchKey?: string
   value?: number | string | null
+
   filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] }
   percentage?: {
     numerator: TileFilter | { and: TileFilter[] }
@@ -53,6 +103,7 @@ export type DashboardTile = {
     start: string
     end: string
   }
+
   thresholds?: Thresholds
   trend?: string
   direction?: 'up' | 'down'
@@ -61,17 +112,17 @@ export type DashboardTile = {
     value: string
   }
 
-  /** ✅ Optional flag to include all records, not range-filtered ones */
-  noRangeFilter?: boolean
-    sql?: string // ✅ ADDED for validator
+  noRangeFilter?: boolean   // ✅ applies to lifetime or fixed window tiles
+  sql?: string              // ✅ used by validator engine
 }
 
-
+// ✅ Table column schema
 export type DashboardColumn = {
   accessorKey: string
   header: string
 }
 
+// ✅ Rules used in data quality charts
 export type DataQualityRule = {
   key: string
   label: string
@@ -92,16 +143,18 @@ export type DataQualityRule = {
     | 'not_contains'
   value?: any
   pattern?: string
-  sql?: string // ✅ ADDED for validator
-
+  sql?: string         // ✅ used in validator test harness
+  group?: string       // ✅ optional group for future filtering
 }
 
+// ✅ Core async loader for any dashboard
 export type DashboardFetchFunction = (
   range: string,
   from?: string,
   to?: string
 ) => Promise<any>
 
+// ✅ Complete top-level dashboard config
 export type DashboardConfig = {
   id: string
   title: string
@@ -128,6 +181,7 @@ export type DashboardConfig = {
   tableColumns: DashboardColumn[]
 }
 
+// ✅ Client-friendly version with prefilled dates
 export type ClientDashboardConfig = Omit<
   DashboardConfig,
   'fetchRecords' | 'fetchMetrics'

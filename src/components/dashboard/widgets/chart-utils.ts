@@ -1,4 +1,6 @@
-type DataItem = { [key: string]: any }
+import { evaluateDataQuality } from '@/components/dashboard/data-quality'
+
+export type DataItem = { [key: string]: any }
 
 export type BucketUnit = 'week'
 
@@ -16,6 +18,7 @@ type BucketOptions = {
   fields: ChartField[]
 }
 
+// 🔧 Shared: normalize dates to week start (Monday)
 function getBucketStart(date: Date): Date {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
   const day = d.getUTCDay()
@@ -36,11 +39,13 @@ export function safeDate(input?: string | null): Date | null {
   return new Date(Date.UTC(raw.getFullYear(), raw.getMonth(), raw.getDate()))
 }
 
+/**
+ * Area chart: time-bucketed aggregation by weekly period.
+ */
 export function getTimeBuckets(
   data: DataItem[],
   options: BucketOptions
 ): { label: string; [key: string]: any }[] {
-  const unit: BucketUnit = 'week' // 🔒 Force weekly always
   const fromDate = new Date(options.from)
   const toDate = new Date(options.to)
   toDate.setUTCHours(23, 59, 59, 999)
@@ -74,4 +79,72 @@ export function getTimeBuckets(
     for (const f of options.fields) obj[f.key] = entry[f.key]
     return obj
   })
+}
+
+type BarChartOptions = {
+  fields?: { key: string; label?: string }[]
+  rules?: { key: string; label: string }[]
+  rulesKey?: string
+  sortBy?: 'label' | 'value'
+  limit?: number
+}
+
+/**
+ * Bar chart: grouped count logic, supports rule-based grouping or simple key group.
+ */
+export function getBarChartData(
+  data: any[],
+  key: string | undefined,
+  options: BarChartOptions = {}
+): { key: string; label: string; value: number }[] {
+  const { fields, rules, sortBy = 'value', limit } = options
+  const counts: Record<string, number> = {}
+
+  if (Array.isArray(rules) && rules.length > 0) {
+    // ✅ Rule-based evaluation
+    for (const row of data) {
+      const issues = evaluateDataQuality(row, rules)
+      for (const issue of issues) {
+        counts[issue] = (counts[issue] || 0) + 1
+      }
+    }
+  } else if (key) {
+    // ✅ Classic filterType-based grouping
+    for (const row of data) {
+      if (!(key in row)) continue
+      const raw = row[key]
+      if (!raw) continue
+
+      const keys = String(raw).split(',').map((k) => k.trim())
+      for (const k of keys) {
+        if (!k) continue
+        counts[k] = (counts[k] || 0) + 1
+      }
+    }
+  }
+
+  let output = Object.entries(counts).map(([label, value]) => {
+    const matchedLabel =
+      fields?.find((f) => f.key === label)?.label ||
+      rules?.find((r) => r.key === label)?.label ||
+      label
+
+    return {
+      key: label,
+      label: matchedLabel,
+      value,
+    }
+  })
+
+  if (sortBy === 'label') {
+    output.sort((a, b) => a.label.localeCompare(b.label))
+  } else {
+    output.sort((a, b) => b.value - a.value)
+  }
+
+  if (limit && limit > 0) {
+    output = output.slice(0, limit)
+  }
+
+  return output
 }

@@ -1,91 +1,83 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-
-import { evaluateDataQuality } from "@/components/dashboard/data-quality";
-import type { ClientDashboardConfig } from "@/components/dashboard/types";
-import ChartAreaInteractive from "@/components/dashboard/widgets/chart-area-interactive";
-import ChartByCreator from "@/components/dashboard/widgets/chart-by-creator";
-import ChartByProject from "@/components/dashboard/widgets/chart-by-project";
-import ChartByStatus from "@/components/dashboard/widgets/chart-by-status";
-import ChartBar from "@/components/dashboard/widgets/chart-bar";
-import { DataTable } from "@/components/dashboard/widgets/data-table";
-import SectionCards from "@/components/dashboard/widgets/section-cards";
+import { useState } from 'react'
+import { DataTable } from '@/components/dashboard/widgets/data-table'
+import SectionCards from '@/components/dashboard/widgets/section-cards'
+import SummaryCards from '@/components/dashboard/widgets/summary-cards'
+import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
+import ChartByStatus from '@/components/dashboard/widgets/chart-by-status'
+import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
+import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
+import ChartBar from '@/components/dashboard/widgets/chart-bar'
+import { applyDataFilters } from '@/components/dashboard/client/data-filters'
+import type { ClientDashboardConfig } from '@/components/dashboard/types'
 
 const widgetMap: Record<string, any> = {
   SectionCards,
+  SummaryCards,
   ChartAreaInteractive,
   ChartByStatus,
   ChartByCreator,
   ChartByProject,
   ChartBar,
-};
+}
 
 type Props = {
-  config: ClientDashboardConfig;
-  metrics: Record<string, any>;
-  records: any[];
-};
+  config: ClientDashboardConfig
+  metrics: any
+  records: any[]
+  from: string
+  to: string
+}
 
-export default function DashboardClient({ config, metrics, records }: Props) {
-  const [filters, setFilters] = useState<{ type: string; value: string }[]>([]);
-
-  useEffect(() => {
-    console.log("📦 CONFIG:", config);
-    console.log("📊 METRICS:", metrics);
-    console.log("📁 RECORDS:", records);
-  }, [config, metrics, records]);
+export default function DashboardClient({ config, metrics, records, from, to }: Props) {
+  const [filters, setFilters] = useState<{ type: string; value: string }[]>([])
 
   const handleFilter = (type: string) => (values: string[]) => {
-    const updated = values.map((val) => ({ type, value: val }));
-    setFilters(updated);
-  };
+    const updated = values.map((val) => ({ type, value: val }))
+    setFilters(updated)
+  }
+
+  const handleClickFilter = (type: string, value: string) => {
+    if (!value || !config.filters[type]) return
+    setFilters([{ type, value }])
+  }
 
   const filteredData =
-    filters.length === 0
-      ? records
-      : records.filter((row) =>
-          filters.every((f) => {
-            if (f.type === "issue") {
-              return evaluateDataQuality(row, config.dataQuality ?? []).includes(f.value);
-            }
-            const field = config.filters[f.type] as string | undefined;
-            if (!field) return true;
-            return row[field] === f.value;
-          }),
-        );
+    filters.length === 0 ? records : applyDataFilters(records, filters, config)
 
   return (
     <div className="grid gap-4">
-      {/* Debugging preview of incoming data */}
-      <pre className="bg-muted overflow-x-auto rounded-md p-2 text-xs">
-        {JSON.stringify(records?.slice(0, 3), null, 2)}
-      </pre>
-
       {config.widgets.map((w, i) => {
-        const Comp = widgetMap[w.component];
-        if (!Comp) return null;
-
-        const props: any = {};
-
-        if (w.key === "tiles") {
-          props.data = config.tiles.map((tile) => ({
-            title: tile.title,
-            ...metrics?.[tile.key],
-          }));
-        } else {
-          props.data = filteredData;
-          if (w.filterType) props.onFilterChange = handleFilter(w.filterType);
+        if (!w || !w.component || !(w.component in widgetMap)) {
+          console.warn('[DashboardClient] ❌ Invalid or unrecognized widget component:', w)
+          return null
         }
 
-        if (w.component === "ChartAreaInteractive") {
-          props.widget = w; // ✅ only ChartAreaInteractive receives `widget`
-        }
+        const Comp = widgetMap[w.component]
 
-        return <Comp key={i} {...props} />;
+        return (
+          <Comp
+            key={i}
+            widget={w}
+            records={records}
+            from={from}
+            to={to}
+            filters={filters}
+            onFilterChange={handleFilter}
+            onClickFilter={handleClickFilter}
+            metrics={metrics}
+            config={config}
+          />
+        )
       })}
 
-      <DataTable data={filteredData} columns={config.tableColumns} />
+      <DataTable
+        key={filteredData.length + filters.map((f) => `${f.type}:${f.value}`).join('|')}
+        data={filteredData}
+        columns={config.tableColumns}
+        rowIdKey={config.rowIdKey}
+      />
     </div>
-  );
+  )
 }
