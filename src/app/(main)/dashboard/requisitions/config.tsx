@@ -270,13 +270,15 @@ export const requisitionsConfig: DashboardConfig = {
      ...chartWidgets,
          {
       component: 'ChartBar',
+      key: 'data_quality_chart', // ✅ widget key (required for indexing/tracking)
       filterType: 'issue',
+        column: 'issue', // ✅ THIS IS MISSING
       title: 'Data Quality Issues',
       description: 'Breakdown of validation issues found in current dataset',
-      layout: 'horizontal',
+      layout: 'vertical',
       rulesKey: 'default',
-      yAxis: { width: 160, fontSize: 12 },
-      xAxis: { hide: true },
+      yAxis: { width: 200, fontSize: 12 },
+      xAxis: { hide: false },
       debug: true, // ✅ Add this
 
     },

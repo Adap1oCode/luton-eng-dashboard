@@ -120,7 +120,11 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           if (w.component === 'ChartBar') {
             commonProps.rules = config.dataQuality ?? []
             commonProps.title = 'Data Quality Issues'
-            commonProps.config = { key: 'issue', column: 'issue' }
+commonProps.config = {
+  ...w,
+  key: 'issue',
+  column: 'issue',
+}
           }
         }
 
