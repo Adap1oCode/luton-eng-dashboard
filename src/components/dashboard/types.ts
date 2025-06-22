@@ -40,10 +40,9 @@ export type DashboardWidget = {
 
   // Interactive toggle-based charts
   toggles?: ToggleGroup[]
-  rulesGroup?: string // ⛔ deprecated
 
   // Optional visual behavior
-  sortBy?: 'value' | 'label'
+  sortBy?: 'label-asc' | 'label-desc' | 'value-asc' | 'value-desc'
   limit?: number
   hideLegend?: boolean
 
@@ -144,7 +143,7 @@ export type DataQualityRule = {
   value?: any
   pattern?: string
   sql?: string         // ✅ used in validator test harness
-  group?: string       // ✅ optional group for future filtering
+  rulesKey?: string       // ✅ optional group for future filtering
 }
 
 // ✅ Core async loader for any dashboard

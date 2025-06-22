@@ -1,12 +1,9 @@
-'use client'
-
 import {
   BarChart,
   Bar,
   CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip,
   ResponsiveContainer,
   Cell,
 } from 'recharts'
@@ -47,7 +44,7 @@ type Props = {
   onFilterChange?: (values: string[]) => void
 }
 
-export default function ChartBar({
+export default function ChartBarVertical({
   config,
   data,
   rules = [],
@@ -61,40 +58,38 @@ export default function ChartBar({
     debug,
   } = config
 
-  const values = rules.length
-    ? rules
-        .map((rule) => {
-          const count = data.reduce((acc, row) => {
-            const val = row[rule.column]
-            switch (rule.type) {
-              case 'is_null':
-                return acc + (val === null || val === undefined || val === '' ? 1 : 0)
-              case 'regex':
-                return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
-              case 'equals':
-                return acc + (val !== rule.value ? 1 : 0)
-              case 'gt':
-                return acc + (val <= rule.value ? 1 : 0)
-              case 'lt':
-                return acc + (val >= rule.value ? 1 : 0)
-              default:
-                return acc
-            }
-          }, 0)
+  const newValues = rules.map((rule) => {
+    const count = data.reduce((acc, row) => {
+      const val = row[rule.column]
+      switch (rule.type) {
+        case 'is_null':
+          return acc + (val === null || val === undefined || val === '' ? 1 : 0)
+        case 'regex':
+          return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
+        case 'equals':
+          return acc + (val !== rule.value ? 1 : 0)
+        case 'gt':
+          return acc + (val <= rule.value ? 1 : 0)
+        case 'lt':
+          return acc + (val >= rule.value ? 1 : 0)
+        default:
+          return acc
+      }
+    }, 0)
 
-          return { key: rule.key, label: rule.label, count }
-        })
-        .sort((a, b) => b.count - a.count)
-    : []
+    return { key: rule.key, label: rule.label, count }
+  })
 
   if (debug) {
-    console.group('[ChartBar DEBUG]')
+    console.group('[ChartBarVertical DEBUG]')
     console.log('📦 config:', config)
     console.log('📊 data.length:', data.length)
     console.log('🧮 rules:', rules)
-    console.log('✅ values:', values)
+    console.log('✅ new values output:', newValues)
     console.groupEnd()
   }
+
+  const chartData = newValues
 
   return (
     <Card className="@container/card">
@@ -106,19 +101,13 @@ export default function ChartBar({
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
           className="h-[260px] w-full"
-config={Object.fromEntries(
-  values.map((d, i) => [
-    d.label,
-    {
-      label: d.label,
-      color: `var(--color-${d.label.replace(/\s+/g, '-')})`,
-    },
-  ])
-)}
+          config={Object.fromEntries(
+            chartData.map((d) => [d.label, { label: d.label }])
+          )}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={values}
+              data={chartData}
               layout="vertical"
               barCategoryGap="20%"
             >
@@ -170,7 +159,7 @@ config={Object.fromEntries(
                 onClick={(entry) => onFilterChange?.([entry.key])}
                 cursor="pointer"
               >
-                {values.map((_, i) => (
+                {chartData.map((_, i) => (
                   <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
                 ))}
               </Bar>

@@ -216,7 +216,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Due Date',
       column: 'due_date',
       type: 'is_null',
-      group: 'default',
+      rulesKey: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
     },
     {
@@ -224,7 +224,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Order Date',
       column: 'order_date',
       type: 'is_null',
-      group: 'default',
+      rulesKey: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
     },
     {
@@ -232,7 +232,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Created By',
       column: 'created_by',
       type: 'is_null',
-      group: 'default',
+      rulesKey: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
     },
     {
@@ -240,7 +240,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Project Number',
       column: 'project_number',
       type: 'is_null',
-      group: 'default',
+      rulesKey: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
     },
     {
@@ -248,7 +248,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Missing Warehouse',
       column: 'warehouse',
       type: 'is_null',
-      group: 'default',
+      rulesKey: 'default',
       sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
     },
     {
@@ -256,7 +256,7 @@ export const requisitionsConfig: DashboardConfig = {
       label: 'Invalid Requisition Order Number',
       column: 'requisition_order_number',
       type: 'regex',
-      group: 'default',
+      rulesKey: 'default',
       pattern: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$",
       sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
     }
@@ -268,21 +268,26 @@ export const requisitionsConfig: DashboardConfig = {
     { component: 'SummaryCards', key: 'tiles', group: 'summary' },
     { component: 'SectionCards', key: 'tiles', group: 'trends' },
      ...chartWidgets,
-         {
-      component: 'ChartBar',
-      key: 'data_quality_chart', // ✅ widget key (required for indexing/tracking)
-      filterType: 'issue',
-        column: 'issue', // ✅ THIS IS MISSING
-      title: 'Data Quality Issues',
-      description: 'Breakdown of validation issues found in current dataset',
-      layout: 'vertical',
-      rulesKey: 'default',
-      yAxis: { width: 200, fontSize: 12 },
-      xAxis: { hide: false },
-      debug: true, // ✅ Add this
-
-    },
-    { component: 'ChartByStatus', filterType: 'status' },
+    {
+  component: 'ChartBarVertical',
+  key: 'data_quality_chart',
+  title: 'Data Quality Issues',
+  description: 'Breakdown of validation issues found in current dataset',
+  rulesKey: 'default',
+  clickable: true,
+  sortBy: 'label-asc',
+  debug: true
+},
+{
+  component: 'ChartBarVertical',
+  key: 'status_chart',
+  title: 'Records by Status',
+  description: 'Status distribution of requisitions in current range',
+  column: 'status',
+  clickable: true,
+  sortBy: 'value-desc',
+  debug: true
+},
     { component: 'ChartByCreator', filterType: 'creator' },
     { component: 'ChartByProject', filterType: 'project' },
   ],

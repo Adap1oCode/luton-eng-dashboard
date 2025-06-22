@@ -8,7 +8,7 @@ import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-inte
 import ChartByStatus from '@/components/dashboard/widgets/chart-by-status'
 import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
-import ChartBar from '@/components/dashboard/widgets/chart-bar'
+import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { buildTiles } from '@/components/dashboard/client/build-tiles'
 import { applyDataFilters } from '@/components/dashboard/client/data-filters'
@@ -21,7 +21,7 @@ const widgetMap: Record<string, any> = {
   ChartByStatus,
   ChartByCreator,
   ChartByProject,
-  ChartBar,
+  ChartBarVertical,
 }
 
 type Props = {
@@ -104,27 +104,30 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
         }
 
         if (
-          w.component === 'ChartBar' ||
+          w.component === 'ChartBarVertical' ||
           w.component === 'ChartByStatus' ||
           w.component === 'ChartByCreator' ||
           w.component === 'ChartByProject'
         ) {
-          const evaluated = records.map((row) => ({
-            ...row,
-            issue: evaluateDataQuality(row, config.dataQuality ?? []),
-          }))
+          // Only apply data quality evaluation if rulesKey is explicitly defined
+          const evaluated = w.rulesKey
+            ? records.map((row) => ({
+                ...row,
+                issue: evaluateDataQuality(row, config.dataQuality ?? []),
+              }))
+            : records
 
           commonProps.records = records
           commonProps.data = evaluated
 
-          if (w.component === 'ChartBar') {
-            commonProps.rules = config.dataQuality ?? []
-            commonProps.title = 'Data Quality Issues'
-commonProps.config = {
-  ...w,
-  key: 'issue',
-  column: 'issue',
-}
+          if (w.component === 'ChartBarVertical') {
+            if (w.rulesKey && config.dataQuality) {
+              commonProps.rules = config.dataQuality
+            }
+
+            commonProps.config = {
+              ...w, // includes title, column, layout, etc.
+            }
           }
         }
 
