@@ -110,8 +110,8 @@ export default function ChartBarHorizontal({
   }
 
   return (
-    <Card className="@container/card rounded-2xl shadow-sm border bg-card text-card-foreground">
-      <CardHeader className="p-6 pb-2">
+    <Card className="@container/card">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>

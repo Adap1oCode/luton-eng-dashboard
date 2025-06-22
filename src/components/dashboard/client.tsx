@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState } from 'react'
 import { DataTable } from '@/components/dashboard/widgets/data-table'
@@ -66,7 +66,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
     filters.length === 0 ? records : applyDataFilters(records, filters, config)
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-12">
       {config.widgets.map((w, i) => {
         const Comp = widgetMap[w.component]
         if (!Comp) return null
@@ -81,7 +81,6 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
 
         const metricTiles = metrics[group] ?? []
 
-        // 🎯 Default props for all widgets
         const commonProps: any = {
           config: w,
           from,
@@ -89,12 +88,10 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           onClickFilter: handleClickFilter,
         }
 
-        // 🎯 Add onFilterChange if supported
         if (w.filterType) {
           commonProps.onFilterChange = handleFilter(w.filterType)
         }
 
-        // 🎯 Summary / Section cards use buildTiles
         if (w.component === 'SummaryCards' || w.component === 'SectionCards') {
           commonProps.config = buildTiles(
             configTiles,
@@ -105,13 +102,9 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           )
         }
 
-        // 🎯 For charts: attach records and rule-evaluated data
-        const isChart =
-          w.component !== 'SummaryCards' &&
-          w.component !== 'SectionCards'
+        const isChart = w.component !== 'SummaryCards' && w.component !== 'SectionCards'
 
         if (isChart) {
-          // Evaluate dataQuality rules only if rulesKey is defined
           const chartRecords = w.rulesKey
             ? records.map((row) => ({
                 ...row,
@@ -126,15 +119,30 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           }
         }
 
-        return <Comp key={i} {...commonProps} />
+        const spanClass =
+          Number(w.span) === 2
+            ? 'col-span-12 lg:col-span-6'
+            : Number(w.span) === 3
+            ? 'col-span-12 lg:col-span-4'
+            : 'col-span-12'
+
+        return (
+          <div key={i} className={`${spanClass} flex flex-col`}>
+            <div className="flex-1 flex flex-col min-h-[280px]">
+              <Comp {...commonProps} />
+            </div>
+          </div>
+        )
       })}
 
-      <DataTable
-        key={filteredData.length + filters.map((f) => `${f.type}:${f.value}`).join('|')}
-        data={filteredData}
-        columns={config.tableColumns}
-        rowIdKey={config.rowIdKey}
-      />
+      <div className="col-span-12">
+        <DataTable
+          key={filteredData.length + filters.map((f) => `${f.type}:${f.value}`).join('|')}
+          data={filteredData}
+          columns={config.tableColumns}
+          rowIdKey={config.rowIdKey}
+        />
+      </div>
     </div>
   )
 }

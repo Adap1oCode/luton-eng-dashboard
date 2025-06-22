@@ -33,7 +33,7 @@ export type DashboardWidget = {
 
   // 📐 Layout & sizing
   layout?: 'horizontal' | 'vertical'
-  span?: '1/1' | '1/2' | '1/3'    // NEW: layout hint for grid sizing
+  span?: number  // NEW: layout hint for grid sizing
 
   // 📊 Chart axis config (optional, only for bar/line)
   xAxis?: AxisConfig

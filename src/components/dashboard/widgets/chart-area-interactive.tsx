@@ -165,16 +165,21 @@ export default function ChartAreaInteractive({ data, from, to, config }: Props) 
               width={32}
               tick={{ fontSize: 12 }}
             />
-            <ChartTooltip
-              cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
-              defaultIndex={isMobile ? -1 : 10}
-              content={
-                <ChartTooltipContent
-                  indicator="dot"
-                  labelFormatter={(val) => `Week of ${val}`}
-                />
-              }
-            />
+<ChartTooltip
+  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+  defaultIndex={isMobile ? -1 : 10}
+  content={({ payload, label }) =>
+    payload && payload.length ? (
+      <ChartTooltipContent
+        indicator="dot"
+        labelFormatter={(val) => `Week of ${val}`}
+        payload={payload}
+        label={label}
+      />
+    ) : null
+  }
+/>
+
             {fields.map((f) => (
               <Area
                 key={f.key}

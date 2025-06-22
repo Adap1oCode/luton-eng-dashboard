@@ -287,7 +287,7 @@ export const requisitionsConfig: DashboardConfig = {
   column: 'status',
   clickable: true,
   sortBy: 'value-desc',
-  span: '1/2',
+  span: 2,
   debug: true
 },
 {
@@ -297,7 +297,7 @@ export const requisitionsConfig: DashboardConfig = {
   description: 'Breakdown of records grouped by created_by',
   column: 'created_by',       // this replaces hardcoded accessor logic
   filterType: 'creator',
-  span: '1/2',
+  span: 2,
   debug: true,                // optional: for console logs
 },
 {

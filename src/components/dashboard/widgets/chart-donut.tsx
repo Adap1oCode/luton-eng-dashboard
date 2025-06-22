@@ -4,7 +4,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
   ResponsiveContainer,
 } from 'recharts'
 
@@ -24,7 +23,14 @@ import {
 
 import type { DashboardWidget } from '@/components/dashboard/types'
 
-type Props = {
+// Utility to check if date is within range
+function isWithinRange(dateStr: string | null | undefined, from: string, to: string): boolean {
+  if (!dateStr) return false
+  const date = new Date(dateStr)
+  return date >= new Date(from) && date <= new Date(to)
+}
+
+interface Props {
   config: DashboardWidget & {
     column?: string
     debug?: boolean
@@ -42,38 +48,22 @@ export default function ChartDonut({
   to,
   onFilterChange,
 }: Props) {
-  if (!config) {
-    console.warn('[ChartDonut] Missing config prop — chart will not render')
-    return null
-  }
-
   const {
     title,
     description,
-    column,
+    column = 'key',
     debug,
   } = config
 
-  if (!column) {
-    if (debug) console.warn('[ChartDonut] Missing config.column')
-    return null
-  }
-
-  // ...rest of logic
-
-
-  const fromDate = new Date(from)
-  const toDate = new Date(to)
+  // ✅ Filter by from/to
+  const filtered = data.filter((row) =>
+    isWithinRange(row.created_at ?? row.order_date, from, to)
+  )
 
   const counts: Record<string, number> = {}
-  for (const row of data) {
-    if (!row.order_date) continue
-
-    const orderDate = new Date(row.order_date)
-    if (orderDate >= fromDate && orderDate <= toDate) {
-      const key = row[column] ?? 'Unknown'
-      counts[key] = (counts[key] ?? 0) + 1
-    }
+  for (const row of filtered) {
+    const key = row[column]?.toString().trim() || 'Unknown'
+    counts[key] = (counts[key] ?? 0) + 1
   }
 
   const chartData = Object.entries(counts)
@@ -83,21 +73,22 @@ export default function ChartDonut({
   if (debug) {
     console.group('[ChartDonut DEBUG]')
     console.log('📦 config:', config)
-    console.log('📊 filtered data.length:', data.length)
+    console.log('📊 input data.length:', data.length)
+    console.log('📆 filtered data.length:', filtered.length)
     console.log('🧮 generated chartData:', chartData)
     console.groupEnd()
   }
 
   return (
-    <Card className="@container/card rounded-2xl shadow-sm border bg-card text-card-foreground">
-      <CardHeader className="p-6 pb-2">
+    <Card className="@container/card">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
 
-      <CardContent className="p-6 pt-0">
+      <CardContent className="px-0 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
-          className="min-h-[260px] h-auto w-full"
+          className="aspect-square max-h-[260px] w-full mx-auto"
           config={Object.fromEntries(chartData.map((d) => [d.name, { label: d.name }]))}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -108,9 +99,9 @@ export default function ChartDonut({
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                innerRadius={50}
-                outerRadius={90}
-                paddingAngle={4}
+                innerRadius={60}
+                outerRadius={110}
+                paddingAngle={0}
                 labelLine={false}
                 label={({ name, percent }) =>
                   `${name} (${Math.round(percent * 100)}%)`
