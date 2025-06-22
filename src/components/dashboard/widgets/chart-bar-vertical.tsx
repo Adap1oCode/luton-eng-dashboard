@@ -127,12 +127,12 @@ export default function ChartBarVertical({
             <BarChart
               data={chartData}
               layout="vertical"
-              barCategoryGap="20%"
             >
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--border)"
                 vertical={false}
+                horizontal={false}
               />
 
               <YAxis
@@ -173,7 +173,6 @@ export default function ChartBarVertical({
               <Bar
                 dataKey="count"
                 radius={[5, 5, 5, 5]}
-                barSize={32}
                 onClick={(entry) => onFilterChange?.([entry.key])}
                 cursor="pointer"
               >
