@@ -31,7 +31,7 @@ const CHART_REQUIREMENTS: Record<string, (keyof DashboardWidget)[]> = {
   ChartBar: ['filterType', 'rulesKey'],
   ChartAreaInteractive: ['toggles'],
   ChartByStatus: ['filterType'],
-  ChartByCreator: ['filterType'],
+  ChartDonut: ['filterType'],
   ChartByProject: ['filterType'],
 }
 

@@ -32,7 +32,7 @@ export const purchaseOrdersConfig: DashboardConfig = {
     { component: 'ChartAreaInteractive' },
     { component: 'ChartMissingData', filterType: 'issue' },
     { component: 'ChartByStatus', filterType: 'status' },
-    { component: 'ChartByCreator', filterType: 'vendor' },
+    { component: 'ChartDonut', filterType: 'vendor' },
     { component: 'ChartByProject', filterType: 'warehouse' }
   ],
 

@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import TileRow from '@/components/widgets/tile-row'
 import ChartMonthly from '@/components/widgets/chart-monthly'
 import ChartByStatus from '@/components/widgets/chart-by-status'
-import ChartByCreator from '@/components/widgets/chart-by-creator'
+import ChartDonut from '@/components/widgets/chart-by-creator'
 import ChartByProject from '@/components/widgets/chart-by-project'
 import RequisitionTable from './_components/requisition-table'
 import { columns } from './_components/columns'
@@ -31,7 +31,7 @@ export default function RequisitionsPage() {
       <ChartMonthly data={requisitions} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ChartByStatus data={requisitions} />
-        <ChartByCreator data={requisitions} />
+        <ChartDonut data={requisitions} />
         <ChartByProject data={requisitions} className="md:col-span-2" />
       </div>
       <RequisitionTable table={table} columns={columns} />

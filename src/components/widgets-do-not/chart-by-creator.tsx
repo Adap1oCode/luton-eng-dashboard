@@ -36,7 +36,7 @@ function isInRange(dateStr: string | null, range: '90d' | '180d' | 'all') {
 
 const COLORS = ['#3b82f6', '#0ea5e9', '#6366f1', '#8b5cf6', '#f97316', '#10b981', '#ef4444']
 
-export default function ChartByCreator({ data }: { data: Requisition[] }) {
+export default function ChartDonut({ data }: { data: Requisition[] }) {
   const [range, setRange] = useState<'90d' | '180d' | 'all'>('90d')
 
   const counts: Record<string, number> = {}

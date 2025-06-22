@@ -6,9 +6,10 @@ import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
 import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
 import ChartByStatus from '@/components/dashboard/widgets/chart-by-status'
-import ChartByCreator from '@/components/dashboard/widgets/chart-by-creator'
+import ChartDonut from '@/components/dashboard/widgets/chart-donut'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
+import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { buildTiles } from '@/components/dashboard/client/build-tiles'
 import { applyDataFilters } from '@/components/dashboard/client/data-filters'
@@ -19,9 +20,10 @@ const widgetMap: Record<string, any> = {
   SummaryCards,
   ChartAreaInteractive,
   ChartByStatus,
-  ChartByCreator,
+  ChartDonut,
   ChartByProject,
   ChartBarVertical,
+  ChartBarHorizontal,
 }
 
 type Props = {
@@ -79,16 +81,21 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
 
         const metricTiles = metrics[group] ?? []
 
+        // 🎯 Default props for all widgets
         const commonProps: any = {
+          config: w,
           from,
           to,
           onClickFilter: handleClickFilter,
         }
 
-        if (
-          w.component === 'SummaryCards' ||
-          w.component === 'SectionCards'
-        ) {
+        // 🎯 Add onFilterChange if supported
+        if (w.filterType) {
+          commonProps.onFilterChange = handleFilter(w.filterType)
+        }
+
+        // 🎯 Summary / Section cards use buildTiles
+        if (w.component === 'SummaryCards' || w.component === 'SectionCards') {
           commonProps.config = buildTiles(
             configTiles,
             metricTiles,
@@ -98,41 +105,25 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           )
         }
 
-        if (w.component === 'ChartAreaInteractive') {
-          commonProps.data = records
-          commonProps.config = w
-        }
+        // 🎯 For charts: attach records and rule-evaluated data
+        const isChart =
+          w.component !== 'SummaryCards' &&
+          w.component !== 'SectionCards'
 
-        if (
-          w.component === 'ChartBarVertical' ||
-          w.component === 'ChartByStatus' ||
-          w.component === 'ChartByCreator' ||
-          w.component === 'ChartByProject'
-        ) {
-          // Only apply data quality evaluation if rulesKey is explicitly defined
-          const evaluated = w.rulesKey
+        if (isChart) {
+          // Evaluate dataQuality rules only if rulesKey is defined
+          const chartRecords = w.rulesKey
             ? records.map((row) => ({
                 ...row,
                 issue: evaluateDataQuality(row, config.dataQuality ?? []),
               }))
             : records
 
-          commonProps.records = records
-          commonProps.data = evaluated
+          commonProps.data = chartRecords
 
-          if (w.component === 'ChartBarVertical') {
-            if (w.rulesKey && config.dataQuality) {
-              commonProps.rules = config.dataQuality
-            }
-
-            commonProps.config = {
-              ...w, // includes title, column, layout, etc.
-            }
+          if (w.rulesKey && config.dataQuality) {
+            commonProps.rules = config.dataQuality
           }
-        }
-
-        if (w.filterType) {
-          commonProps.onFilterChange = handleFilter(w.filterType)
         }
 
         return <Comp key={i} {...commonProps} />

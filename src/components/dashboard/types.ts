@@ -19,34 +19,33 @@ export type AxisConfig = boolean | { hide?: boolean; fontSize?: number; width?: 
 
 // ✅ Widget config block for dashboard layout
 export type DashboardWidget = {
+  // 🔑 Core widget info
   key?: string
-  group?: string
+  component: string
   title?: string
   description?: string
-  component: string
-  debug?: boolean
+  group?: string // e.g. 'tiles', 'trends', 'summary'
 
-  // Used for chart filtering (e.g., status, project, issue)
-  filterType?: string
-  clickable?: boolean              // ✅ enable click-to-filter (default: false)
+  // 🎯 Filtering & interactivity
+  filterType?: string      // e.g. 'status', 'creator'
+  clickable?: boolean      // Enables click-to-filter (default: false)
+  onClickFilter?: (type: string, value: string) => void
 
-  // Layout control for charts
+  // 📐 Layout & sizing
   layout?: 'horizontal' | 'vertical'
+  span?: '1/1' | '1/2' | '1/3'    // NEW: layout hint for grid sizing
+
+  // 📊 Chart axis config (optional, only for bar/line)
   xAxis?: AxisConfig
   yAxis?: AxisConfig
 
-  // Reference to group of rules for validator-based charts
-  rulesKey?: string
+  // 🧪 Data quality rules (for validation charts)
+  rulesKey?: string               // Reference key for rule group
+  column?: string                // Column used in evaluation
+  rules?: any[]                  // Optional inline rule set
 
-  // Interactive toggle-based charts
-  toggles?: ToggleGroup[]
-
-  // Optional visual behavior
-  sortBy?: 'label-asc' | 'label-desc' | 'value-asc' | 'value-desc'
-  limit?: number
-  hideLegend?: boolean
-
-  // Simple static field definition
+  // 🧰 Advanced chart features
+  toggles?: ToggleGroup[]        // For interactive time-based charts
   fields?: {
     key: string
     label: string
@@ -56,9 +55,11 @@ export type DashboardWidget = {
     band?: string
   }[]
 
-  // ✅ NEW: for evaluated rule-based charts like ChartBar
-  column?: string
-  rules?: any[]
+  // 🎨 Display modifiers
+  sortBy?: 'label-asc' | 'label-desc' | 'value-asc' | 'value-desc'
+  limit?: number
+  hideLegend?: boolean
+  debug?: boolean
 }
 
 

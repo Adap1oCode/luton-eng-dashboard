@@ -273,6 +273,7 @@ export const requisitionsConfig: DashboardConfig = {
   key: 'data_quality_chart',
   title: 'Data Quality Issues',
   description: 'Breakdown of validation issues found in current dataset',
+  layout: 'vertical', // ✅ NEW
   rulesKey: 'default',
   clickable: true,
   sortBy: 'label-asc',
@@ -286,10 +287,29 @@ export const requisitionsConfig: DashboardConfig = {
   column: 'status',
   clickable: true,
   sortBy: 'value-desc',
+  span: '1/2',
   debug: true
 },
-    { component: 'ChartByCreator', filterType: 'creator' },
-    { component: 'ChartByProject', filterType: 'project' },
+{
+  key: 'records_by_creator',
+  component: 'ChartDonut',
+  title: 'Records by Creator',
+  description: 'Breakdown of records grouped by created_by',
+  column: 'created_by',       // this replaces hardcoded accessor logic
+  filterType: 'creator',
+  span: '1/2',
+  debug: true,                // optional: for console logs
+},
+{
+  key: 'records_by_project',
+  component: 'ChartBarHorizontal', // still pointing to ChartBarVertical for now
+  title: 'Records by Project',
+  description: 'Breakdown by project_number',
+  column: 'project_number',
+  filterType: 'project_number',
+  debug: true,
+},
+
   ],
 
   tableColumns: [
