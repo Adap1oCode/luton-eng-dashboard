@@ -25,6 +25,20 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { DashboardWidget } from '@/components/dashboard/types'
 
+/** ✅ NEW: utility to generate values from generic column count */
+function generateColumnCounts(records: any[], column: string) {
+  const counts: Record<string, number> = {}
+  for (const row of records) {
+    const val = row[column] ?? 'Unknown'
+    counts[val] = (counts[val] ?? 0) + 1
+  }
+  return Object.entries(counts).map(([key, count]) => ({
+    key,
+    label: key,
+    count,
+  }))
+}
+
 type Rule = {
   key: string
   label: string
@@ -58,38 +72,42 @@ export default function ChartBarVertical({
     debug,
   } = config
 
-  const newValues = rules.map((rule) => {
-    const count = data.reduce((acc, row) => {
-      const val = row[rule.column]
-      switch (rule.type) {
-        case 'is_null':
-          return acc + (val === null || val === undefined || val === '' ? 1 : 0)
-        case 'regex':
-          return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
-        case 'equals':
-          return acc + (val !== rule.value ? 1 : 0)
-        case 'gt':
-          return acc + (val <= rule.value ? 1 : 0)
-        case 'lt':
-          return acc + (val >= rule.value ? 1 : 0)
-        default:
-          return acc
-      }
-    }, 0)
+  let chartData: { key: string; label: string; count: number }[] = []
 
-    return { key: rule.key, label: rule.label, count }
-  })
+  if (rules.length > 0) {
+    chartData = rules.map((rule) => {
+      const count = data.reduce((acc, row) => {
+        const val = row[rule.column]
+        switch (rule.type) {
+          case 'is_null':
+            return acc + (val === null || val === undefined || val === '' ? 1 : 0)
+          case 'regex':
+            return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
+          case 'equals':
+            return acc + (val !== rule.value ? 1 : 0)
+          case 'gt':
+            return acc + (val <= rule.value ? 1 : 0)
+          case 'lt':
+            return acc + (val >= rule.value ? 1 : 0)
+          default:
+            return acc
+        }
+      }, 0)
+
+      return { key: rule.key, label: rule.label, count }
+    })
+  } else {
+    chartData = generateColumnCounts(data, column)
+  }
 
   if (debug) {
     console.group('[ChartBarVertical DEBUG]')
     console.log('📦 config:', config)
     console.log('📊 data.length:', data.length)
     console.log('🧮 rules:', rules)
-    console.log('✅ new values output:', newValues)
+    console.log('✅ new values output:', chartData)
     console.groupEnd()
   }
-
-  const chartData = newValues
 
   return (
     <Card className="@container/card">
