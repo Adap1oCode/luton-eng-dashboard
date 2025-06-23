@@ -18,7 +18,7 @@ const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
 
 type Props = {
   config: DashboardTile[]
-  onClickFilter?: (type: string, value: string) => void
+  onClickFilter?: (column: string, value: string) => void
 }
 
 function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | 'danger' | undefined {
@@ -45,13 +45,24 @@ export default function SummaryCards({ config, onClickFilter }: Props) {
             : null
 
         const clickFilter = getClickFilter(tile)
-        const hasClickHandler = tile.onClick || (tile.clickable && clickFilter && onClickFilter)
+
+        const isSimpleFilter = clickFilter && 'column' in clickFilter
+        const hasClickHandler =
+          tile.onClick || (tile.clickable && isSimpleFilter && onClickFilter)
 
         const handleClick = () => {
           if (tile.onClick) {
             tile.onClick()
-          } else if (tile.clickable && clickFilter && onClickFilter) {
-            onClickFilter(clickFilter.type, clickFilter.value)
+          } else if (
+            tile.clickable &&
+            isSimpleFilter &&
+            onClickFilter &&
+            clickFilter.column &&
+            (clickFilter.contains !== undefined || clickFilter.equals !== undefined)
+          ) {
+            const column = clickFilter.column
+            const rawValue = clickFilter.contains ?? clickFilter.equals
+            onClickFilter(column, String(rawValue))
           }
         }
 

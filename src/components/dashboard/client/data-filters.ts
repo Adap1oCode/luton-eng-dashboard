@@ -1,88 +1,92 @@
-// File: src/components/dashboard/client/data-filters.ts
+// data-filters.ts
 
-import type { ClientDashboardConfig, DashboardTile } from '@/components/dashboard/types'
+export type Filter =
+  | {
+      column: string
+      type?: string
+      equals?: string | number | boolean
+      notEquals?: string | number | boolean
+      lt?: number | string
+      lte?: number | string
+      gt?: number | string
+      gte?: number | string
+      contains?: string
+      notContains?: string
+      in?: (string | number)[]
+      notIn?: (string | number)[]
+    }
+  | {
+      and: Filter[]
+    }
+  | {
+      or: Filter[]
+    }
 
-export function isDateString(val: any): boolean {
-  return typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)
+export function isDateString(value: any): boolean {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
-export function isInRange(date: string, from?: string, to?: string): boolean {
-  if (!date || !from || !to) return false
-  const d = new Date(date)
-  return d >= new Date(from) && d <= new Date(to)
-}
-
-export function evaluateFilter(row: Record<string, any>, filter?: any): boolean {
-  if (!filter) return false
-
-  const match = (f: any): boolean => {
-    if ('and' in f) return f.and.every(match)
-    if ('or' in f) return f.or.some(match)
-
-    const field = row[f.column]
-    const fieldIsDate = isDateString(field)
-
-    if (f.eq !== undefined) return field === f.eq
-    if (f.contains !== undefined) return typeof field === 'string' && field.toLowerCase().includes(f.contains.toLowerCase())
-    if (f.not_contains !== undefined) return typeof field === 'string' && !field.toLowerCase().includes(f.not_contains.toLowerCase())
-    if (f.lt !== undefined) {
-      if (fieldIsDate && isDateString(f.lt)) return new Date(field) < new Date(f.lt)
-      return field < f.lt
-    }
-    if (f.gt !== undefined) {
-      if (fieldIsDate && isDateString(f.gt)) return new Date(field) > new Date(f.gt)
-      return field > f.gt
-    }
-    if (f.isNull !== undefined) {
-      return f.isNull
-        ? field === null || field === undefined || field === ''
-        : field !== null && field !== undefined && field !== ''
-    }
-
-    return false
+// ✅ Core: compile any filter to a performant function
+export function compileFilter(filter: Filter): (row: Record<string, any>) => boolean {
+  if ('and' in filter) {
+    const subs = filter.and.map(compileFilter)
+    return (row) => subs.every((fn) => fn(row))
   }
 
-  return match(filter)
+  if ('or' in filter) {
+    const subs = filter.or.map(compileFilter)
+    return (row) => subs.some((fn) => fn(row))
+  }
+
+  const col = filter.column
+
+  return (row) => {
+    const raw = row[col]
+    const isString = typeof raw === 'string'
+    const val = isString ? raw.toLowerCase() : raw
+
+    if (filter.equals !== undefined) return raw === filter.equals
+    if (filter.notEquals !== undefined) return raw !== filter.notEquals
+    if (filter.lt !== undefined) return raw < filter.lt
+    if (filter.lte !== undefined) return raw <= filter.lte
+    if (filter.gt !== undefined) return raw > filter.gt
+    if (filter.gte !== undefined) return raw >= filter.gte
+    if (filter.contains !== undefined && isString) return val.includes(filter.contains.toLowerCase())
+    if (filter.notContains !== undefined && isString) return !val.includes(filter.notContains.toLowerCase())
+    if (filter.in) return filter.in.includes(raw)
+    if (filter.notIn) return !filter.notIn.includes(raw)
+
+    return true
+  }
 }
+
+// ✅ Main API: applies one or many filters (memoized compile)
+const filterCache = new WeakMap<Filter, (row: Record<string, any>) => boolean>()
 
 export function applyDataFilters(
   records: any[],
-  filters: { type: string; value: string }[],
-  config: ClientDashboardConfig
+  filters: Filter | Filter[] = [],
+  config?: any
 ): any[] {
-  return records.filter((row) => {
-    return filters.every((f) => {
-      if (f.type === 'issue') {
-        const issues = config.dataQuality ? config.dataQuality.map(rule => rule.key) : []
-        return issues.includes(f.value)
-      }
+  if (!filters || records.length === 0) return records
 
-      const field = config.filters[f.type] as string | undefined
-      if (!field) return true
-
-      const rowVal = row[field]
-      if (f.value === '') return true
-
-      if (typeof rowVal === 'string') {
-        return rowVal.toLowerCase().includes(f.value.toLowerCase())
-      }
-
-      return rowVal === f.value
-    })
+  const list = Array.isArray(filters) ? filters : [filters]
+  const compiled = list.map((f) => {
+    if (filterCache.has(f)) return filterCache.get(f)!
+    const fn = compileFilter(f)
+    filterCache.set(f, fn)
+    return fn
   })
+
+  return records.filter((row) => compiled.every((fn) => fn(row)))
 }
 
-export function getClickFilter(tile: DashboardTile): { type: string; value: string } | null {
-  const filter = tile.filter as any
-  if (!tile.clickable || !filter) return null
+// ✅ Used in clickable tiles (e.g. SummaryCards)
+export function getClickFilter(tile: any): Filter | null {
+  if (!tile || !tile.filterType || tile.value === undefined || tile.value === null) return null
 
-  if ('column' in filter && 'contains' in filter) {
-    return { type: filter.column, value: filter.contains }
+  return {
+    column: tile.filterType,
+    equals: tile.value,
   }
-
-  if ('column' in filter && 'eq' in filter) {
-    return { type: filter.column, value: String(filter.eq) }
-  }
-
-  return null
 }

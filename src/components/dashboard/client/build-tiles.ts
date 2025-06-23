@@ -1,4 +1,4 @@
-import { isDateString, evaluateFilter } from './data-filters'
+import { isDateString, compileFilter } from './data-filters'
 
 export function buildTiles(
   configTiles: any[],
@@ -20,8 +20,9 @@ export function buildTiles(
     let direction: 'up' | 'down' | undefined
 
     if (tile.filter) {
-      const matches = currentRecords.filter((r) => evaluateFilter(r, tile.filter))
-      const prevMatches = previousRecords.filter((r) => evaluateFilter(r, tile.filter))
+      const filterFn = compileFilter(tile.filter)
+      const matches = currentRecords.filter(filterFn)
+      const prevMatches = previousRecords.filter(filterFn)
       value = matches.length
       previous = prevMatches.length
 
@@ -37,8 +38,10 @@ export function buildTiles(
         direction = undefined
       }
     } else if (tile.percentage) {
-      const num = currentRecords.filter((r) => evaluateFilter(r, tile.percentage!.numerator)).length
-      const denom = currentRecords.filter((r) => evaluateFilter(r, tile.percentage!.denominator)).length || 1
+      const numFn = compileFilter(tile.percentage!.numerator)
+      const denomFn = compileFilter(tile.percentage!.denominator)
+      const num = currentRecords.filter(numFn).length
+      const denom = currentRecords.filter(denomFn).length || 1
       value = parseFloat(((num / denom) * 100).toFixed(1))
       trend = undefined
       direction = undefined
@@ -58,9 +61,8 @@ export function buildTiles(
       direction = undefined
     }
 
-    // Ensure clickable + filter propagate through
     const clickFilter = tile.clickFilter || (
-      tile.filter && tile.matchKey ? { type: tile.matchKey, value: tile.key } : undefined
+      tile.filter && tile.matchKey ? { column: tile.matchKey, contains: tile.key } : undefined
     )
 
     return {
