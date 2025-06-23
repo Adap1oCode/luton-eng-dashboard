@@ -1,5 +1,3 @@
-// types.ts
-
 // ✅ Toggle group for ChartAreaInteractive
 export type ToggleGroup = {
   key: string
@@ -16,53 +14,6 @@ export type ToggleGroup = {
 
 export type AxisConfig = boolean | { hide?: boolean; fontSize?: number; width?: number }
 
-
-// ✅ Widget config block for dashboard layout
-export type DashboardWidget = {
-  // 🔑 Core widget info
-  key?: string
-  component: string
-  title?: string
-  description?: string
-  group?: string // e.g. 'tiles', 'trends', 'summary'
-
-  // 🎯 Filtering & interactivity
-  filterType?: string      // e.g. 'status', 'creator'
-  clickable?: boolean      // Enables click-to-filter (default: false)
-  onClickFilter?: (type: string, value: string) => void
-
-  // 📐 Layout & sizing
-  layout?: 'horizontal' | 'vertical'
-  span?: number  // NEW: layout hint for grid sizing
-
-  // 📊 Chart axis config (optional, only for bar/line)
-  xAxis?: AxisConfig
-  yAxis?: AxisConfig
-
-  // 🧪 Data quality rules (for validation charts)
-  rulesKey?: string               // Reference key for rule group
-  column?: string                // Column used in evaluation
-  rules?: any[]                  // Optional inline rule set
-
-  // 🧰 Advanced chart features
-  toggles?: ToggleGroup[]        // For interactive time-based charts
-  fields?: {
-    key: string
-    label: string
-    color?: string
-    accessor?: (row: any) => string | null | undefined
-    type?: string
-    band?: string
-  }[]
-
-  // 🎨 Display modifiers
-  sortBy?: 'label-asc' | 'label-desc' | 'value-asc' | 'value-desc'
-  limit?: number
-  hideLegend?: boolean
-  debug?: boolean
-}
-
-
 // ✅ Tile-level condition rules
 export type TileCondition =
   | {
@@ -77,13 +28,54 @@ export type TileCondition =
   | { and: TileCondition[] }
   | { or: TileCondition[] }
 
-// ✅ Metric / tile-specific filter block
 export type TileFilter = TileCondition
 
 export type Thresholds = {
   ok?: { lt?: number; gt?: number }
   warning?: { lt?: number; gt?: number }
   danger?: { lt?: number; gt?: number }
+}
+
+// ✅ Widget config block for dashboard layout
+export type DashboardWidget = {
+  // 🔑 Core widget info
+  key?: string
+  component: string
+  title?: string
+  description?: string
+  group?: string // e.g. 'tiles', 'trends', 'summary'
+
+  // 🎯 Filtering & interactivity
+  filterType?: string      // e.g. 'status', 'creator'
+  clickable?: boolean      // Enables click-to-filter (default: false)
+  filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] } // ✅ NEW
+
+  // 📐 Layout & sizing
+  layout?: 'horizontal' | 'vertical'
+  span?: number
+
+  // 🧪 Data quality rules (for validation charts)
+  rulesKey?: string
+  column?: string
+  rules?: any[]
+
+  // 🧰 Advanced chart features
+  toggles?: ToggleGroup[]
+  fields?: {
+    key: string
+    label: string
+    color?: string
+    accessor?: (row: any) => string | null | undefined
+    type?: string
+    band?: string
+    
+  }[]
+
+  // 🎨 Display modifiers
+  sortBy?: 'label-asc' | 'label-desc' | 'value-asc' | 'value-desc'
+  limit?: number
+  hideLegend?: boolean
+  debug?: boolean
 }
 
 // ✅ Tiles for summaries, sections, and trends
@@ -93,6 +85,7 @@ export type DashboardTile = {
   subtitle?: string
   matchKey?: string
   value?: number | string | null
+  onClick?: () => void
 
   filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] }
   percentage?: {
@@ -110,10 +103,10 @@ export type DashboardTile = {
   clickFilter?: {
     type: string
     value: string
-  }
-
-  noRangeFilter?: boolean   // ✅ applies to lifetime or fixed window tiles
-  sql?: string              // ✅ used by validator engine
+  } // legacy; prefer clickable + filter
+  clickable?: boolean
+  noRangeFilter?: boolean
+  sql?: string
 }
 
 // ✅ Table column schema
@@ -143,8 +136,8 @@ export type DataQualityRule = {
     | 'not_contains'
   value?: any
   pattern?: string
-  sql?: string         // ✅ used in validator test harness
-  rulesKey?: string       // ✅ optional group for future filtering
+  sql?: string
+  rulesKey?: string
 }
 
 // ✅ Core async loader for any dashboard

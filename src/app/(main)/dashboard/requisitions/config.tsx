@@ -69,112 +69,114 @@ export const requisitionsConfig: DashboardConfig = {
     issue: true,
   },
 
-  summary: [
-    {
-      key: 'totalAllTime',
-      title: 'Total Requisitions',
-      subtitle: 'All Time',
-      matchKey: 'totalAllTime',
-      filter: { column: 'status', isNull: false },
-      thresholds: {},
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
+summary: [
+  {
+    key: 'totalAllTime',
+    title: 'Total Requisitions',
+    subtitle: 'All Time',
+    filter: { column: 'status', isNull: false },
+    thresholds: {},
+    noRangeFilter: true,
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
+  },
+  {
+    key: 'issued',
+    title: 'Issued',
+    subtitle: 'All Time',
+    filter: { column: 'status', contains: 'issued' },
+    thresholds: {},
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%issued%'"
+  },
+  {
+    key: 'inProgress',
+    title: 'In Progress',
+    subtitle: 'All Time',
+    filter: { column: 'status', contains: 'in progress' },
+    thresholds: {},
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%in progress%'"
+  },
+  {
+    key: 'completed',
+    title: 'Completed',
+    subtitle: 'All Time',
+    filter: { column: 'status', contains: 'complete' },
+    thresholds: {},
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%complete%'"
+  },
+  {
+    key: 'cancelled',
+    title: 'Cancelled',
+    subtitle: 'All Time',
+    filter: { column: 'status', contains: 'cancel' },
+    thresholds: {},
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%cancel%'"
+  },
+  {
+    key: 'late',
+    title: 'Late',
+    subtitle: 'All Time',
+    filter: {
+      and: [
+        { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
+        {
+          and: [
+            { column: 'status', not_contains: 'complete' },
+            { column: 'status', not_contains: 'cancel' },
+          ],
+        },
+      ],
     },
-    {
-      key: 'issued',
-      title: 'Issued',
-      subtitle: 'All Time',
-      filter: { column: 'status', contains: 'issued' },
-      thresholds: {},
-      clickFilter: { type: 'status', value: 'issued' },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%issued%'"
+    thresholds: { danger: { gt: 0 } },
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE due_date < CURRENT_DATE AND status NOT ILIKE '%complete%' AND status NOT ILIKE '%cancel%'"
+  },
+  {
+    key: 'old_open_reqs',
+    title: 'Previous Requistions',
+    subtitle: 'All Time',
+    filter: {
+      and: [
+        { column: 'order_date', lt: '2025-01-31' },
+        {
+          or: [
+            { column: 'status', contains: 'issued' },
+            { column: 'status', contains: 'in progress' },
+          ],
+        },
+      ],
     },
-    {
-      key: 'inProgress',
-      title: 'In Progress',
-      subtitle: 'All Time',
-      filter: { column: 'status', contains: 'in progress' },
-      thresholds: {},
-      clickFilter: { type: 'status', value: 'in progress' },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%in progress%'"
+    thresholds: { danger: { gt: 0 } },
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE order_date < '2025-01-31' AND (status ILIKE '%issued%' OR status ILIKE '%in progress%')"
+  },
+  {
+    key: 'avgTimeToClose',
+    title: 'Avg Time to Close',
+    subtitle: 'Days between Order & Due',
+    average: {
+      start: 'order_date',
+      end: 'due_date',
     },
-    {
-      key: 'completed',
-      title: 'Completed',
-      subtitle: 'All Time',
-      filter: { column: 'status', contains: 'complete' },
-      thresholds: {},
-      clickFilter: { type: 'status', value: 'complete' },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%complete%'"
+    thresholds: {
+      warning: { gt: 7 },
+      danger: { gt: 14 },
     },
-    {
-      key: 'cancelled',
-      title: 'Cancelled',
-      subtitle: 'All Time',
-      filter: { column: 'status', contains: 'cancel' },
-      thresholds: {},
-      clickFilter: { type: 'status', value: 'cancel' },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%cancel%'"
-    },
-    {
-      key: 'late',
-      title: 'Late',
-      subtitle: 'All Time',
-      filter: {
-        and: [
-          { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
-          {
-            and: [
-              { column: 'status', not_contains: 'complete' },
-              { column: 'status', not_contains: 'cancel' },
-            ],
-          },
-        ],
-      },
-      thresholds: { danger: { gt: 0 } },
-      clickFilter: { type: 'status', value: 'late' },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date < CURRENT_DATE AND status NOT ILIKE '%complete%' AND status NOT ILIKE '%cancel%'"
-    },
-    {
-      key: 'old_open_reqs',
-      title: 'Previous Requistions',
-      subtitle: 'All Time',
-      filter: {
-        and: [
-          { column: 'order_date', lt: '2025-01-31' },
-          {
-            or: [
-              { column: 'status', contains: 'issued' },
-              { column: 'status', contains: 'in progress' },
-            ],
-          },
-        ],
-      },
-      thresholds: { danger: { gt: 0 } },
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date < '2025-01-31' AND (status ILIKE '%issued%' OR status ILIKE '%in progress%')"
-    },
-    {
-      key: 'avgTimeToClose',
-      title: 'Avg Time to Close',
-      subtitle: 'Days between Order & Due',
-      average: {
-        start: 'order_date',
-        end: 'due_date',
-      },
-      thresholds: {
-        warning: { gt: 7 },
-        danger: { gt: 14 },
-      },
-      noRangeFilter: true,
-      sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
-    }
-  ],
+    clickable: true,
+    noRangeFilter: true,
+    sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
+  }
+],
 
   trends: [
     {
@@ -182,6 +184,7 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Total Reqs',
       filter: { column: 'status', isNull: false },
       thresholds: {},
+      clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     },
     {
@@ -189,7 +192,7 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Closed - Pick Complete',
       filter: { column: 'status', contains: 'closed' },
       thresholds: {},
-      clickFilter: { type: 'status', value: 'closed' },
+      clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%closed%'"
     },
     {
@@ -197,7 +200,7 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Missing Order Date',
       filter: { column: 'order_date', isNull: true },
       thresholds: { warning: { gt: 0 } },
-      clickFilter: { type: 'issue', value: 'missing_order_date' },
+      clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
     },
     {
@@ -205,7 +208,7 @@ export const requisitionsConfig: DashboardConfig = {
       title: 'Missing Due Date',
       filter: { column: 'due_date', isNull: true },
       thresholds: { warning: { gt: 0 } },
-      clickFilter: { type: 'issue', value: 'missing_due_date' },
+      clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
     }
   ],

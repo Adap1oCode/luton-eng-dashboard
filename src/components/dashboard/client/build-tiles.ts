@@ -58,12 +58,19 @@ export function buildTiles(
       direction = undefined
     }
 
+    // Ensure clickable + filter propagate through
+    const clickFilter = tile.clickFilter || (
+      tile.filter && tile.matchKey ? { type: tile.matchKey, value: tile.key } : undefined
+    )
+
     return {
       ...tile,
       value,
       trend,
       direction,
       subtitle: tile.subtitle ?? match?.subtitle,
+      clickFilter,
+      clickable: tile.clickable ?? Boolean(clickFilter),
     }
   })
 }

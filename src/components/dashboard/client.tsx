@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { buildTiles } from '@/components/dashboard/client/build-tiles'
 import { applyDataFilters } from '@/components/dashboard/client/data-filters'
-import type { ClientDashboardConfig } from '@/components/dashboard/types'
+import type { ClientDashboardConfig, DashboardWidget } from '@/components/dashboard/types'
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -28,6 +28,21 @@ const widgetMap: Record<string, any> = {
   ChartByProject,
   ChartBarVertical,
   ChartBarHorizontal,
+}
+
+function buildFilterFromWidget(widget: DashboardWidget): { type: string; value: any }[] {
+  const filter = (widget as any).filter
+  if (!filter) return []
+  if ('and' in filter || 'or' in filter) {
+    return [{ type: 'compound', value: filter }]
+  }
+  if ('column' in filter && 'contains' in filter) {
+    return [{ type: filter.column, value: filter.contains }]
+  }
+  if ('column' in filter && 'equals' in filter) {
+    return [{ type: filter.column, value: filter.equals }]
+  }
+  return []
 }
 
 type Props = {
@@ -57,15 +72,17 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
     return orderDate >= prevFrom && orderDate <= prevTo
   })
 
+  const handleClickWidget = (widget: DashboardWidget) => {
+    const builtFilters = buildFilterFromWidget(widget)
+    if (builtFilters.length > 0) {
+      setFilters(builtFilters)
+      setDrawerOpen(true)
+    }
+  }
+
   const handleFilter = (type: string) => (values: string[]) => {
     const updated = values.map((val) => ({ type, value: val }))
     setFilters(updated)
-    setDrawerOpen(true)
-  }
-
-  const handleClickFilter = (type: string, value: string) => {
-    if (!value || !config.filters[type]) return
-    setFilters([{ type, value }])
     setDrawerOpen(true)
   }
 
@@ -86,10 +103,11 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
 
           <SheetContent
             side="right"
-            className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
-          >
+            aria-labelledby="drawer-title"
+            className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto">
+          <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
+
             <div className="p-4">
-              <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
               <DataTable
                 key={filteredData.length + filters.map((f) => `${f.type}:${f.value}`).join('|')}
                 data={filteredData}
@@ -139,7 +157,10 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             config: w,
             from,
             to,
-            onClickFilter: handleClickFilter,
+          }
+
+          if (w.clickable) {
+            commonProps.onClick = () => handleClickWidget(w)
           }
 
           if (w.filterType) {
@@ -147,13 +168,25 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           }
 
           if (w.component === 'SummaryCards' || w.component === 'SectionCards') {
-            commonProps.config = buildTiles(
+            const builtTiles = buildTiles(
               configTiles,
               metricTiles,
               rangeFilteredRecords,
               previousRangeFilteredRecords,
               records
             )
+
+commonProps.config = builtTiles.map((tile: any) => {
+  const original = configTiles.find((t) => t.key === tile.key)
+  const filterType = w.filterType
+
+  return {
+    ...tile,
+    clickable: original?.clickable,
+    onClickFilter: filterType ? handleFilter(filterType) : undefined,
+    onClick: original?.clickable ? () => handleClickWidget({ ...original, ...tile }) : undefined,
+  }
+})
           }
 
           const isChart = w.component !== 'SummaryCards' && w.component !== 'SectionCards'

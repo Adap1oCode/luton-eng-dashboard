@@ -1,6 +1,6 @@
 // File: src/components/dashboard/client/data-filters.ts
 
-import type { ClientDashboardConfig } from '@/components/dashboard/types'
+import type { ClientDashboardConfig, DashboardTile } from '@/components/dashboard/types'
 
 export function isDateString(val: any): boolean {
   return typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)
@@ -70,4 +70,19 @@ export function applyDataFilters(
       return rowVal === f.value
     })
   })
+}
+
+export function getClickFilter(tile: DashboardTile): { type: string; value: string } | null {
+  const filter = tile.filter as any
+  if (!tile.clickable || !filter) return null
+
+  if ('column' in filter && 'contains' in filter) {
+    return { type: filter.column, value: filter.contains }
+  }
+
+  if ('column' in filter && 'eq' in filter) {
+    return { type: filter.column, value: String(filter.eq) }
+  }
+
+  return null
 }

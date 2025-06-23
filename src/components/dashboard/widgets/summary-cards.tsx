@@ -7,26 +7,17 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 
-import { Badge } from '@/components/ui/badge'
+import { getClickFilter } from '@/components/dashboard/client/data-filters'
+import type { DashboardTile, Thresholds } from '@/components/dashboard/types'
 
-export type Thresholds = {
-  ok?: { lt?: number; gt?: number }
-  warning?: { lt?: number; gt?: number }
-  danger?: { lt?: number; gt?: number }
-}
-
-export type SummaryTile = {
-  key: string
-  title: string
-  subtitle?: string
-  matchKey?: string
-  value?: number | string | null
-  thresholds?: Thresholds
-  clickFilter?: { type: string; value: string }
+const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
+  ok: 'bg-green-500',
+  warning: 'bg-yellow-500',
+  danger: 'bg-red-500',
 }
 
 type Props = {
-  config: SummaryTile[]
+  config: DashboardTile[]
   onClickFilter?: (type: string, value: string) => void
 }
 
@@ -36,12 +27,6 @@ function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | '
   if (thresholds.warning && ((thresholds.warning.lt !== undefined && value < thresholds.warning.lt) || (thresholds.warning.gt !== undefined && value > thresholds.warning.gt))) return 'warning'
   if (thresholds.danger && ((thresholds.danger.lt !== undefined && value < thresholds.danger.lt) || (thresholds.danger.gt !== undefined && value > thresholds.danger.gt))) return 'danger'
   return undefined
-}
-
-const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
-  ok: 'bg-green-500',
-  warning: 'bg-yellow-500',
-  danger: 'bg-red-500',
 }
 
 export default function SummaryCards({ config, onClickFilter }: Props) {
@@ -59,17 +44,25 @@ export default function SummaryCards({ config, onClickFilter }: Props) {
             ? parseFloat(((value / totalValue) * 100).toFixed(1))
             : null
 
+        const clickFilter = getClickFilter(tile)
+        const hasClickHandler = tile.onClick || (tile.clickable && clickFilter && onClickFilter)
+
         const handleClick = () => {
-          if (tile.clickFilter && onClickFilter) {
-            onClickFilter(tile.clickFilter.type, tile.clickFilter.value)
+          if (tile.onClick) {
+            tile.onClick()
+          } else if (tile.clickable && clickFilter && onClickFilter) {
+            onClickFilter(clickFilter.type, clickFilter.value)
           }
         }
 
         return (
           <Card
             key={i}
-            className="@container/card relative cursor-pointer"
-            onClick={tile.clickFilter && onClickFilter ? handleClick : undefined}
+            role={hasClickHandler ? 'button' : undefined}
+            onClick={hasClickHandler ? handleClick : undefined}
+            className={`@container/card relative ${
+              hasClickHandler ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
+            }`}
           >
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
