@@ -1,5 +1,9 @@
 import { isDateString, compileFilter } from './data-filters'
 
+function getActiveRecords(tile: any, rangeFiltered: any[], full: any[]): any[] {
+  return tile.noRangeFilter ? full : rangeFiltered
+}
+
 export function tileCalculations(
   configTiles: any[],
   metricTiles: any[],
@@ -10,22 +14,20 @@ export function tileCalculations(
   return configTiles.map((tile) => {
     const match = metricTiles.find((m: any) => m.key === tile.matchKey || m.key === tile.key)
 
-    const useFiltered = !tile.noRangeFilter
-    const currentRecords = useFiltered ? rangeFilteredRecords : allRecords
-    const previousRecords = useFiltered ? previousRangeFilteredRecords : allRecords
+    const activeRecords = getActiveRecords(tile, rangeFilteredRecords, allRecords)
+    const previousRecords = getActiveRecords(tile, previousRangeFilteredRecords, allRecords)
 
     let value: number | string | null = tile.value ?? 0
     let previous = 0
     let trend: string | undefined
     let direction: 'up' | 'down' | undefined
+    let percent: number | undefined
 
+    // Standard count-based value
     if (tile.filter && !tile.average && !tile.percentage) {
       const filterFn = compileFilter(tile.filter)
-      const matches = currentRecords.filter(filterFn)
+      const matches = activeRecords.filter(filterFn)
       const prevMatches = previousRecords.filter(filterFn)
-
-      console.log(`[TileCalc] [${tile.key}] Matches (current): ${matches.length}`)
-      console.log(`[TileCalc] [${tile.key}] Matches (previous): ${prevMatches.length}`)
 
       value = matches.length
       previous = prevMatches.length
@@ -37,73 +39,61 @@ export function tileCalculations(
       } else if (value > 0) {
         trend = `+${value}`
         direction = 'up'
-      } else {
-        trend = undefined
-        direction = undefined
       }
 
+      console.log(`[TileCalc] [${tile.key}] Matches: ${matches.length}, Previous: ${prevMatches.length}`)
       console.log(`[TileCalc] [${tile.key}] Trend: ${trend} | Direction: ${direction}`)
     }
 
+    // Percentage-based
     else if (tile.percentage) {
       const numFn = compileFilter(tile.percentage.numerator)
       const denomFn = compileFilter(tile.percentage.denominator)
-      const num = currentRecords.filter(numFn).length
-      const denom = currentRecords.filter(denomFn).length || 1
-      value = parseFloat(((num / denom) * 100).toFixed(1))
 
-      console.log(`[TileCalc] [${tile.key}] Percentage → Numerator: ${num}, Denominator: ${denom}, Value: ${value}`)
+      const numerator = activeRecords.filter(numFn).length
+      const denominator = activeRecords.filter(denomFn).length || 1
+
+      value = parseFloat(((numerator / denominator) * 100).toFixed(1))
+
+      console.log(`[TileCalc] [${tile.key}] Percentage → Numerator: ${numerator}, Denominator: ${denominator}, Value: ${value}`)
     }
 
+    // Average day calculation
     else if (tile.average) {
       console.log(`[TileCalc] [${tile.key}] Starting average calc from ${tile.average.start} to ${tile.average.end}`)
-      console.log(`[TileCalc] [${tile.key}] Raw currentRecords: ${currentRecords.length}`)
 
-      const valid = currentRecords
+      const valid = activeRecords
         .filter((r) => isDateString(r[tile.average!.start]) && isDateString(r[tile.average!.end]))
         .filter(tile.filter ? compileFilter(tile.filter) : () => true)
-
-      console.log(`[TileCalc] [${tile.key}] Valid records after date+filter check: ${valid.length}`)
 
       const deltas = valid
         .map((r) => {
           const start = new Date(r[tile.average.start])
           const end = new Date(r[tile.average.end])
-          const diff = end.getTime() - start.getTime()
-          return diff / (1000 * 60 * 60 * 24)
+          return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
         })
         .filter((d) => !isNaN(d))
-
-      console.log(`[TileCalc] [${tile.key}] Day deltas:`, deltas)
 
       value = deltas.length
         ? Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length)
         : 0
 
-      console.log(`[TileCalc] [${tile.key}] Average result: ${value}`)
+      console.log(`[TileCalc] [${tile.key}] Average from ${valid.length} records → ${value} days`)
+    }
 
-      trend = undefined
-      direction = undefined
+    // Percent of active records
+    if (!tile.average && typeof value === 'number') {
+      const total = activeRecords.length
+
+      if (total > 0) {
+        percent = parseFloat(((Number(value) / total) * 100).toFixed(1))
+        console.log(`[TileCalc] [${tile.key}] Percent of active records (${value}/${total}): ${percent}%`)
+      }
     }
 
     const clickFilter = tile.clickFilter || (
       tile.filter && tile.matchKey ? { column: tile.matchKey, contains: tile.key } : undefined
     )
-
-let percent: number | undefined
-
-if (!tile.average && typeof value === 'number') {
-  const baseRecords = useFiltered ? rangeFilteredRecords : allRecords
-  const total = baseRecords.length
-
-  if (total > 0) {
-    percent = parseFloat(((value / total) * 100).toFixed(1))
-    console.log(`[TileCalc] [${tile.key}] Percent of base records (${value}/${total}): ${percent}%`)
-  } else {
-    console.log(`[TileCalc] [${tile.key}] No base records to calculate percent`)
-  }
-}
-
 
     return {
       ...tile,

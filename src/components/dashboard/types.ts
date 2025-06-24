@@ -76,6 +76,7 @@ export type DashboardTile = {
   matchKey?: string
   value?: number | string | null
   percent?: number // ✅ Add this line
+    debug?: boolean
 
   onClick?: () => void
   onClickFilter?: (filter: Filter) => void

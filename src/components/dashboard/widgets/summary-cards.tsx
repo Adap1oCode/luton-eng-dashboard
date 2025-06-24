@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card'
 
 import type { Filter } from '@/components/dashboard/client/data-filters'
-import type { DashboardTile, Thresholds} from '@/components/dashboard/types'
+import type { DashboardTile, Thresholds } from '@/components/dashboard/types'
 
 const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
   ok: 'bg-green-500',
@@ -16,8 +16,10 @@ const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
   danger: 'bg-red-500',
 }
 
+type DashboardTileWithKey = DashboardTile & { key: string }
+
 type Props = {
-  config: DashboardTile[]
+  config: DashboardTileWithKey[]
   onClickFilter?: (filter: Filter) => void
 }
 
@@ -32,25 +34,25 @@ function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | '
 export default function SummaryCards({ config, onClickFilter }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-      {config.map((tile, i) => {
+      {config.map((tile) => {
         const value = tile.value ?? '—'
         const status = typeof value === 'number' ? getStatus(value, tile.thresholds) : undefined
-        const hasClickHandler = !!tile.onClick || !!tile.onClickFilter
+        const isInteractive = !!tile.onClick
 
-        const handleClick = () => {
-          if (tile.onClick) {
-            tile.onClick()
-          } else if (tile.onClickFilter && tile.filter) {
-            tile.onClickFilter(tile.filter)
-          }
+        if (tile.debug) {
+          console.log(`[SummaryCard] ${tile.key}`, {
+            value,
+            thresholds: tile.thresholds,
+            filter: tile.filter,
+          })
         }
 
         return (
           <Card
-            key={i}
-            role={hasClickHandler ? 'button' : undefined}
-            onClick={hasClickHandler ? handleClick : undefined}
-            className={`@container/card relative ${hasClickHandler ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+            key={tile.key}
+            role={isInteractive ? 'button' : undefined}
+            onClick={isInteractive ? tile.onClick : undefined}
+            className={`@container/card relative ${isInteractive ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
           >
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>

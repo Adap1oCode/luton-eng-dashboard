@@ -11,51 +11,24 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
-export type TileFilter = {
-  column: string
-  eq?: string | number
-  contains?: string
-  not_contains?: string
-  lt?: number | string
-  gt?: number | string
-  isNull?: boolean
-}
+import type { DashboardTile } from '@/components/dashboard/types'
+import type { Filter } from '@/components/dashboard/client/data-filters'
 
-export type Thresholds = {
+type Thresholds = {
   ok?: { lt?: number; gt?: number }
   warning?: { lt?: number; gt?: number }
   danger?: { lt?: number; gt?: number }
 }
 
-export type MetricTile = {
-  key: string
-  title: string
-  subtitle?: string
-  matchKey?: string
-  value?: number | string | null
-  filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] }
-  percentage?: {
-    numerator: TileFilter | { and: TileFilter[] }
-    denominator: TileFilter | { and: TileFilter[] }
-  }
-  average?: {
-    start: string
-    end: string
-  }
-  thresholds?: Thresholds
-  trend?: string
-  direction?: 'up' | 'down'
-  clickFilter?: {
-    type: string
-    value: string
-  }
+type DashboardTileWithClick = DashboardTile & {
+  onClick?: () => void
+  debug?: boolean
 }
 
 type Props = {
-  config: MetricTile[]
+  config: DashboardTileWithClick[]
   from?: string
   to?: string
-  onClickFilter?: (type: string, value: string) => void
 }
 
 function formatContextLine(from?: string, to?: string): string {
@@ -75,28 +48,38 @@ function formatStatusLine(direction?: 'up' | 'down'): string {
   return 'No change this period'
 }
 
-export default function SectionCards({ config, from, to, onClickFilter }: Props) {
+export default function SectionCards({ config, from, to }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs">
-      {config.map((tile, i) => {
-        const current = typeof tile.value === 'number' ? tile.value : tile.value ?? '—'
+      {config.map((tile) => {
+        const value = typeof tile.value === 'number' ? tile.value : tile.value ?? '—'
         const trend = tile.trend
         const direction = tile.direction
+        const Icon = direction === 'up' ? TrendingUp : direction === 'down' ? TrendingDown : null
+        const isInteractive = !!tile.onClick
 
-        const handleClick = () => {
-          if (tile.clickFilter && onClickFilter) {
-            onClickFilter(tile.clickFilter.type, tile.clickFilter.value)
-          }
+        if (tile.debug) {
+          console.log(`[SectionCard] ${tile.key}`, {
+            value,
+            trend,
+            direction,
+            filter: tile.filter,
+          })
         }
 
-        const Icon = direction === 'up' ? TrendingUp : direction === 'down' ? TrendingDown : null
-
         return (
-          <Card key={i} onClick={handleClick} className="@container/card cursor-pointer">
+          <Card
+            key={tile.key}
+            role={isInteractive ? 'button' : undefined}
+            onClick={isInteractive ? tile.onClick : undefined}
+            className={`@container/card relative ${
+              isInteractive ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
+            }`}
+          >
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {typeof current === 'number' ? current.toLocaleString() : current}
+                {typeof value === 'number' ? value.toLocaleString() : value}
               </CardTitle>
               {trend && direction && (
                 <CardAction>
@@ -112,9 +95,7 @@ export default function SectionCards({ config, from, to, onClickFilter }: Props)
                 {formatStatusLine(direction)}
                 {Icon && <Icon className="size-4" />}
               </div>
-              <div className="text-muted-foreground">
-                {formatContextLine(from, to)}
-              </div>
+              <div className="text-muted-foreground">{formatContextLine(from, to)}</div>
             </CardFooter>
           </Card>
         )
