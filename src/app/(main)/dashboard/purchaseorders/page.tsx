@@ -1,6 +1,0 @@
-import GenericDashboardPage from '@/components/dashboard/page'
-import { purchaseOrdersConfig } from '@/app/(main)/purchase-orders/config'
-
-export default function RequisitionsPage() {
-  return <GenericDashboardPage config={purchaseOrdersConfig} />
-}
