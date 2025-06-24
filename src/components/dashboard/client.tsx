@@ -15,9 +15,12 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
-import { buildTiles } from '@/components/dashboard/client/build-tiles'
+import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
+import { attachTileActions } from '@/components/dashboard/client/tile-actions'
 import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters'
-import type { ClientDashboardConfig, DashboardWidget } from '@/components/dashboard/types'
+import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
+import { isFastFilter } from '@/components/dashboard/client/fast-filter'
+
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -30,15 +33,11 @@ const widgetMap: Record<string, any> = {
   ChartBarHorizontal,
 }
 
-function buildFilterFromWidget(widget: DashboardWidget): Filter[] {
+function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[] {
   const filter = (widget as any).filter
   if (!filter) return []
 
-  if ('and' in filter || 'or' in filter) return [filter]
-  if ('column' in filter && 'contains' in filter) return [filter]
-  if ('column' in filter && 'equals' in filter) return [{ column: filter.column, equals: filter.equals }]
-
-  return []
+  return isFastFilter(filter) ? [filter] : [filter] // still returns even if not fast, but consistent
 }
 
 type Props = {
@@ -68,8 +67,14 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
     return orderDate >= prevFrom && orderDate <= prevTo
   })
 
-  const handleClickWidget = (widget: DashboardWidget) => {
+  const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
     const builtFilters = buildFilterFromWidget(widget)
+    console.log('[handleClickWidget]', {
+      key: widget.key,
+      rawFilter: (widget as any).filter,
+      builtFilters
+    })
+
     if (builtFilters.length > 0) {
       setFilters(builtFilters)
       setDrawerOpen(true)
@@ -78,6 +83,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
 
   const handleFilter = (type: string) => (values: string[]) => {
     const updated = values.map((val) => ({ column: type, contains: val }))
+    console.log('[handleFilter] updated filters:', updated)
     setFilters(updated)
     setDrawerOpen(true)
   }
@@ -86,6 +92,11 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
     filters.length === 0 ? records : applyDataFilters(records, filters, config)
 
   useEffect(() => {
+    console.log('[Drawer State]', {
+      filters,
+      drawerOpen: filters.length > 0
+    })
+
     if (filters.length === 0) setDrawerOpen(false)
   }, [filters])
 
@@ -101,8 +112,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             side="right"
             aria-labelledby="drawer-title"
             className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto">
-          <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
-
+            <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
             <div className="p-4">
               <DataTable
                 key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
@@ -164,7 +174,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           }
 
           if (w.component === 'SummaryCards' || w.component === 'SectionCards') {
-            const builtTiles = buildTiles(
+            const calculatedTiles = tileCalculations(
               configTiles,
               metricTiles,
               rangeFilteredRecords,
@@ -172,17 +182,15 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
               records
             )
 
-            commonProps.config = builtTiles.map((tile: any) => {
-              const original = configTiles.find((t) => t.key === tile.key)
-              const filterType = w.filterType
-
-              return {
-                ...tile,
-                clickable: original?.clickable,
-                onClickFilter: filterType ? handleFilter(filterType) : undefined,
-                onClick: original?.clickable ? () => handleClickWidget({ ...original, ...tile }) : undefined,
+            commonProps.config = attachTileActions(
+              calculatedTiles,
+              w,
+              (tile) => handleClickWidget(tile),
+              (filter) => {
+                setFilters([filter])
+                setDrawerOpen(true)
               }
-            })
+            )
           }
 
           const isChart = w.component !== 'SummaryCards' && w.component !== 'SectionCards'

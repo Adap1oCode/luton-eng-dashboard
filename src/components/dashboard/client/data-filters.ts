@@ -14,6 +14,8 @@ export type Filter =
       notContains?: string
       in?: (string | number)[]
       notIn?: (string | number)[]
+      isNull?: boolean
+      isNotNull?: boolean
     }
   | {
       and: Filter[]
@@ -45,16 +47,35 @@ export function compileFilter(filter: Filter): (row: Record<string, any>) => boo
     const isString = typeof raw === 'string'
     const val = isString ? raw.toLowerCase() : raw
 
-    if (filter.equals !== undefined) return raw === filter.equals
-    if (filter.notEquals !== undefined) return raw !== filter.notEquals
+    if (filter.isNull === true) return raw === null || raw === undefined
+    if (filter.isNotNull === true) return raw !== null && raw !== undefined
+
+    if (filter.equals !== undefined) {
+      return isString
+        ? val === filter.equals.toString().toLowerCase()
+        : raw === filter.equals
+    }
+    if (filter.notEquals !== undefined) {
+      return isString
+        ? val !== filter.notEquals.toString().toLowerCase()
+        : raw !== filter.notEquals
+    }
     if (filter.lt !== undefined) return raw < filter.lt
     if (filter.lte !== undefined) return raw <= filter.lte
     if (filter.gt !== undefined) return raw > filter.gt
     if (filter.gte !== undefined) return raw >= filter.gte
     if (filter.contains !== undefined && isString) return val.includes(filter.contains.toLowerCase())
     if (filter.notContains !== undefined && isString) return !val.includes(filter.notContains.toLowerCase())
-    if (filter.in) return filter.in.includes(raw)
-    if (filter.notIn) return !filter.notIn.includes(raw)
+    if (filter.in) {
+      return filter.in.some(
+        (v) => (isString ? val : raw) === (typeof v === 'string' ? v.toLowerCase() : v)
+      )
+    }
+    if (filter.notIn) {
+      return !filter.notIn.some(
+        (v) => (isString ? val : raw) === (typeof v === 'string' ? v.toLowerCase() : v)
+      )
+    }
 
     return true
   }
@@ -82,11 +103,9 @@ export function applyDataFilters(
 }
 
 // ✅ Used in clickable tiles (e.g. SummaryCards)
+// ✅ Used in clickable tiles (e.g. SummaryCards)
 export function getClickFilter(tile: any): Filter | null {
-  if (!tile || !tile.filterType || tile.value === undefined || tile.value === null) return null
-
-  return {
-    column: tile.filterType,
-    equals: tile.value,
-  }
+  if (!tile || !tile.clickable) return null
+  return tile.filter ?? null
 }
+

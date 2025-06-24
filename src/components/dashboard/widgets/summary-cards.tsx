@@ -7,8 +7,8 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 
-import { getClickFilter } from '@/components/dashboard/client/data-filters'
-import type { DashboardTile, Thresholds } from '@/components/dashboard/types'
+import type { Filter } from '@/components/dashboard/client/data-filters'
+import type { DashboardTile, Thresholds} from '@/components/dashboard/types'
 
 const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
   ok: 'bg-green-500',
@@ -18,7 +18,7 @@ const statusColors: Record<'ok' | 'warning' | 'danger', string> = {
 
 type Props = {
   config: DashboardTile[]
-  onClickFilter?: (column: string, value: string) => void
+  onClickFilter?: (filter: Filter) => void
 }
 
 function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | 'danger' | undefined {
@@ -30,39 +30,18 @@ function getStatus(value: number, thresholds?: Thresholds): 'ok' | 'warning' | '
 }
 
 export default function SummaryCards({ config, onClickFilter }: Props) {
-  const totalTile = config.find((t) => t.key === 'totalAllTime')
-  const totalValue = typeof totalTile?.value === 'number' ? totalTile.value : undefined
-
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
       {config.map((tile, i) => {
         const value = tile.value ?? '—'
         const status = typeof value === 'number' ? getStatus(value, tile.thresholds) : undefined
-
-        const percent =
-          totalValue && typeof value === 'number'
-            ? parseFloat(((value / totalValue) * 100).toFixed(1))
-            : null
-
-        const clickFilter = getClickFilter(tile)
-
-        const isSimpleFilter = clickFilter && 'column' in clickFilter
-        const hasClickHandler =
-          tile.onClick || (tile.clickable && isSimpleFilter && onClickFilter)
+        const hasClickHandler = !!tile.onClick || !!tile.onClickFilter
 
         const handleClick = () => {
           if (tile.onClick) {
             tile.onClick()
-          } else if (
-            tile.clickable &&
-            isSimpleFilter &&
-            onClickFilter &&
-            clickFilter.column &&
-            (clickFilter.contains !== undefined || clickFilter.equals !== undefined)
-          ) {
-            const column = clickFilter.column
-            const rawValue = clickFilter.contains ?? clickFilter.equals
-            onClickFilter(column, String(rawValue))
+          } else if (tile.onClickFilter && tile.filter) {
+            tile.onClickFilter(tile.filter)
           }
         }
 
@@ -71,17 +50,15 @@ export default function SummaryCards({ config, onClickFilter }: Props) {
             key={i}
             role={hasClickHandler ? 'button' : undefined}
             onClick={hasClickHandler ? handleClick : undefined}
-            className={`@container/card relative ${
-              hasClickHandler ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
-            }`}
+            className={`@container/card relative ${hasClickHandler ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
           >
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                 {typeof value === 'number' ? value.toLocaleString() : value}
               </CardTitle>
-              {percent !== null && (
-                <div className="text-sm font-medium">{percent}%</div>
+              {tile.percent !== undefined && (
+                <div className="text-sm font-medium">{tile.percent}%</div>
               )}
               {tile.subtitle && (
                 <CardDescription className="text-muted-foreground text-sm">

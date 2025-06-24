@@ -70,16 +70,15 @@ export const requisitionsConfig: DashboardConfig = {
   },
 
 summary: [
-  {
-    key: 'totalAllTime',
-    title: 'Total Requisitions',
-    subtitle: 'All Time',
-    filter: { column: 'status', isNull: false },
-    thresholds: {},
-    noRangeFilter: true,
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
-  },
+{
+  key: 'totalAllTime',
+  title: 'Total Requisitions',
+  subtitle: 'All Time',
+  filter: { column: 'requisition_order_number', isNotNull: true }, // ✅ cleaner than fudge
+  clickable: true,
+  noRangeFilter: true,
+  sql: "SELECT COUNT(*) FROM requisitions"
+},
   {
     key: 'issued',
     title: 'Issued',
@@ -129,8 +128,8 @@ summary: [
         { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
         {
           and: [
-            { column: 'status', not_contains: 'complete' },
-            { column: 'status', not_contains: 'cancel' },
+            { column: 'status', notContains: 'complete' },
+            { column: 'status', notContains: 'cancel' },
           ],
         },
       ],
@@ -161,21 +160,27 @@ summary: [
     sql: "SELECT COUNT(*) FROM requisitions WHERE order_date < '2025-01-31' AND (status ILIKE '%issued%' OR status ILIKE '%in progress%')"
   },
   {
-    key: 'avgTimeToClose',
-    title: 'Avg Time to Close',
-    subtitle: 'Days between Order & Due',
-    average: {
-      start: 'order_date',
-      end: 'due_date',
-    },
-    thresholds: {
-      warning: { gt: 7 },
-      danger: { gt: 14 },
-    },
-    clickable: true,
-    noRangeFilter: true,
-    sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
-  }
+  key: 'avgTimeToClose',
+  title: 'Avg Time to Close',
+  subtitle: 'Days between Order & Due',
+  average: {
+    start: 'order_date',
+    end: 'due_date',
+  },
+  filter: {
+    and: [
+      { column: 'order_date', isNotNull: true },
+      { column: 'due_date', isNotNull: true }
+    ]
+  },
+  thresholds: {
+    warning: { gt: 7 },
+    danger: { gt: 14 },
+  },
+  clickable: true,
+  noRangeFilter: true,
+  sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
+}
 ],
 
   trends: [

@@ -1,6 +1,6 @@
 import { isDateString, compileFilter } from './data-filters'
 
-export function buildTiles(
+export function tileCalculations(
   configTiles: any[],
   metricTiles: any[],
   rangeFilteredRecords: any[],
@@ -38,8 +38,8 @@ export function buildTiles(
         direction = undefined
       }
     } else if (tile.percentage) {
-      const numFn = compileFilter(tile.percentage!.numerator)
-      const denomFn = compileFilter(tile.percentage!.denominator)
+      const numFn = compileFilter(tile.percentage.numerator)
+      const denomFn = compileFilter(tile.percentage.denominator)
       const num = currentRecords.filter(numFn).length
       const denom = currentRecords.filter(denomFn).length || 1
       value = parseFloat(((num / denom) * 100).toFixed(1))
@@ -47,15 +47,19 @@ export function buildTiles(
       direction = undefined
     } else if (tile.average) {
       const valid = currentRecords.filter(
-        (r) => isDateString(r[tile.average!.start]) && isDateString(r[tile.average!.end])
+        (r) => isDateString(r[tile.average.start]) && isDateString(r[tile.average.end])
       )
-      const deltas = valid.map((r) => {
-        const diff =
-          new Date(r[tile.average!.end]).getTime() - new Date(r[tile.average!.start]).getTime()
-        return diff / (1000 * 60 * 60 * 24)
-      })
+      const deltas = valid
+        .map((r) => {
+          const start = new Date(r[tile.average.start])
+          const end = new Date(r[tile.average.end])
+          const diff = end.getTime() - start.getTime()
+          return diff / (1000 * 60 * 60 * 24)
+        })
+        .filter((d) => !isNaN(d))
+
       value = deltas.length
-        ? parseFloat((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(1))
+        ? Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length)
         : 0
       trend = undefined
       direction = undefined
@@ -65,6 +69,14 @@ export function buildTiles(
       tile.filter && tile.matchKey ? { column: tile.matchKey, contains: tile.key } : undefined
     )
 
+    let percent: number | undefined
+    if (tile.key !== 'totalAllTime' && typeof value === 'number') {
+      const total = metricTiles.find((m: any) => m.key === 'totalAllTime')?.value
+      if (typeof total === 'number' && total > 0) {
+        percent = parseFloat(((value / total) * 100).toFixed(1))
+      }
+    }
+
     return {
       ...tile,
       value,
@@ -73,6 +85,7 @@ export function buildTiles(
       subtitle: tile.subtitle ?? match?.subtitle,
       clickFilter,
       clickable: tile.clickable ?? Boolean(clickFilter),
+      percent,
     }
   })
 }

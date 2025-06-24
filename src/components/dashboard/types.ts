@@ -1,3 +1,5 @@
+import type { Filter } from '@/components/dashboard/client/data-filters'
+
 // ✅ Toggle group for ChartAreaInteractive
 export type ToggleGroup = {
   key: string
@@ -15,20 +17,8 @@ export type ToggleGroup = {
 export type AxisConfig = boolean | { hide?: boolean; fontSize?: number; width?: number }
 
 // ✅ Tile-level condition rules
-export type TileCondition =
-  | {
-      column: string
-      eq?: string | number
-      contains?: string
-      not_contains?: string
-      lt?: number | string
-      gt?: number | string
-      isNull?: boolean
-    }
-  | { and: TileCondition[] }
-  | { or: TileCondition[] }
 
-export type TileFilter = TileCondition
+
 
 export type Thresholds = {
   ok?: { lt?: number; gt?: number }
@@ -48,7 +38,7 @@ export type DashboardWidget = {
   // 🎯 Filtering & interactivity
   filterType?: string      // e.g. 'status', 'creator'
   clickable?: boolean      // Enables click-to-filter (default: false)
-  filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] } // ✅ NEW
+  filter?: Filter | { and: Filter[] } | { or: Filter[] } // ✅ NEW
 
   // 📐 Layout & sizing
   layout?: 'horizontal' | 'vertical'
@@ -85,12 +75,16 @@ export type DashboardTile = {
   subtitle?: string
   matchKey?: string
   value?: number | string | null
-  onClick?: () => void
+  percent?: number // ✅ Add this line
 
-  filter?: TileFilter | { and: TileFilter[] } | { or: TileFilter[] }
+  onClick?: () => void
+  onClickFilter?: (filter: Filter) => void
+
+
+  filter?: Filter | { and: Filter[] } | { or: Filter[] }
   percentage?: {
-    numerator: TileFilter | { and: TileFilter[] }
-    denominator: TileFilter | { and: TileFilter[] }
+    numerator: Filter | { and: Filter[] }
+    denominator: Filter | { and: Filter[] }
   }
   average?: {
     start: string
@@ -100,10 +94,6 @@ export type DashboardTile = {
   thresholds?: Thresholds
   trend?: string
   direction?: 'up' | 'down'
-  clickFilter?: {
-    type: string
-    value: string
-  } // legacy; prefer clickable + filter
   clickable?: boolean
   noRangeFilter?: boolean
   sql?: string
