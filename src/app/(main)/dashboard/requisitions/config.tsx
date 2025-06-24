@@ -177,7 +177,7 @@ summary: [
     warning: { gt: 7 },
     danger: { gt: 14 },
   },
-  clickable: true,
+  clickable: false,
   noRangeFilter: true,
   sql: "SELECT ROUND(AVG(DATE_PART('day', due_date - order_date))) FROM requisitions WHERE order_date IS NOT NULL AND due_date IS NOT NULL"
 }

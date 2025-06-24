@@ -90,14 +90,20 @@ export function tileCalculations(
       tile.filter && tile.matchKey ? { column: tile.matchKey, contains: tile.key } : undefined
     )
 
-    let percent: number | undefined
-    if (tile.key !== 'totalAllTime' && typeof value === 'number') {
-      const total = metricTiles.find((m: any) => m.key === 'totalAllTime')?.value
-      if (typeof total === 'number' && total > 0) {
-        percent = parseFloat(((value / total) * 100).toFixed(1))
-        console.log(`[TileCalc] [${tile.key}] Percent of totalAllTime (${total}): ${percent}%`)
-      }
-    }
+let percent: number | undefined
+
+if (!tile.average && typeof value === 'number') {
+  const baseRecords = useFiltered ? rangeFilteredRecords : allRecords
+  const total = baseRecords.length
+
+  if (total > 0) {
+    percent = parseFloat(((value / total) * 100).toFixed(1))
+    console.log(`[TileCalc] [${tile.key}] Percent of base records (${value}/${total}): ${percent}%`)
+  } else {
+    console.log(`[TileCalc] [${tile.key}] No base records to calculate percent`)
+  }
+}
+
 
     return {
       ...tile,

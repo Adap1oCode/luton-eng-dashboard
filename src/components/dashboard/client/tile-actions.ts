@@ -9,18 +9,21 @@ export function attachTileActions(
   handleClickFilter: (filter: Filter) => void
 ): DashboardTile[] {
   return tiles.map((tile) => {
-    const isClickable = tile.clickable === true && tile.filter && isFastFilter(tile.filter as Filter)
-console.log('[attachTileActions]', {
-  key: tile.key,
-  clickable: tile.clickable,
-  hasFilter: !!tile.filter,
-  isFast: tile.filter ? isFastFilter(tile.filter as Filter) : false,
-})
+    const canClick = tile.clickable === true && tile.filter
+
+    console.log('[attachTileActions]', {
+      key: tile.key,
+      clickable: tile.clickable,
+      hasFilter: !!tile.filter,
+      isFast: tile.filter ? isFastFilter(tile.filter as Filter) : false,
+      canClick,
+    })
 
     return {
       ...tile,
-      onClick: isClickable ? () => handleClickWidget(tile) : undefined,
-      onClickFilter: tile.filter ? () => handleClickFilter(tile.filter as Filter) : undefined,
+      onClick: canClick ? () => handleClickWidget(tile) : undefined,
+      onClickFilter: canClick ? () => handleClickFilter(tile.filter as Filter) : undefined,
     }
   })
 }
+
