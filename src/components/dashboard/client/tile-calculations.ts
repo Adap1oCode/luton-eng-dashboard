@@ -36,9 +36,15 @@ export function tileCalculations(
         const delta = ((Number(value) - previous) / previous) * 100
         trend = `${Math.abs(delta).toFixed(1)}%`
         direction = delta >= 0 ? 'up' : 'down'
+        percent = parseFloat(delta.toFixed(1))
       } else if (value > 0) {
         trend = `+${value}`
         direction = 'up'
+        percent = 100
+      } else {
+        trend = undefined
+        direction = undefined
+        percent = 0
       }
 
       console.log(`[TileCalc] [${tile.key}] Matches: ${matches.length}, Previous: ${prevMatches.length}`)
@@ -54,6 +60,9 @@ export function tileCalculations(
       const denominator = activeRecords.filter(denomFn).length || 1
 
       value = parseFloat(((numerator / denominator) * 100).toFixed(1))
+      trend = undefined
+      direction = undefined
+      percent = undefined
 
       console.log(`[TileCalc] [${tile.key}] Percentage → Numerator: ${numerator}, Denominator: ${denominator}, Value: ${value}`)
     }
@@ -78,17 +87,11 @@ export function tileCalculations(
         ? Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length)
         : 0
 
+      trend = undefined
+      direction = undefined
+      percent = undefined
+
       console.log(`[TileCalc] [${tile.key}] Average from ${valid.length} records → ${value} days`)
-    }
-
-    // Percent of active records
-    if (!tile.average && typeof value === 'number') {
-      const total = activeRecords.length
-
-      if (total > 0) {
-        percent = parseFloat(((Number(value) / total) * 100).toFixed(1))
-        console.log(`[TileCalc] [${tile.key}] Percent of active records (${value}/${total}): ${percent}%`)
-      }
     }
 
     const clickFilter = tile.clickFilter || (
@@ -100,6 +103,7 @@ export function tileCalculations(
       value,
       trend,
       direction,
+      previous,
       subtitle: tile.subtitle ?? match?.subtitle,
       clickFilter,
       clickable: tile.clickable ?? Boolean(clickFilter),

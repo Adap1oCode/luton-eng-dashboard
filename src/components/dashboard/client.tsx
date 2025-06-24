@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { DataTable } from '@/components/dashboard/widgets/data-table'
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
 import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
@@ -11,16 +9,13 @@ import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
 import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
 
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-
 import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
 import { attachTileActions } from '@/components/dashboard/client/tile-actions'
-import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters'
-import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 import { isFastFilter } from '@/components/dashboard/client/fast-filter'
-
+import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
+import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
+import type { Filter } from '@/components/dashboard/client/data-filters'
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -36,8 +31,7 @@ const widgetMap: Record<string, any> = {
 function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[] {
   const filter = (widget as any).filter
   if (!filter) return []
-
-  return isFastFilter(filter) ? [filter] : [filter] // still returns even if not fast, but consistent
+  return isFastFilter(filter) ? [filter] : [filter]
 }
 
 type Props = {
@@ -49,9 +43,6 @@ type Props = {
 }
 
 export default function DashboardClient({ config, metrics, records, from, to }: Props) {
-  const [filters, setFilters] = useState<Filter[]>([])
-  const [drawerOpen, setDrawerOpen] = useState(false)
-
   const rangeFilteredRecords = records.filter(
     (r) => r.order_date && r.order_date >= from && r.order_date <= to
   )
@@ -67,82 +58,25 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
     return orderDate >= prevFrom && orderDate <= prevTo
   })
 
-  const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
-    const builtFilters = buildFilterFromWidget(widget)
-    console.log('[handleClickWidget]', {
-      key: widget.key,
-      rawFilter: (widget as any).filter,
-      builtFilters
-    })
-
-    if (builtFilters.length > 0) {
-      setFilters(builtFilters)
-      setDrawerOpen(true)
-    }
-  }
-
-  const handleFilter = (type: string) => (values: string[]) => {
-    const updated = values.map((val) => ({ column: type, contains: val }))
-    console.log('[handleFilter] updated filters:', updated)
-    setFilters(updated)
-    setDrawerOpen(true)
-  }
-
-  const filteredData =
-    filters.length === 0 ? records : applyDataFilters(records, filters, config)
-
-  useEffect(() => {
-    console.log('[Drawer State]', {
-      filters,
-      drawerOpen: filters.length > 0
-    })
-
-    if (filters.length === 0) setDrawerOpen(false)
-  }, [filters])
+  const {
+    filters,
+    setFilters,
+    drawerOpen,
+    setDrawerOpen,
+    filteredData,
+    handleClickWidget,
+    handleFilter,
+  } = useDataViewer({ config, records })
 
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline">View Full Table</Button>
-          </SheetTrigger>
-
-          <SheetContent
-            side="right"
-            aria-labelledby="drawer-title"
-            className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto">
-            <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
-            <div className="p-4">
-              <DataTable
-                key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
-                data={filteredData}
-                columns={config.tableColumns}
-                rowIdKey={config.rowIdKey}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <div className="hidden" aria-hidden>
-          <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <SheetContent
-              side="right"
-              className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
-            >
-              <div className="p-4">
-                <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
-                <DataTable
-                  key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
-                  data={filteredData}
-                  columns={config.tableColumns}
-                  rowIdKey={config.rowIdKey}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
+      <DataViewer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        filteredData={filteredData}
+        filters={filters}
+        config={config}
+      />
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w, i) => {
@@ -165,9 +99,10 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             to,
           }
 
-          if (w.clickable) {
-            commonProps.onClick = () => handleClickWidget(w)
-          }
+if (w.clickable && w.key) {
+  commonProps.onClick = () => handleClickWidget(w as DashboardTile)
+}
+
 
           if (w.filterType) {
             commonProps.onFilterChange = handleFilter(w.filterType)

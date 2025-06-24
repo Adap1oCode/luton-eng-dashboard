@@ -12,17 +12,11 @@ import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
 import type { DashboardTile } from '@/components/dashboard/types'
-import type { Filter } from '@/components/dashboard/client/data-filters'
-
-type Thresholds = {
-  ok?: { lt?: number; gt?: number }
-  warning?: { lt?: number; gt?: number }
-  danger?: { lt?: number; gt?: number }
-}
 
 type DashboardTileWithClick = DashboardTile & {
   onClick?: () => void
   debug?: boolean
+  previous?: number
 }
 
 type Props = {
@@ -31,15 +25,16 @@ type Props = {
   to?: string
 }
 
-function formatContextLine(from?: string, to?: string): string {
-  if (!from || !to) return 'vs previous period'
+function formatContextLine(from?: string, to?: string, previous?: number): string {
+  if (!from || !to || typeof previous !== 'number') return 'vs previous period'
   const fromDate = new Date(from)
   const toDate = new Date(to)
   const diffDays = Math.round((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24))
-  if (Math.abs(diffDays - 365) <= 2) return 'vs previous 12 months'
-  if (Math.abs(diffDays - 180) <= 2) return 'vs previous 6 months'
-  if (Math.abs(diffDays - 90) <= 2) return 'vs previous 3 months'
-  return `vs previous ${diffDays} days`
+
+  if (Math.abs(diffDays - 365) <= 2) return `vs ${previous.toLocaleString()} in previous 12 months`
+  if (Math.abs(diffDays - 180) <= 2) return `vs ${previous.toLocaleString()} in previous 6 months`
+  if (Math.abs(diffDays - 90) <= 2) return `vs ${previous.toLocaleString()} in previous 3 months`
+  return `vs ${previous.toLocaleString()} in previous ${diffDays} days`
 }
 
 function formatStatusLine(direction?: 'up' | 'down'): string {
@@ -63,6 +58,7 @@ export default function SectionCards({ config, from, to }: Props) {
             value,
             trend,
             direction,
+            previous: tile.previous,
             filter: tile.filter,
           })
         }
@@ -95,7 +91,9 @@ export default function SectionCards({ config, from, to }: Props) {
                 {formatStatusLine(direction)}
                 {Icon && <Icon className="size-4" />}
               </div>
-              <div className="text-muted-foreground">{formatContextLine(from, to)}</div>
+              <div className="text-muted-foreground">
+                {formatContextLine(from, to, typeof tile.previous === 'number' ? tile.previous : undefined)}
+              </div>
             </CardFooter>
           </Card>
         )
