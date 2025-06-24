@@ -1,5 +1,7 @@
 'use client'
 
+import { sub } from 'date-fns'
+
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
 import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
@@ -43,20 +45,21 @@ type Props = {
 }
 
 export default function DashboardClient({ config, metrics, records, from, to }: Props) {
-  const rangeFilteredRecords = records.filter(
-    (r) => r.order_date && r.order_date >= from && r.order_date <= to
-  )
+const currentFrom = new Date(from)
+const currentTo = new Date(to)
+const duration = currentTo.getTime() - currentFrom.getTime()
 
-  const previousRangeFilteredRecords = records.filter((r) => {
-    if (!r.order_date || !from || !to) return false
-    const currentFrom = new Date(from)
-    const currentTo = new Date(to)
-    const diff = currentTo.getTime() - currentFrom.getTime()
-    const prevFrom = new Date(currentFrom.getTime() - diff)
-    const prevTo = new Date(currentFrom.getTime() - 1)
-    const orderDate = new Date(r.order_date)
-    return orderDate >= prevFrom && orderDate <= prevTo
-  })
+const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
+const prevTo = new Date(currentTo.getTime() - duration).toISOString()
+
+const rangeFilteredRecords = records.filter(
+  (r) => r.order_date && r.order_date >= from && r.order_date <= to
+)
+
+const previousRangeFilteredRecords = records.filter(
+  (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
+)
+
 
   const {
     filters,
@@ -99,10 +102,9 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             to,
           }
 
-if (w.clickable && w.key) {
-  commonProps.onClick = () => handleClickWidget(w as DashboardTile)
-}
-
+          if (w.clickable && w.key) {
+            commonProps.onClick = () => handleClickWidget(w as DashboardTile)
+          }
 
           if (w.filterType) {
             commonProps.onFilterChange = handleFilter(w.filterType)

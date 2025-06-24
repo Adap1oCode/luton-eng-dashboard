@@ -187,7 +187,7 @@ summary: [
     {
       key: 'totalReqs',
       title: 'Total Reqs',
-      filter: { column: 'status', isNull: false },
+      filter: { column: 'requisition_order_number', isNotNull: true  },
       thresholds: {},
       clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"

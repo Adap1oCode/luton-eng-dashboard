@@ -1,0 +1,215 @@
+import { getPurchaseOrders } from '@/app/(main)/dashboard/purchase-orders/_components/data'
+import type { DashboardConfig } from '@/components/dashboard/types'
+
+export const purchaseOrdersConfig: DashboardConfig = {
+  id: 'purchaseorders',
+  title: 'Purchase Orders Dashboard',
+  range: '3m',
+  rowIdKey: 'po_number',
+  fetchRecords: getPurchaseOrders,
+
+  filters: {
+    status: 'status',
+    creator: 'created_by',
+    project: 'project_number',
+    issue: true,
+  },
+
+  summary: [
+    {
+      key: 'totalAllTime',
+      title: 'Total Purchase Orders',
+      subtitle: 'All Time',
+      filter: { column: 'po_number', isNotNull: true },
+      clickable: true,
+      noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders"
+    },
+    {
+      key: 'issued',
+      title: 'Issued',
+      subtitle: 'All Time',
+      filter: { column: 'status', contains: 'issued' },
+      thresholds: {},
+      clickable: true,
+      noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%issued%'"
+    },
+    {
+      key: 'inProgress',
+      title: 'In Progress',
+      subtitle: 'All Time',
+      filter: { column: 'status', contains: 'in progress' },
+      thresholds: {},
+      clickable: true,
+      noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%in progress%'"
+    },
+    {
+      key: 'completed',
+      title: 'Completed',
+      subtitle: 'All Time',
+      filter: { column: 'status', contains: 'complete' },
+      thresholds: {},
+      clickable: true,
+      noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%complete%'"
+    },
+    {
+      key: 'cancelled',
+      title: 'Cancelled',
+      subtitle: 'All Time',
+      filter: { column: 'status', contains: 'cancel' },
+      thresholds: {},
+      clickable: true,
+      noRangeFilter: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%cancel%'"
+    }
+  ],
+
+  trends: [
+    {
+      key: 'totalPOs',
+      title: 'Total POs',
+      filter: { column: 'po_number', isNotNull: true },
+      thresholds: {},
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE po_number IS NOT NULL"
+    },
+    {
+      key: 'closedPOs',
+      title: 'Closed - Pick Complete',
+      filter: { column: 'status', contains: 'closed' },
+      thresholds: {},
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%closed%'"
+    },
+    {
+      key: 'missingOrderDate',
+      title: 'Missing Order Date',
+      filter: { column: 'order_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE order_date IS NULL"
+    },
+    {
+      key: 'missingDueDate',
+      title: 'Missing Due Date',
+      filter: { column: 'due_date', isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE due_date IS NULL"
+    }
+  ],
+
+  dataQuality: [
+    {
+      key: 'missing_due_date',
+      label: 'Missing Due Date',
+      column: 'due_date',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE due_date IS NULL"
+    },
+    {
+      key: 'missing_order_date',
+      label: 'Missing Order Date',
+      column: 'order_date',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE order_date IS NULL"
+    },
+    {
+      key: 'missing_created_by',
+      label: 'Missing Created By',
+      column: 'created_by',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE created_by IS NULL"
+    },
+    {
+      key: 'missing_project_number',
+      label: 'Missing Project Number',
+      column: 'project_number',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE project_number IS NULL"
+    },
+    {
+      key: 'missing_warehouse',
+      label: 'Missing Warehouse',
+      column: 'warehouse',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE warehouse IS NULL"
+    },
+    {
+      key: 'missing_supplier',
+      label: 'Missing Supplier',
+      column: 'supplier',
+      type: 'is_null',
+      rulesKey: 'default',
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE supplier IS NULL"
+    }
+  ],
+
+  tiles: [],
+
+  widgets: [
+    { component: 'SummaryCards', key: 'tiles', group: 'summary' },
+    { component: 'SectionCards', key: 'tiles', group: 'trends' },
+    {
+      component: 'ChartBarVertical',
+      key: 'data_quality_chart',
+      title: 'Data Quality Issues',
+      description: 'Breakdown of validation issues found in current dataset',
+      layout: 'vertical',
+      rulesKey: 'default',
+      clickable: true,
+      sortBy: 'label-asc',
+      debug: true
+    },
+    {
+      component: 'ChartBarVertical',
+      key: 'status_chart',
+      title: 'Records by Status',
+      description: 'Status distribution of purchase orders in current range',
+      column: 'status',
+      clickable: true,
+      sortBy: 'value-desc',
+      span: 2,
+      debug: true
+    },
+    {
+      key: 'records_by_creator',
+      component: 'ChartDonut',
+      title: 'Records by Creator',
+      description: 'Breakdown of records grouped by created_by',
+      column: 'created_by',
+      filterType: 'creator',
+      span: 2,
+      debug: true
+    },
+    {
+      key: 'records_by_project',
+      component: 'ChartBarHorizontal',
+      title: 'Records by Project',
+      description: 'Breakdown by project_number',
+      column: 'project_number',
+      filterType: 'project_number',
+      debug: true
+    }
+  ],
+
+  tableColumns: [
+    { accessorKey: 'po_number', header: 'PO Number' },
+    { accessorKey: 'status', header: 'Status' },
+    { accessorKey: 'created_by', header: 'Created By' },
+    { accessorKey: 'project_number', header: 'Project' },
+    { accessorKey: 'order_date', header: 'Order Date' },
+    { accessorKey: 'due_date', header: 'Due Date' },
+    { accessorKey: 'warehouse', header: 'Warehouse' },
+    { accessorKey: 'supplier', header: 'Supplier' },
+    { accessorKey: 'po_type', header: 'PO Type' },
+  ]
+};
