@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { DataTable } from '@/components/dashboard/widgets/data-table'
 import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters'
-import type { ClientDashboardConfig, DashboardWidget, DashboardTile  } from '@/components/dashboard/types'
+import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 
 export function useDataViewer({
   config,
@@ -24,13 +23,12 @@ export function useDataViewer({
     if (filters.length === 0) setDrawerOpen(false)
   }, [filters])
 
-const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
-  const filter = (widget as any).filter
-  if (!filter) return
-  setFilters([filter])
-  setDrawerOpen(true)
-}
-
+  const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
+    const filter = (widget as any).filter
+    if (!filter) return
+    setFilters([filter])
+    setDrawerOpen(true)
+  }
 
   const handleFilter = (type: string) => (values: string[]) => {
     const updated = values.map((val) => ({ column: type, contains: val }))
@@ -63,49 +61,22 @@ export function DataViewer({
   config: ClientDashboardConfig
 }) {
   return (
-    <>
-      <div className="flex justify-end mb-4">
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline">View Full Table</Button>
-          </SheetTrigger>
-
-          <SheetContent
-            side="right"
-            aria-labelledby="drawer-title"
-            className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
-          >
-            <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
-            <div className="p-4">
-              <DataTable
-                key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
-                data={filteredData}
-                columns={config.tableColumns}
-                rowIdKey={config.rowIdKey}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      <div className="hidden" aria-hidden>
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent
-            side="right"
-            className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
-          >
-            <div className="p-4">
-              <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
-              <DataTable
-                key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
-                data={filteredData}
-                columns={config.tableColumns}
-                rowIdKey={config.rowIdKey}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </>
+    <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+      <SheetContent
+        side="right"
+        aria-labelledby="drawer-title"
+        className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
+      >
+        <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
+        <div className="p-4">
+          <DataTable
+            key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
+            data={filteredData}
+            columns={config.tableColumns}
+            rowIdKey={config.rowIdKey}
+          />
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

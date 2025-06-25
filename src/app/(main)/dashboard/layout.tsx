@@ -1,26 +1,26 @@
-import { ReactNode } from "react";
+import { ReactNode } from "react"
+import { cookies } from "next/headers"
 
-import { cookies } from "next/headers";
+import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar"
+import { Separator } from "@/components/ui/separator"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { users } from "@/data/users"
+import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences"
+import { cn } from "@/lib/utils"
 
-import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
-import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
-import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
-import { cn } from "@/lib/utils";
-
-import { AccountSwitcher } from "./_components/sidebar/account-switcher";
-import { LayoutControls } from "./_components/sidebar/layout-controls";
-import { SearchDialog } from "./_components/sidebar/search-dialog";
-import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
+import { AccountSwitcher } from "@/app/(main)/dashboard/_components/sidebar/account-switcher"
+import { LayoutControls } from "@/app/(main)/dashboard/_components/sidebar/layout-controls"
+import { SearchDialog } from "@/app/(main)/dashboard/_components/sidebar/search-dialog"
+import { ThemeSwitcher } from "@/app/(main)/dashboard/_components/sidebar/theme-switcher"
+import { DataViewerButton } from "@/app/(main)/dashboard/_components/sidebar/data-viewer-button"
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
+  const cookieStore = await cookies()
+  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
 
-  const sidebarVariant = await getSidebarVariant();
-  const sidebarCollapsible = await getSidebarCollapsible();
-  const contentLayout = await getContentLayout();
+  const sidebarVariant = await getSidebarVariant()
+  const sidebarCollapsible = await getSidebarCollapsible()
+  const contentLayout = await getContentLayout()
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -28,8 +28,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
       <SidebarInset
         className={cn(
           contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
-          // Adds right margin for inset sidebar in centered layout up to 113rem.
-          // On wider screens with collapsed sidebar, removes margin and sets margin auto for alignment.
           "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
         )}
       >
@@ -41,14 +39,19 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               <SearchDialog />
             </div>
             <div className="flex items-center gap-2">
-              <LayoutControls contentLayout={contentLayout} variant={sidebarVariant} collapsible={sidebarCollapsible} />
+              <LayoutControls
+                contentLayout={contentLayout}
+                variant={sidebarVariant}
+                collapsible={sidebarCollapsible}
+              />
               <ThemeSwitcher />
-              <AccountSwitcher users={users} />
+              {/* <AccountSwitcher users={users} /> */}
+              <DataViewerButton />
             </div>
           </div>
         </header>
         <div className="p-4 md:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }

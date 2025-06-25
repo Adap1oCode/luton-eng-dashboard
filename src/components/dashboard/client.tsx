@@ -1,6 +1,8 @@
 'use client'
 
 import { sub } from 'date-fns'
+import { useEffect } from 'react'
+
 
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
@@ -18,6 +20,8 @@ import { isFastFilter } from '@/components/dashboard/client/fast-filter'
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
 import type { Filter } from '@/components/dashboard/client/data-filters'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -71,15 +75,39 @@ const previousRangeFilteredRecords = records.filter(
     handleFilter,
   } = useDataViewer({ config, records })
 
+  const searchParams = useSearchParams()
+const router = useRouter()
+const pathname = usePathname()
+
+const shouldOpen = searchParams.get('viewTable') === 'true'
+
+useEffect(() => {
+  if (shouldOpen) {
+    setDrawerOpen(true)
+  }
+}, [shouldOpen])
+
+const handleDrawerClose = (open: boolean) => {
+  setDrawerOpen(open)
+
+  if (!open) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('viewTable')
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+}
+
+
   return (
     <>
-      <DataViewer
-        drawerOpen={drawerOpen}
-        setDrawerOpen={setDrawerOpen}
-        filteredData={filteredData}
-        filters={filters}
-        config={config}
-      />
+<DataViewer
+  drawerOpen={drawerOpen}
+  setDrawerOpen={handleDrawerClose}
+  filteredData={filteredData}
+  filters={filters}
+  config={config}
+/>
+
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w, i) => {
@@ -156,9 +184,16 @@ const previousRangeFilteredRecords = records.filter(
 
           return (
             <div key={i} className={`${spanClass} flex flex-col`}>
-              <div className="flex-1 flex flex-col min-h-[280px]">
-                <Comp {...commonProps} />
-              </div>
+              <div
+  className={`flex-1 flex flex-col ${
+    w.component !== 'SectionCards' && w.component !== 'SummaryCards'
+      ? 'min-h-[280px]'
+      : ''
+  }`}
+>
+  <Comp {...commonProps} />
+</div>
+
             </div>
           )
         })}

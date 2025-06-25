@@ -118,21 +118,31 @@ export function SearchDialog() {
       <DateInput label="To" value={to} onSelect={(date) => handleDateChange('to', date)} />
 
       <ToggleGroup
-        type="single"
-        value={preset !== 'custom' ? preset : undefined}
-        onValueChange={(val) => val && handlePreset(val)}
-        className="bg-muted px-2 py-1 rounded-md border"
-      >
-        <ToggleGroupItem value="3m" className="text-xs px-3 py-1">
-          Last 3M
-        </ToggleGroupItem>
-        <ToggleGroupItem value="6m" className="text-xs px-3 py-1">
-          Last 6M
-        </ToggleGroupItem>
-        <ToggleGroupItem value="12m" className="text-xs px-3 py-1">
-          Last 12M
-        </ToggleGroupItem>
-      </ToggleGroup>
+  type="single"
+  value={preset !== 'custom' ? preset : undefined}
+  onValueChange={(val) => val && handlePreset(val)}
+  className="gap-1"
+>
+  <ToggleGroupItem
+    value="3m"
+    className="text-xs px-3 py-1"
+  >
+    Last 3M
+  </ToggleGroupItem>
+  <ToggleGroupItem
+    value="6m"
+    className="text-xs px-3 py-1"
+  >
+    Last 6M
+  </ToggleGroupItem>
+  <ToggleGroupItem
+    value="12m"
+    className="text-xs px-3 py-1"
+  >
+    Last 12M
+  </ToggleGroupItem>
+</ToggleGroup>
+
     </div>
   )
 }

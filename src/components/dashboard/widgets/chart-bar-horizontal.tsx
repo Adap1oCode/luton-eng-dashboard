@@ -26,6 +26,8 @@ import {
 
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { DashboardWidget } from '@/components/dashboard/types'
+import type { Filter } from '@/components/dashboard/client/data-filters'
+
 
 function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {}
@@ -56,7 +58,7 @@ type Props = {
   }
   data: Record<string, any>[]
   rules?: Rule[]
-  onFilterChange?: (values: string[]) => void
+  onFilterChange?: (filters: Filter[]) => void
 }
 
 export default function ChartBarHorizontal({
@@ -156,9 +158,21 @@ export default function ChartBarHorizontal({
 
               <Bar
                 dataKey="count"
-                onClick={(entry) => onFilterChange?.([entry.key])}
                 cursor="pointer"
                 radius={[4, 4, 0, 0]}
+                onClick={(entry) => {
+                  if (!rules || rules.length === 0) return
+                  const matchedRule = rules.find((r) => r.key === entry.key)
+                  if (matchedRule) {
+                    const filter: Filter = {
+                      column: matchedRule.column,
+                      type: matchedRule.type,
+                      value: matchedRule.value,
+                      pattern: matchedRule.pattern,
+                    }
+                    onFilterChange?.([filter])
+                  }
+                }}
               >
                 {chartData.map((_, index) => (
                   <Cell key={index} fill={`var(--chart-${(index % 5) + 1})`} />

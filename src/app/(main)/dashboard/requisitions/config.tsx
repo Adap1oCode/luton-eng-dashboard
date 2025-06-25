@@ -34,7 +34,7 @@ const chartWidgets = [
     toggles: [
       {
         key: 'created_vs_due',
-        title: 'Created vs Due - Dynamic',
+        title: 'Created vs Due',
         fields: [
           { key: 'created', label: 'Created', type: 'created', color: 'var(--chart-1)' },
           { key: 'due', label: 'Due', type: 'due', color: 'var(--chart-2)' },
