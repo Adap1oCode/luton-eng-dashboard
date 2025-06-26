@@ -74,6 +74,7 @@ export type DashboardTile = {
   title: string
   subtitle?: string
   matchKey?: string
+  rulesKey?: string
   value?: number | string | null
   percent?: number // ✅ Add this line
     debug?: boolean
@@ -106,30 +107,6 @@ export type DashboardColumn = {
   header: string
 }
 
-// ✅ Rules used in data quality charts
-export type DataQualityRule = {
-  key: string
-  label: string
-  column: string
-  type:
-    | 'is_null'
-    | 'is_not_null'
-    | 'regex'
-    | 'equals'
-    | 'not_equals'
-    | 'gt'
-    | 'lt'
-    | 'gte'
-    | 'lte'
-    | 'in'
-    | 'not_in'
-    | 'contains'
-    | 'not_contains'
-  value?: any
-  pattern?: string
-  sql?: string
-  rulesKey?: string
-}
 
 // ✅ Core async loader for any dashboard
 export type DashboardFetchFunction = (
@@ -159,8 +136,7 @@ export type DashboardConfig = {
   tiles: DashboardTile[]
   summary?: DashboardTile[]
   trends?: DashboardTile[]
-  dataQuality?: DataQualityRule[]
-
+  dataQuality?: DashboardTile[]
   widgets: DashboardWidget[]
   tableColumns: DashboardColumn[]
 }

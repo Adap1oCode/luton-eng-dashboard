@@ -1,5 +1,3 @@
-import { evaluateDataQuality } from '@/components/dashboard/data-quality'
-
 export type DataItem = { [key: string]: any }
 
 export type BucketUnit = 'week'
@@ -11,6 +9,12 @@ export type ChartField = {
   accessor?: (row: any) => string | null | undefined
 }
 
+export type BarChartOptions = {
+  fields?: { key: string; label?: string }[]
+  sortBy?: 'label' | 'value'
+  limit?: number
+}
+
 type BucketOptions = {
   from: string
   to: string
@@ -18,7 +22,7 @@ type BucketOptions = {
   fields: ChartField[]
 }
 
-// 🔧 Shared: normalize dates to week start (Monday)
+// 🔧 Normalize dates to start of the week (Monday)
 function getBucketStart(date: Date): Date {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
   const day = d.getUTCDay()
@@ -50,7 +54,7 @@ export function getTimeBuckets(
   const toDate = new Date(options.to)
   toDate.setUTCHours(23, 59, 59, 999)
 
-  const bucketMap = new Map<string, { date: Date; [key: string]: any }>()
+  const bucketMap = new Map<string, { date: Date; [key: string]: any }>();
   const cursor = getBucketStart(fromDate)
 
   while (cursor <= toDate) {
@@ -81,35 +85,19 @@ export function getTimeBuckets(
   })
 }
 
-type BarChartOptions = {
-  fields?: { key: string; label?: string }[]
-  rules?: { key: string; label: string }[]
-  rulesKey?: string
-  sortBy?: 'label' | 'value'
-  limit?: number
-}
-
 /**
- * Bar chart: grouped count logic, supports rule-based grouping or simple key group.
+ * Bar chart: grouped count logic, based on simple key grouping only.
  */
 export function getBarChartData(
   data: any[],
   key: string | undefined,
   options: BarChartOptions = {}
 ): { key: string; label: string; value: number }[] {
-  const { fields, rules, sortBy = 'value', limit } = options
+  const { fields = [], sortBy = 'value', limit } = options
+
   const counts: Record<string, number> = {}
 
-  if (Array.isArray(rules) && rules.length > 0) {
-    // ✅ Rule-based evaluation
-    for (const row of data) {
-      const issues = evaluateDataQuality(row, rules)
-      for (const issue of issues) {
-        counts[issue] = (counts[issue] || 0) + 1
-      }
-    }
-  } else if (key) {
-    // ✅ Classic filterType-based grouping
+  if (key) {
     for (const row of data) {
       if (!(key in row)) continue
       const raw = row[key]
@@ -125,8 +113,7 @@ export function getBarChartData(
 
   let output = Object.entries(counts).map(([label, value]) => {
     const matchedLabel =
-      fields?.find((f) => f.key === label)?.label ||
-      rules?.find((r) => r.key === label)?.label ||
+      fields.find((f) => f.key === label)?.label ||
       label
 
     return {

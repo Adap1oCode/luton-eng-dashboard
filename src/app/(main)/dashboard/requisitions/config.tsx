@@ -288,65 +288,68 @@ filter: {
     }
   ],
 
-  dataQuality: [
-    {
-      key: 'missing_due_date',
-      label: 'Missing Due Date',
-      column: 'due_date',
-      type: 'is_null',
-      rulesKey: 'default',
-      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
-    },
-    {
-      key: 'missing_order_date',
-      label: 'Missing Order Date',
-      column: 'order_date',
-      type: 'is_null',
-      rulesKey: 'default',
-      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
-    },
-    {
-      key: 'missing_created_by',
-      label: 'Missing Created By',
-      column: 'created_by',
-      type: 'is_null',
-      rulesKey: 'default',
-      sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
-    },
-    {
-      key: 'missing_project_number',
-      label: 'Missing Project Number',
-      column: 'project_number',
-      type: 'is_null',
-      rulesKey: 'default',
-      sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
-    },
-    {
-      key: 'missing_warehouse',
-      label: 'Missing Warehouse',
-      column: 'warehouse',
-      type: 'is_null',
-      rulesKey: 'default',
-      sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
-    },
-    {
-      key: 'invalid_requisition_order_number',
-      label: 'Invalid Requisition Order Number',
+dataQuality: [
+  {
+    key: 'missing_due_date',
+    title: 'Missing Due Date',
+    filter: { column: 'due_date', isNull: true },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
+  },
+  {
+    key: 'missing_order_date',
+    title: 'Missing Order Date',
+    filter: { column: 'order_date', isNull: true },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
+  },
+  {
+    key: 'missing_created_by',
+    title: 'Missing Created By',
+    filter: { column: 'created_by', isNull: true },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
+  },
+  {
+    key: 'missing_project_number',
+    title: 'Missing Project Number',
+    filter: { column: 'project_number', isNull: true },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
+  },
+  {
+    key: 'missing_warehouse',
+    title: 'Missing Warehouse',
+    filter: { column: 'warehouse', isNull: true },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
+  },
+  {
+    key: 'invalid_requisition_order_number',
+    title: 'Invalid Requisition Order Number',
+    filter: {
       column: 'requisition_order_number',
-      type: 'regex',
-      rulesKey: 'default',
-      pattern: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$",
-      sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
-    }
-  ],
+      notMatches: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$"
+    },
+    rulesKey: 'default',
+    clickable: true,
+    sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
+  }
+],
+
 
   tiles: [],
 
   widgets: [
-    { component: 'SummaryCards', key: 'tiles', group: 'summary' },
-    { component: 'SectionCards', key: 'tiles', group: 'trends' },
+  { component: 'SummaryCards', key: 'tiles', group: 'summary' },
+  { component: 'SectionCards', key: 'tiles', group: 'trends' },
      ...chartWidgets,
-    {
+  {
   component: 'ChartBarVertical',
   key: 'data_quality_chart',
   title: 'Data Quality Issues',

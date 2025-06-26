@@ -1,5 +1,3 @@
-// data-filters.ts
-
 export type Filter =
   | {
       column: string
@@ -16,19 +14,18 @@ export type Filter =
       notIn?: (string | number)[]
       isNull?: boolean
       isNotNull?: boolean
+      matches?: string               // ✅ NEW
+      notMatches?: string           // ✅ NEW
+
     }
-  | {
-      and: Filter[]
-    }
-  | {
-      or: Filter[]
-    }
+  | { and: Filter[] }
+  | { or: Filter[] }
 
 export function isDateString(value: any): boolean {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
-// ✅ Core: compile any filter to a performant function
+// ✅ Compile a single filter into a test function
 export function compileFilter(filter: Filter): (row: Record<string, any>) => boolean {
   if ('and' in filter) {
     const subs = filter.and.map(compileFilter)
@@ -41,7 +38,6 @@ export function compileFilter(filter: Filter): (row: Record<string, any>) => boo
   }
 
   const col = filter.column
-
   return (row) => {
     const raw = row[col]
     const isString = typeof raw === 'string'
@@ -50,38 +46,52 @@ export function compileFilter(filter: Filter): (row: Record<string, any>) => boo
     if (filter.isNull === true) return raw === null || raw === undefined
     if (filter.isNotNull === true) return raw !== null && raw !== undefined
 
-    if (filter.equals !== undefined) {
+    if (filter.equals !== undefined)
       return isString
         ? val === filter.equals.toString().toLowerCase()
         : raw === filter.equals
-    }
-    if (filter.notEquals !== undefined) {
+
+    if (filter.notEquals !== undefined)
       return isString
         ? val !== filter.notEquals.toString().toLowerCase()
         : raw !== filter.notEquals
-    }
+
     if (filter.lt !== undefined) return raw < filter.lt
     if (filter.lte !== undefined) return raw <= filter.lte
     if (filter.gt !== undefined) return raw > filter.gt
     if (filter.gte !== undefined) return raw >= filter.gte
-    if (filter.contains !== undefined && isString) return val.includes(filter.contains.toLowerCase())
-    if (filter.notContains !== undefined && isString) return !val.includes(filter.notContains.toLowerCase())
-    if (filter.in) {
+
+    if (filter.contains !== undefined && isString)
+      return val.includes(filter.contains.toLowerCase())
+
+    if (filter.notContains !== undefined && isString)
+      return !val.includes(filter.notContains.toLowerCase())
+
+    if (filter.matches !== undefined && isString)
+      return new RegExp(filter.matches).test(raw)
+
+    if (filter.notMatches !== undefined && isString)
+      return !new RegExp(filter.notMatches).test(raw)
+
+    if (filter.in)
       return filter.in.some(
-        (v) => (isString ? val : raw) === (typeof v === 'string' ? v.toLowerCase() : v)
+        (v) =>
+          (isString ? val : raw) ===
+          (typeof v === 'string' ? v.toLowerCase() : v)
       )
-    }
-    if (filter.notIn) {
+
+    if (filter.notIn)
       return !filter.notIn.some(
-        (v) => (isString ? val : raw) === (typeof v === 'string' ? v.toLowerCase() : v)
+        (v) =>
+          (isString ? val : raw) ===
+          (typeof v === 'string' ? v.toLowerCase() : v)
       )
-    }
 
     return true
   }
 }
 
-// ✅ Main API: applies one or many filters (memoized compile)
+// ✅ Memoized application of filters to dataset
 const filterCache = new WeakMap<Filter, (row: Record<string, any>) => boolean>()
 
 export function applyDataFilters(
@@ -102,10 +112,8 @@ export function applyDataFilters(
   return records.filter((row) => compiled.every((fn) => fn(row)))
 }
 
-// ✅ Used in clickable tiles (e.g. SummaryCards)
-// ✅ Used in clickable tiles (e.g. SummaryCards)
+// ✅ Used in SummaryCards, SectionCards, Chart click
 export function getClickFilter(tile: any): Filter | null {
   if (!tile || !tile.clickable) return null
   return tile.filter ?? null
 }
-

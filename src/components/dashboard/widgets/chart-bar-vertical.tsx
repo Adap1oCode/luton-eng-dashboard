@@ -1,3 +1,5 @@
+'use client'
+
 import {
   BarChart,
   Bar,
@@ -24,8 +26,9 @@ import {
 
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { DashboardWidget } from '@/components/dashboard/types'
+import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters' // ✅ NEW
 
-/** ✅ NEW: utility to generate values from generic column count */
+/** ✅ Utility to generate fallback values from generic column count */
 function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {}
   for (const row of records) {
@@ -42,10 +45,7 @@ function generateColumnCounts(records: any[], column: string) {
 type Rule = {
   key: string
   label: string
-  column: string
-  type: string
-  value?: any
-  pattern?: string
+  filter: Filter
 }
 
 type Props = {
@@ -55,7 +55,7 @@ type Props = {
   }
   data: Record<string, any>[]
   rules?: Rule[]
-  onFilterChange?: (values: string[]) => void
+  onFilterChange?: (keys: string[]) => void
 }
 
 export default function ChartBarVertical({
@@ -76,24 +76,7 @@ export default function ChartBarVertical({
 
   if (rules.length > 0) {
     chartData = rules.map((rule) => {
-      const count = data.reduce((acc, row) => {
-        const val = row[rule.column]
-        switch (rule.type) {
-          case 'is_null':
-            return acc + (val === null || val === undefined || val === '' ? 1 : 0)
-          case 'regex':
-            return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
-          case 'equals':
-            return acc + (val !== rule.value ? 1 : 0)
-          case 'gt':
-            return acc + (val <= rule.value ? 1 : 0)
-          case 'lt':
-            return acc + (val >= rule.value ? 1 : 0)
-          default:
-            return acc
-        }
-      }, 0)
-
+      const count = applyDataFilters(data, rule.filter).length // ✅ use shared filter logic
       return { key: rule.key, label: rule.label, count }
     })
   } else {
@@ -173,7 +156,7 @@ export default function ChartBarVertical({
               <Bar
                 dataKey="count"
                 radius={[5, 5, 5, 5]}
-                onClick={(entry) => onFilterChange?.([entry.key])}
+                onClick={(entry) => onFilterChange?.([entry.key])} // ✅ passed key from clicked bar
                 cursor="pointer"
               >
                 {chartData.map((_, i) => (

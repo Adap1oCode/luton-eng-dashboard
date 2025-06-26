@@ -3,7 +3,6 @@
 import { sub } from 'date-fns'
 import { useEffect } from 'react'
 
-
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
 import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
@@ -13,7 +12,6 @@ import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
 import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
 
-import { evaluateDataQuality } from '@/components/dashboard/data-quality'
 import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
 import { attachTileActions } from '@/components/dashboard/client/tile-actions'
 import { isFastFilter } from '@/components/dashboard/client/fast-filter'
@@ -21,7 +19,6 @@ import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/co
 import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
 import type { Filter } from '@/components/dashboard/client/data-filters'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -40,30 +37,27 @@ function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[
   return isFastFilter(filter) ? [filter] : [filter]
 }
 
-type Props = {
+export default function DashboardClient({ config, metrics, records, from, to }: {
   config: ClientDashboardConfig
   metrics: any
   records: any[]
   from: string
   to: string
-}
+}) {
+  const currentFrom = new Date(from)
+  const currentTo = new Date(to)
+  const duration = currentTo.getTime() - currentFrom.getTime()
 
-export default function DashboardClient({ config, metrics, records, from, to }: Props) {
-const currentFrom = new Date(from)
-const currentTo = new Date(to)
-const duration = currentTo.getTime() - currentFrom.getTime()
+  const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
+  const prevTo = new Date(currentTo.getTime() - duration).toISOString()
 
-const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
-const prevTo = new Date(currentTo.getTime() - duration).toISOString()
+  const rangeFilteredRecords = records.filter(
+    (r) => r.order_date && r.order_date >= from && r.order_date <= to
+  )
 
-const rangeFilteredRecords = records.filter(
-  (r) => r.order_date && r.order_date >= from && r.order_date <= to
-)
-
-const previousRangeFilteredRecords = records.filter(
-  (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
-)
-
+  const previousRangeFilteredRecords = records.filter(
+    (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
+  )
 
   const {
     filters,
@@ -76,38 +70,33 @@ const previousRangeFilteredRecords = records.filter(
   } = useDataViewer({ config, records })
 
   const searchParams = useSearchParams()
-const router = useRouter()
-const pathname = usePathname()
+  const router = useRouter()
+  const pathname = usePathname()
 
-const shouldOpen = searchParams.get('viewTable') === 'true'
+  const shouldOpen = searchParams.get('viewTable') === 'true'
 
-useEffect(() => {
-  if (shouldOpen) {
-    setDrawerOpen(true)
+  useEffect(() => {
+    if (shouldOpen) setDrawerOpen(true)
+  }, [shouldOpen])
+
+  const handleDrawerClose = (open: boolean) => {
+    setDrawerOpen(open)
+    if (!open) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('viewTable')
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
   }
-}, [shouldOpen])
-
-const handleDrawerClose = (open: boolean) => {
-  setDrawerOpen(open)
-
-  if (!open) {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('viewTable')
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
-}
-
 
   return (
     <>
-<DataViewer
-  drawerOpen={drawerOpen}
-  setDrawerOpen={handleDrawerClose}
-  filteredData={filteredData}
-  filters={filters}
-  config={config}
-/>
-
+      <DataViewer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={handleDrawerClose}
+        filteredData={filteredData}
+        filters={filters}
+        config={config}
+      />
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w, i) => {
@@ -120,6 +109,8 @@ const handleDrawerClose = (open: boolean) => {
               ? config.summary ?? []
               : group === 'trends'
               ? config.trends ?? []
+              : group === 'dataQuality'
+              ? config.dataQuality ?? []
               : config.tiles ?? []
 
           const metricTiles = metrics[group] ?? []
@@ -138,7 +129,7 @@ const handleDrawerClose = (open: boolean) => {
             commonProps.onFilterChange = handleFilter(w.filterType)
           }
 
-          if (w.component === 'SummaryCards' || w.component === 'SectionCards') {
+          if (w.component === 'SummaryCards' || w.component === 'SectionCards' || group === 'dataQuality') {
             const calculatedTiles = tileCalculations(
               configTiles,
               metricTiles,
@@ -151,33 +142,19 @@ const handleDrawerClose = (open: boolean) => {
               calculatedTiles,
               w,
               (tile) => handleClickWidget(tile),
-(filter) => {
-  setFilters([
-    { column: 'order_date', gte: from },
-    { column: 'order_date', lte: to },
-    filter
-  ])
-  setDrawerOpen(true)
-}
-
+              (filter) => {
+                setFilters([
+                  { column: 'order_date', gte: from },
+                  { column: 'order_date', lte: to },
+                  filter
+                ])
+                setDrawerOpen(true)
+              }
             )
           }
 
-          const isChart = w.component !== 'SummaryCards' && w.component !== 'SectionCards'
-
-          if (isChart) {
-            const chartRecords = w.rulesKey
-              ? records.map((row) => ({
-                  ...row,
-                  issue: evaluateDataQuality(row, config.dataQuality ?? []),
-                }))
-              : records
-
-            commonProps.data = chartRecords
-
-            if (w.rulesKey && config.dataQuality) {
-              commonProps.rules = config.dataQuality
-            }
+          if (!['SummaryCards', 'SectionCards'].includes(w.component)) {
+            commonProps.data = records
           }
 
           const spanClass =
@@ -190,15 +167,14 @@ const handleDrawerClose = (open: boolean) => {
           return (
             <div key={i} className={`${spanClass} flex flex-col`}>
               <div
-  className={`flex-1 flex flex-col ${
-    w.component !== 'SectionCards' && w.component !== 'SummaryCards'
-      ? 'min-h-[280px]'
-      : ''
-  }`}
->
-  <Comp {...commonProps} />
-</div>
-
+                className={`flex-1 flex flex-col ${
+                  w.component !== 'SectionCards' && w.component !== 'SummaryCards'
+                    ? 'min-h-[280px]'
+                    : ''
+                }`}
+              >
+                <Comp {...commonProps} />
+              </div>
             </div>
           )
         })}
