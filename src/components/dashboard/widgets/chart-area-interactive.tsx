@@ -107,9 +107,15 @@ export default function ChartAreaInteractive({ data, from, to, config }: Props) 
               value={activeKey}
               onValueChange={(val) => setActiveKey(val ?? toggles[0]?.key ?? '')}
               variant="outline"
+              
             >
               {toggles.map((w) => (
-                <ToggleGroupItem key={w.key} value={w.key} disabled={!w.key}>
+                    <ToggleGroupItem
+      key={w.key}
+      value={w.key}
+      disabled={!w.key}
+      className="px-6 py-2" // 👈 wider buttons with more padding
+    >
                   {w.title || w.key || 'Unnamed'}
                 </ToggleGroupItem>
               ))}
@@ -119,14 +125,14 @@ export default function ChartAreaInteractive({ data, from, to, config }: Props) 
       </CardHeader>
 
       <CardContent className="px-2 pt-2 sm:px-6 sm:pt-4">
-        <div className="mb-2 flex justify-end gap-4 text-xs text-muted-foreground px-2">
-          {summary.map((s) => (
-            <div key={s.key} className="flex items-center gap-1">
-              <span className="font-medium text-foreground">{s.total}</span>
-              <span>{s.label}</span>
-            </div>
-          ))}
-        </div>
+{/* <div className="mb-2 flex justify-end gap-4 text-xs text-muted-foreground px-2">
+  {summary.map((s) => (
+    <div key={s.key} className="flex items-center gap-1">
+      <span className="font-medium text-foreground">{s.total}</span>
+      <span>{s.label}</span>
+    </div>
+  ))}
+</div> */}
 
         <div className="mb-2 flex justify-end gap-4 text-sm text-muted-foreground px-2">
           {fields.map((f) => (

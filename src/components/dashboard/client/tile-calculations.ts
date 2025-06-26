@@ -32,19 +32,26 @@ export function tileCalculations(
       value = matches.length
       previous = prevMatches.length
 
-      if (previous > 0) {
-        const delta = ((Number(value) - previous) / previous) * 100
-        trend = `${Math.abs(delta).toFixed(1)}%`
-        direction = delta >= 0 ? 'up' : 'down'
-        percent = parseFloat(delta.toFixed(1))
-      } else if (value > 0) {
-        trend = `+${value}`
-        direction = 'up'
-        percent = 100
-      } else {
+      if (tile.noRangeFilter) {
+        const total = activeRecords.length || 1
+        percent = parseFloat(((value / total) * 100).toFixed(1))
         trend = undefined
         direction = undefined
-        percent = 0
+      } else {
+        if (previous > 0) {
+          const delta = ((Number(value) - previous) / previous) * 100
+          trend = `${Math.abs(delta).toFixed(1)}%`
+          direction = delta >= 0 ? 'up' : 'down'
+          percent = parseFloat(delta.toFixed(1))
+        } else if (value > 0) {
+          trend = `+${value}`
+          direction = 'up'
+          percent = 100
+        } else {
+          trend = undefined
+          direction = undefined
+          percent = 0
+        }
       }
 
       console.log(`[TileCalc] [${tile.key}] Matches: ${matches.length}, Previous: ${prevMatches.length}`)

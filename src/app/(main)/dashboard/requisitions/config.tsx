@@ -41,15 +41,30 @@ const chartWidgets = [
         ]
       },
       {
-        key: 'lateness_breakdown',
-        title: 'Lateness Breakdown',
-        description: 'Tracks how overdue items are, grouped by when they were due',
-        fields: [
-          { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
-          { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
-          { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
+  key: 'lateness_breakdown',
+  title: 'Lateness',
+  description: 'Tracks how overdue items are, grouped by when they were due',
+  filter: {
+    and: [
+      { column: 'due_date', lt: new Date().toISOString().split('T')[0] }, // past due
+      { column: 'due_date', isNotNull: true },
+      { column: 'due_date', notEquals: '' },
+      { column: 'status', isNotNull: true },
+      {
+        and: [
+          { column: 'status', notContains: 'complete' },
+          { column: 'status', notContains: 'cancel' },
         ]
       }
+    ]
+  },
+  fields: [
+    { key: 'late_1_7', label: '1–7 days late', type: 'lateness', band: '1-7', color: 'var(--chart-1)' },
+    { key: 'late_8_30', label: '8–30 days late', type: 'lateness', band: '8-30', color: 'var(--chart-2)' },
+    { key: 'late_30_plus', label: '30+ days late', type: 'lateness', band: '30+', color: 'var(--chart-3)' },
+  ]
+}
+
     ]
   }
 ]
@@ -83,7 +98,7 @@ summary: [
     key: 'issued',
     title: 'Issued',
     subtitle: 'All Time',
-    filter: { column: 'status', contains: 'issued' },
+    filter: { column: 'status', contains: 'issue' },
     thresholds: {},
     clickable: true,
     noRangeFilter: true,
@@ -119,26 +134,79 @@ summary: [
     noRangeFilter: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%cancel%'"
   },
-  {
-    key: 'late',
-    title: 'Late',
-    subtitle: 'All Time',
-    filter: {
-      and: [
-        { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
-        {
-          and: [
-            { column: 'status', notContains: 'complete' },
-            { column: 'status', notContains: 'cancel' },
-          ],
-        },
+      {
+      key: 'missingOrderDate',
+      title: 'Missing Order Date',
+filter: {
+  and: [
+    {
+      or: [
+        { column: 'order_date', isNull: true },
+        { column: 'order_date', equals: '' },
       ],
     },
-    thresholds: { danger: { gt: 0 } },
-    clickable: true,
-    noRangeFilter: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE due_date < CURRENT_DATE AND status NOT ILIKE '%complete%' AND status NOT ILIKE '%cancel%'"
+    {
+      and: [
+        { column: 'status', notContains: 'complete' },
+        { column: 'status', notContains: 'cancel' },
+      ],
+    },
+  ],
+},
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      noRangeFilter: true,
+
+      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
+    },
+    {
+      key: 'missingDueDate',
+      title: 'Missing Due Date',
+      filter: {
+  and: [
+    {
+      or: [
+        { column: 'due_date', isNull: true },
+        { column: 'due_date', equals: '' },
+      ],
+    },
+    {
+      and: [
+        { column: 'status', notContains: 'complete' },
+        { column: 'status', notContains: 'cancel' },
+      ],
+    },
+  ],
+},
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      noRangeFilter: true,
+
+      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
+    },
+{
+  key: 'late',
+  title: 'Late',
+  subtitle: 'All Time',
+  filter: {
+    and: [
+      { column: 'due_date', lt: new Date().toISOString().split('T')[0] },
+      { column: 'status', isNotNull: true },
+      { column: 'due_date', isNotNull: true },
+      { column: 'due_date', notEquals: '' },
+      {
+        and: [
+          { column: 'status', notContains: 'complete' },
+          { column: 'status', notContains: 'cancel' },
+        ],
+      },
+    ],
   },
+  thresholds: { danger: { gt: 0 } },
+  clickable: true,
+  noRangeFilter: true,
+  sql: "SELECT COUNT(*) FROM requisitions WHERE due_date < CURRENT_DATE AND status NOT ILIKE '%complete%' AND status NOT ILIKE '%cancel%' AND status IS NOT NULL"
+},
   {
     key: 'old_open_reqs',
     title: 'Previous Requistions',
@@ -146,6 +214,8 @@ summary: [
     filter: {
       and: [
         { column: 'order_date', lt: '2025-01-31' },
+        { column: 'due_date', isNotNull: true },
+        { column: 'due_date', notEquals: '' },
         {
           or: [
             { column: 'status', contains: 'issued' },
@@ -192,29 +262,29 @@ summary: [
       clickable: true,
       sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     },
-    {
-      key: 'closedReqs',
-      title: 'Closed - Pick Complete',
-      filter: { column: 'status', contains: 'closed' },
+        {
+      key: 'totalissued',
+      title: 'Issued',
+      filter: { column: 'status', contains: 'issue'  },
       thresholds: {},
       clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%closed%'"
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
+    },
+        {
+      key: 'totalinprogress',
+      title: 'In Progress',
+      filter: { column: 'status', contains: 'progress' },
+      thresholds: {},
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     },
     {
-      key: 'missingOrderDate',
-      title: 'Missing Order Date',
-      filter: { column: 'order_date', isNull: true },
-      thresholds: { warning: { gt: 0 } },
+      key: 'totalcomplete',
+      title: 'Complete',
+      filter: { column: 'status', contains: 'complete' },
+      thresholds: {},
       clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
-    },
-    {
-      key: 'missingDueDate',
-      title: 'Missing Due Date',
-      filter: { column: 'due_date', isNull: true },
-      thresholds: { warning: { gt: 0 } },
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
+      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
     }
   ],
 
