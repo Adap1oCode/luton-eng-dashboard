@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
 import type { DashboardTile } from '@/components/dashboard/types'
+import type { Filter } from '@/components/dashboard/client/data-filters'
+
 
 type DashboardTileWithClick = DashboardTile & {
   onClick?: () => void
@@ -64,14 +66,19 @@ export default function SectionCards({ config, from, to }: Props) {
         }
 
         return (
-          <Card
-            key={tile.key}
-            role={isInteractive ? 'button' : undefined}
-            onClick={isInteractive ? tile.onClick : undefined}
-            className={`@container/card relative ${
-              isInteractive ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
-            }`}
-          >
+<Card
+  key={tile.key}
+  role={isInteractive ? 'button' : undefined}
+  onClick={() => {
+  tile.onClick?.()
+  tile.onClickFilter?.(tile.filter as Filter)
+}}
+
+  className={`@container/card relative ${
+    isInteractive ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
+  }`}
+>
+
             <CardHeader>
               <CardDescription>{tile.title}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

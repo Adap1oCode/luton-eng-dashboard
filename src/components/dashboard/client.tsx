@@ -3,6 +3,7 @@
 import { sub } from 'date-fns'
 import { useEffect } from 'react'
 
+
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
 import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
@@ -21,6 +22,7 @@ import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-vi
 import type { Filter } from '@/components/dashboard/client/data-filters'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 
+
 const widgetMap: Record<string, any> = {
   SectionCards,
   SummaryCards,
@@ -30,18 +32,6 @@ const widgetMap: Record<string, any> = {
   ChartByProject,
   ChartBarVertical,
   ChartBarHorizontal,
-}
-
-function wrapFilterWithRange(tile: DashboardTile, filter: Filter, from: string, to: string): Filter {
-  return tile.noRangeFilter
-    ? filter
-    : {
-        and: [
-          { column: 'order_date', gte: from },
-          { column: 'order_date', lte: to },
-          filter,
-        ],
-      }
 }
 
 function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[] {
@@ -59,20 +49,21 @@ type Props = {
 }
 
 export default function DashboardClient({ config, metrics, records, from, to }: Props) {
-  const currentFrom = new Date(from)
-  const currentTo = new Date(to)
-  const duration = currentTo.getTime() - currentFrom.getTime()
+const currentFrom = new Date(from)
+const currentTo = new Date(to)
+const duration = currentTo.getTime() - currentFrom.getTime()
 
-  const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
-  const prevTo = new Date(currentTo.getTime() - duration).toISOString()
+const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
+const prevTo = new Date(currentTo.getTime() - duration).toISOString()
 
-  const rangeFilteredRecords = records.filter(
-    (r) => r.order_date && r.order_date >= from && r.order_date <= to
-  )
+const rangeFilteredRecords = records.filter(
+  (r) => r.order_date && r.order_date >= from && r.order_date <= to
+)
 
-  const previousRangeFilteredRecords = records.filter(
-    (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
-  )
+const previousRangeFilteredRecords = records.filter(
+  (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
+)
+
 
   const {
     filters,
@@ -85,35 +76,38 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
   } = useDataViewer({ config, records })
 
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-  const shouldOpen = searchParams.get('viewTable') === 'true'
+const router = useRouter()
+const pathname = usePathname()
 
-  useEffect(() => {
-    if (shouldOpen) {
-      setDrawerOpen(true)
-    }
-  }, [shouldOpen])
+const shouldOpen = searchParams.get('viewTable') === 'true'
 
-  const handleDrawerClose = (open: boolean) => {
-    setDrawerOpen(open)
-
-    if (!open) {
-      const params = new URLSearchParams(searchParams.toString())
-      params.delete('viewTable')
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
+useEffect(() => {
+  if (shouldOpen) {
+    setDrawerOpen(true)
   }
+}, [shouldOpen])
+
+const handleDrawerClose = (open: boolean) => {
+  setDrawerOpen(open)
+
+  if (!open) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('viewTable')
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+}
+
 
   return (
     <>
-      <DataViewer
-        drawerOpen={drawerOpen}
-        setDrawerOpen={handleDrawerClose}
-        filteredData={filteredData}
-        filters={filters}
-        config={config}
-      />
+<DataViewer
+  drawerOpen={drawerOpen}
+  setDrawerOpen={handleDrawerClose}
+  filteredData={filteredData}
+  filters={filters}
+  config={config}
+/>
+
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w, i) => {
@@ -157,10 +151,15 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
               calculatedTiles,
               w,
               (tile) => handleClickWidget(tile),
-              (filter, tile) => {
-                setFilters([wrapFilterWithRange(tile, filter, from, to)])
-                setDrawerOpen(true)
-              }
+(filter) => {
+  setFilters([
+    { column: 'order_date', gte: from },
+    { column: 'order_date', lte: to },
+    filter
+  ])
+  setDrawerOpen(true)
+}
+
             )
           }
 
@@ -191,14 +190,15 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
           return (
             <div key={i} className={`${spanClass} flex flex-col`}>
               <div
-                className={`flex-1 flex flex-col ${
-                  w.component !== 'SectionCards' && w.component !== 'SummaryCards'
-                    ? 'min-h-[280px]'
-                    : ''
-                }`}
-              >
-                <Comp {...commonProps} />
-              </div>
+  className={`flex-1 flex flex-col ${
+    w.component !== 'SectionCards' && w.component !== 'SummaryCards'
+      ? 'min-h-[280px]'
+      : ''
+  }`}
+>
+  <Comp {...commonProps} />
+</div>
+
             </div>
           )
         })}
