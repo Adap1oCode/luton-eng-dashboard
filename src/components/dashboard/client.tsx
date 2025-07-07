@@ -1,7 +1,7 @@
 'use client'
 
-import { sub } from 'date-fns'
 import { useEffect } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 
 import SectionCards from '@/components/dashboard/widgets/section-cards'
 import SummaryCards from '@/components/dashboard/widgets/summary-cards'
@@ -18,7 +18,6 @@ import { isFastFilter } from '@/components/dashboard/client/fast-filter'
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
 import type { Filter } from '@/components/dashboard/client/data-filters'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -37,7 +36,13 @@ function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[
   return isFastFilter(filter) ? [filter] : [filter]
 }
 
-export default function DashboardClient({ config, metrics, records, from, to }: {
+export default function DashboardClient({
+  config,
+  metrics,
+  records,
+  from,
+  to,
+}: {
   config: ClientDashboardConfig
   metrics: any
   records: any[]
@@ -129,7 +134,10 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             commonProps.onFilterChange = handleFilter(w.filterType)
           }
 
-          if (w.component === 'SummaryCards' || w.component === 'SectionCards' || group === 'dataQuality') {
+          // Generic tile-based calculation for any group using tile logic
+          const isTileGroup = ['summary', 'trends', 'dataQuality'].includes(group)
+
+          if (isTileGroup) {
             const calculatedTiles = tileCalculations(
               configTiles,
               metricTiles,
@@ -138,7 +146,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
               records
             )
 
-            commonProps.config = attachTileActions(
+            const interactiveTiles = attachTileActions(
               calculatedTiles,
               w,
               (tile) => handleClickWidget(tile),
@@ -146,13 +154,31 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
                 setFilters([
                   { column: 'order_date', gte: from },
                   { column: 'order_date', lte: to },
-                  filter
+                  filter,
                 ])
                 setDrawerOpen(true)
               }
             )
+
+            console.groupCollapsed(`[widget: ${w.key}] Calculated Tiles`)
+            console.table(
+              interactiveTiles.map(({ key, title, value }) => ({
+                key,
+                title,
+                value,
+              }))
+            )
+            console.groupEnd()
+
+            // Pass either config (for SummaryCards/SectionCards) or tiles (for charts)
+            if (['SummaryCards', 'SectionCards'].includes(w.component)) {
+              commonProps.config = interactiveTiles
+            } else {
+              commonProps.tiles = interactiveTiles
+            }
           }
 
+          // Always pass raw records for chart widgets
           if (!['SummaryCards', 'SectionCards'].includes(w.component)) {
             commonProps.data = records
           }
@@ -168,7 +194,7 @@ export default function DashboardClient({ config, metrics, records, from, to }: 
             <div key={i} className={`${spanClass} flex flex-col`}>
               <div
                 className={`flex-1 flex flex-col ${
-                  w.component !== 'SectionCards' && w.component !== 'SummaryCards'
+                  !['SummaryCards', 'SectionCards'].includes(w.component)
                     ? 'min-h-[280px]'
                     : ''
                 }`}

@@ -26,9 +26,10 @@ import {
 
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { DashboardWidget } from '@/components/dashboard/types'
-import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters' // ✅ NEW
+import type { Filter } from '@/components/dashboard/client/data-filters'
 
-/** ✅ Utility to generate fallback values from generic column count */
+
+/** ✅ Utility to generate fallback values from a column */
 function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {}
   for (const row of records) {
@@ -42,10 +43,12 @@ function generateColumnCounts(records: any[], column: string) {
   }))
 }
 
-type Rule = {
+type Tile = {
   key: string
-  label: string
-  filter: Filter
+  title?: string
+  value?: number
+  onClick?: () => void
+  onClickFilter?: (filter: Filter) => void
 }
 
 type Props = {
@@ -54,14 +57,14 @@ type Props = {
     debug?: boolean
   }
   data: Record<string, any>[]
-  rules?: Rule[]
+  tiles?: Tile[]
   onFilterChange?: (keys: string[]) => void
 }
 
 export default function ChartBarVertical({
   config,
   data,
-  rules = [],
+  tiles,
   onFilterChange,
 }: Props) {
   const isMobile = useIsMobile()
@@ -74,11 +77,12 @@ export default function ChartBarVertical({
 
   let chartData: { key: string; label: string; count: number }[] = []
 
-  if (rules.length > 0) {
-    chartData = rules.map((rule) => {
-      const count = applyDataFilters(data, rule.filter).length // ✅ use shared filter logic
-      return { key: rule.key, label: rule.label, count }
-    })
+  if (tiles && tiles.length > 0) {
+    chartData = tiles.map((tile) => ({
+      key: tile.key,
+      label: tile.title ?? tile.key,
+      count: tile.value ?? 0,
+    }))
   } else {
     chartData = generateColumnCounts(data, column)
   }
@@ -87,7 +91,7 @@ export default function ChartBarVertical({
     console.group('[ChartBarVertical DEBUG]')
     console.log('📦 config:', config)
     console.log('📊 data.length:', data.length)
-    console.log('🧮 rules:', rules)
+    console.log('✅ tiles:', tiles)
     console.log('✅ new values output:', chartData)
     console.groupEnd()
   }
@@ -154,15 +158,19 @@ export default function ChartBarVertical({
               />
 
               <Bar
-                dataKey="count"
-                radius={[5, 5, 5, 5]}
-                onClick={(entry) => onFilterChange?.([entry.key])} // ✅ passed key from clicked bar
-                cursor="pointer"
-              >
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
-                ))}
-              </Bar>
+  dataKey="count"
+  radius={[5, 5, 5, 5]}
+  onClick={(_, index) => {
+    const tile = tiles?.[index]
+    tile?.onClick?.()
+  }}
+  cursor="pointer"
+>
+  {chartData.map((_, i) => (
+    <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
+  ))}
+</Bar>
+
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>

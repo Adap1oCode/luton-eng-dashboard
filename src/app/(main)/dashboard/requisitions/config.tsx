@@ -292,40 +292,60 @@ dataQuality: [
   {
     key: 'missing_due_date',
     title: 'Missing Due Date',
-    filter: { column: 'due_date', isNull: true },
-    rulesKey: 'default',
+filter: {
+  or: [
+    { column: 'due_date', isNull: true },
+    { column: 'due_date', equals: '' }
+  ]
+},
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
   },
   {
     key: 'missing_order_date',
     title: 'Missing Order Date',
-    filter: { column: 'order_date', isNull: true },
-    rulesKey: 'default',
+filter: {
+  or: [
+    { column: 'order_date', isNull: true },
+    { column: 'order_date', equals: '' }
+  ]
+},
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
   },
   {
     key: 'missing_created_by',
     title: 'Missing Created By',
-    filter: { column: 'created_by', isNull: true },
-    rulesKey: 'default',
+    filter: {
+  or: [
+    { column: 'created_by', isNull: true },
+    { column: 'created_by', equals: '' }
+  ]
+},
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
   },
   {
     key: 'missing_project_number',
     title: 'Missing Project Number',
-    filter: { column: 'project_number', isNull: true },
-    rulesKey: 'default',
+    filter: {
+  or: [
+    { column: 'project_number', isNull: true },
+    { column: 'project_number', equals: '' }
+  ]
+},
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
   },
   {
     key: 'missing_warehouse',
     title: 'Missing Warehouse',
-    filter: { column: 'warehouse', isNull: true },
-    rulesKey: 'default',
+    filter: {
+  or: [
+    { column: 'warehouse', isNull: true },
+    { column: 'warehouse', equals: '' }
+  ]
+},
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
   },
@@ -336,7 +356,6 @@ dataQuality: [
       column: 'requisition_order_number',
       notMatches: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$"
     },
-    rulesKey: 'default',
     clickable: true,
     sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
   }
@@ -352,10 +371,9 @@ dataQuality: [
   {
   component: 'ChartBarVertical',
   key: 'data_quality_chart',
+  group: 'dataQuality',
   title: 'Data Quality Issues',
   description: 'Breakdown of validation issues found in current dataset',
-  layout: 'vertical', // ✅ NEW
-  rulesKey: 'default',
   clickable: true,
   sortBy: 'label-asc',
   debug: true

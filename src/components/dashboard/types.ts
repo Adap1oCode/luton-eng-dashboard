@@ -29,28 +29,47 @@ export type Thresholds = {
 // ✅ Widget config block for dashboard layout
 export type DashboardWidget = {
   // 🔑 Core widget info
-  key?: string
+  key: string
   component: string
   title?: string
   description?: string
-  group?: string // e.g. 'tiles', 'trends', 'summary'
+  group?: string // e.g. 'tiles', 'trends', 'summary', 'dataQuality'
 
   // 🎯 Filtering & interactivity
-  filterType?: string      // e.g. 'status', 'creator'
   clickable?: boolean      // Enables click-to-filter (default: false)
-  filter?: Filter | { and: Filter[] } | { or: Filter[] } // ✅ NEW
+  filterType?: string      // e.g. 'status', 'creator', 'project_number' (used for onFilterChange)
+  filter?: Filter | { and: Filter[] } | { or: Filter[] } // Used for static filtering (rarely here)
 
-  // 📐 Layout & sizing
-  layout?: 'horizontal' | 'vertical'
-  span?: number
+  // 🧰 Tile values (precomputed — used by ChartBar, SummaryCards, etc.)
+  tiles?: {
+    key: string
+    title?: string
+    value?: number
+  }[]
 
-  // 🧪 Data quality rules (for validation charts)
-  rulesKey?: string
-  column?: string
-  rules?: any[]
+  // 🧪 Data quality rules (used in ChartBar rule-based view)
+  rules?: {
+    key: string
+    label: string
+    filter: Filter
+  }[]
 
-  // 🧰 Advanced chart features
-  toggles?: ToggleGroup[]
+  // 📊 Charting support
+  column?: string // e.g. 'status', 'created_by' — used for dynamic grouping in bar/donut charts
+  toggles?: {
+    key: string
+    title: string
+    description?: string
+    filter?: Filter | { and: Filter[] } | { or: Filter[] }
+    fields: {
+      key: string
+      label: string
+      color?: string
+      accessor?: (row: any) => string | null | undefined
+      type?: string
+      band?: string
+    }[]
+  }[]
   fields?: {
     key: string
     label: string
@@ -58,7 +77,6 @@ export type DashboardWidget = {
     accessor?: (row: any) => string | null | undefined
     type?: string
     band?: string
-    
   }[]
 
   // 🎨 Display modifiers
@@ -66,7 +84,11 @@ export type DashboardWidget = {
   limit?: number
   hideLegend?: boolean
   debug?: boolean
+
+  // 📐 Layout & sizing
+  span?: number // e.g. 2 = half width, 3 = one-third width — used for responsive layout
 }
+
 
 // ✅ Tiles for summaries, sections, and trends
 export type DashboardTile = {
