@@ -6,7 +6,6 @@ import type { Filter } from "@/components/dashboard/client/data-filters";
 import type { DashboardWidget } from "@/components/dashboard/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 type Tile = {
   key: string;
@@ -26,7 +25,7 @@ type Props = {
   onFilterChange?: (filters: Filter[]) => void;
 };
 
-/** ✅ Utility to generate fallback values from a column */
+/** Utility fallback: generate chart values from raw records */
 function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {};
   for (const row of records) {
@@ -41,7 +40,8 @@ function generateColumnCounts(records: any[], column: string) {
 }
 
 export default function ChartBarHorizontal({ config, data, tiles, onFilterChange }: Props) {
-  const { title, description, column = "key", debug } = config;
+  const { title, description, debug } = config;
+  const column = config.column ?? "key";
 
   const chartData =
     tiles && tiles.length > 0
@@ -57,6 +57,7 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
     console.log("📦 config:", config);
     console.log("📊 data.length:", data.length);
     console.log("✅ tiles:", tiles);
+    console.log("🔍 fallback column:", column);
     console.log("📊 chartData:", chartData);
     console.groupEnd();
   }
@@ -74,26 +75,23 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
           config={Object.fromEntries(chartData.map((d) => [d.label, { label: d.label }]))}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="horizontal">
+            <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} horizontal={false} />
 
-              <YAxis
+              <XAxis
                 type="category"
                 dataKey="label"
-                width={180}
                 tick={{
                   fontSize: 12,
                   fill: "var(--foreground)",
                   fontWeight: 500,
-                  dx: 4,
                 }}
                 axisLine={false}
                 tickLine={false}
               />
 
-              <XAxis
+              <YAxis
                 type="number"
-                dataKey="count"
                 domain={[0, "dataMax"]}
                 tick={{
                   fontSize: 12,
