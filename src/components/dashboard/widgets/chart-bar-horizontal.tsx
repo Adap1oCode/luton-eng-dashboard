@@ -81,6 +81,9 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
               <XAxis
                 type="category"
                 dataKey="label"
+                angle={-40}
+                textAnchor="end"
+                interval={0}
                 tick={{
                   fontSize: 12,
                   fill: "var(--foreground)",
