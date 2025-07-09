@@ -18,7 +18,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-// 🧠 Known requirements per chart component (loosened type to bypass TS limitation)
+// 🧠 Known requirements per chart component (loosened type to bypass TS limitation.)
 const CHART_REQUIREMENTS: Record<string, string[]> = {
   ChartBar: ["filterType", "rulesKey"],
   ChartAreaInteractive: ["toggles"],
