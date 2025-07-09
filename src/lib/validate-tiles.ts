@@ -22,9 +22,11 @@ function resolveValue(value: any): any {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilter(query: any, filter: any): any {
   if (Array.isArray(filter.and)) {
-    filter.and.forEach((f) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    filter.and.forEach((f: any) => {
       query = applyFilter(query, f);
     });
+
     return query;
   }
 
