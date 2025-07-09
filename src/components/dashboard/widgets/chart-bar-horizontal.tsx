@@ -1,114 +1,46 @@
-'use client'
+"use client";
 
-import {
-  BarChart,
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'
+import type { Filter } from "@/components/dashboard/client/data-filters";
+import type { DashboardWidget } from "@/components/dashboard/types";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart'
-
-import { useIsMobile } from '@/hooks/use-mobile'
-import type { DashboardWidget } from '@/components/dashboard/types'
-import type { Filter } from '@/components/dashboard/client/data-filters'
-
-
-function generateColumnCounts(records: any[], column: string) {
-  const counts: Record<string, number> = {}
-  for (const row of records) {
-    const val = row[column] ?? 'Unknown'
-    counts[val] = (counts[val] ?? 0) + 1
-  }
-  return Object.entries(counts).map(([key, count]) => ({
-    key,
-    label: key,
-    count,
-  }))
-}
-
-type Rule = {
-  key: string
-  label: string
-  column: string
-  type: string
-  value?: any
-  pattern?: string
-}
+type Tile = {
+  key: string;
+  title?: string;
+  value?: number;
+  onClick?: () => void;
+  onClickFilter?: Filter;
+};
 
 type Props = {
   config: DashboardWidget & {
-    column?: string
-    debug?: boolean
-  }
-  data: Record<string, any>[]
-  rules?: Rule[]
-  onFilterChange?: (filters: Filter[]) => void
-}
+    column?: string;
+    debug?: boolean;
+  };
+  data: Record<string, any>[];
+  tiles?: Tile[];
+  onFilterChange?: (filters: Filter[]) => void;
+};
 
-export default function ChartBarHorizontal({
-  config,
-  data,
-  rules = [],
-  onFilterChange,
-}: Props) {
-  const isMobile = useIsMobile()
-  const {
-    title,
-    description,
-    column = 'key',
-    debug,
-  } = config
+export default function ChartBarHorizontal({ config, tiles = [], onFilterChange }: Props) {
+  const { title, description, debug } = config;
 
-  let chartData: { key: string; label: string; count: number }[] = []
-
-  if (rules.length > 0) {
-    chartData = rules.map((rule) => {
-      const count = data.reduce((acc, row) => {
-        const val = row[rule.column]
-        switch (rule.type) {
-          case 'is_null':
-            return acc + (val === null || val === undefined || val === '' ? 1 : 0)
-          case 'regex':
-            return acc + (!new RegExp(rule.pattern || '').test(val) ? 1 : 0)
-          case 'equals':
-            return acc + (val !== rule.value ? 1 : 0)
-          case 'gt':
-            return acc + (val <= rule.value ? 1 : 0)
-          case 'lt':
-            return acc + (val >= rule.value ? 1 : 0)
-          default:
-            return acc
-        }
-      }, 0)
-      return { key: rule.key, label: rule.label, count }
-    })
-  } else {
-    chartData = generateColumnCounts(data, column)
-  }
+  const chartData = tiles.map((tile) => ({
+    key: tile.key,
+    label: tile.title ?? tile.key,
+    count: tile.value ?? 0,
+  }));
 
   if (debug) {
-    console.group('[ChartBarHorizontal DEBUG]')
-    console.log('📦 config:', config)
-    console.log('📊 data.length:', data.length)
-    console.log('🧮 rules:', rules)
-    console.log('✅ new values output:', chartData)
-    console.groupEnd()
+    console.group("[ChartBarHorizontal DEBUG]");
+    console.log("📦 config:", config);
+    console.log("✅ tiles:", tiles);
+    console.log("📊 chartData:", chartData);
+    console.groupEnd();
   }
 
   return (
@@ -120,57 +52,41 @@ export default function ChartBarHorizontal({
 
       <CardContent className="p-6 pt-0">
         <ChartContainer
-          className="min-h-[260px] h-auto w-full"
-          config={Object.fromEntries(
-            chartData.map((d) => [d.label, { label: d.label }])
-          )}
+          className="h-auto min-h-[260px] w-full"
+          config={Object.fromEntries(chartData.map((d) => [d.label, { label: d.label }]))}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 12, right: 24, left: 24, bottom: 90 }}
-            >
+            <BarChart data={chartData} layout="horizontal" margin={{ top: 12, right: 24, left: 24, bottom: 90 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 12, fill: 'var(--muted-foreground)', fontWeight: 400 }}
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)", fontWeight: 400 }}
                 interval={0}
                 angle={-40}
                 textAnchor="end"
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fontSize: 12, fill: 'var(--muted-foreground)', fontWeight: 400 }}
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)", fontWeight: 400 }}
                 axisLine={false}
                 tickLine={false}
               />
 
               <ChartTooltip
-                cursor={{ fill: 'var(--muted)' }}
-                content={
-                  <ChartTooltipContent
-                    indicator="dot"
-                    labelFormatter={(label) => label}
-                  />
-                }
+                cursor={{ fill: "var(--muted)" }}
+                content={<ChartTooltipContent indicator="dot" labelFormatter={(label) => label} />}
               />
 
               <Bar
                 dataKey="count"
                 cursor="pointer"
                 radius={[4, 4, 0, 0]}
-                onClick={(entry) => {
-                  if (!rules || rules.length === 0) return
-                  const matchedRule = rules.find((r) => r.key === entry.key)
-                  if (matchedRule) {
-                    const filter: Filter = {
-                      column: matchedRule.column,
-                      type: matchedRule.type,
-                      value: matchedRule.value,
-                      pattern: matchedRule.pattern,
-                    }
-                    onFilterChange?.([filter])
+                onClick={(_, index) => {
+                  const tile = tiles?.[index];
+                  tile?.onClick?.();
+                  if (tile?.onClickFilter) {
+                    onFilterChange?.([tile.onClickFilter]);
                   }
                 }}
               >
@@ -183,5 +99,5 @@ export default function ChartBarHorizontal({
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
