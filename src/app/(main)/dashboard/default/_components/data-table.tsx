@@ -100,7 +100,6 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof schema>[
           <DataTableNew
             dndEnabled={dndEnabled}
             table={table}
-            columns={columns}
             dataIds={dataIds}
             handleDragEnd={handleDragEnd}
             sensors={sensors}
