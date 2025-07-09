@@ -26,18 +26,36 @@ type Props = {
   onFilterChange?: (filters: Filter[]) => void;
 };
 
-export default function ChartBarHorizontal({ config, tiles = [], onFilterChange }: Props) {
-  const { title, description, debug } = config;
-
-  const chartData = tiles.map((tile) => ({
-    key: tile.key,
-    label: tile.title ?? tile.key,
-    count: tile.value ?? 0,
+/** ✅ Utility to generate fallback values from a column */
+function generateColumnCounts(records: any[], column: string) {
+  const counts: Record<string, number> = {};
+  for (const row of records) {
+    const val = row[column] ?? "Unknown";
+    counts[val] = (counts[val] ?? 0) + 1;
+  }
+  return Object.entries(counts).map(([key, count]) => ({
+    key,
+    label: key,
+    count,
   }));
+}
+
+export default function ChartBarHorizontal({ config, data, tiles, onFilterChange }: Props) {
+  const { title, description, column = "key", debug } = config;
+
+  const chartData =
+    tiles && tiles.length > 0
+      ? tiles.map((tile) => ({
+          key: tile.key,
+          label: tile.title ?? tile.key,
+          count: tile.value ?? 0,
+        }))
+      : generateColumnCounts(data, column);
 
   if (debug) {
     console.group("[ChartBarHorizontal DEBUG]");
     console.log("📦 config:", config);
+    console.log("📊 data.length:", data.length);
     console.log("✅ tiles:", tiles);
     console.log("📊 chartData:", chartData);
     console.groupEnd();
@@ -50,25 +68,37 @@ export default function ChartBarHorizontal({ config, tiles = [], onFilterChange 
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
 
-      <CardContent className="p-6 pt-0">
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
-          className="h-auto min-h-[260px] w-full"
+          className="h-[260px] w-full"
           config={Object.fromEntries(chartData.map((d) => [d.label, { label: d.label }]))}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="horizontal" margin={{ top: 12, right: 24, left: 24, bottom: 90 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <BarChart data={chartData} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} horizontal={false} />
+
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={180}
+                tick={{
+                  fontSize: 12,
+                  fill: "var(--foreground)",
+                  fontWeight: 500,
+                  dx: 4,
+                }}
+                axisLine={false}
+                tickLine={false}
+              />
 
               <XAxis
-                dataKey="label"
-                tick={{ fontSize: 12, fill: "var(--muted-foreground)", fontWeight: 400 }}
-                interval={0}
-                angle={-40}
-                textAnchor="end"
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: 12, fill: "var(--muted-foreground)", fontWeight: 400 }}
+                type="number"
+                dataKey="count"
+                domain={[0, "dataMax"]}
+                tick={{
+                  fontSize: 12,
+                  fill: "var(--muted-foreground)",
+                }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -80,8 +110,7 @@ export default function ChartBarHorizontal({ config, tiles = [], onFilterChange 
 
               <Bar
                 dataKey="count"
-                cursor="pointer"
-                radius={[4, 4, 0, 0]}
+                radius={[5, 5, 5, 5]}
                 onClick={(_, index) => {
                   const tile = tiles?.[index];
                   tile?.onClick?.();
@@ -89,9 +118,10 @@ export default function ChartBarHorizontal({ config, tiles = [], onFilterChange 
                     onFilterChange?.([tile.onClickFilter]);
                   }
                 }}
+                cursor="pointer"
               >
-                {chartData.map((_, index) => (
-                  <Cell key={index} fill={`var(--chart-${(index % 5) + 1})`} />
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
                 ))}
               </Bar>
             </BarChart>
