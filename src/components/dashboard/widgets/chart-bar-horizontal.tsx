@@ -84,7 +84,7 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
                 angle={-40}
                 textAnchor="end"
                 interval={0}
-                height={60} // ✅ Add this line
+                height={100} // ✅ Add this line
                 tick={{
                   fontSize: 12,
                   fill: "var(--foreground)",
