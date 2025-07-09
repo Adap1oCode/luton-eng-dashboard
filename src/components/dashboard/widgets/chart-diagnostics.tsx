@@ -1,80 +1,68 @@
-'use client'
+"use client";
 
-import * as React from 'react'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'
-import {
-  Alert,
-  AlertTitle,
-  AlertDescription,
-} from '@/components/ui/alert'
-import { Terminal } from 'lucide-react'
-import type { DashboardWidget } from '@/components/dashboard/types'
+import * as React from "react";
+
+import { Terminal } from "lucide-react";
+
+import type { DashboardWidget } from "@/components/dashboard/types";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 interface Props {
-  widget: DashboardWidget
-  data?: any[]
-  from?: string
-  to?: string
-  rules?: any[]
-    rawRecords?: { key: string; label: string; value: number }[] // ✅ Add this line
-  children: React.ReactNode
+  widget: DashboardWidget;
+  data?: Record<string, unknown>[];
+  from?: string;
+  to?: string;
+  rules?: any[];
+  rawRecords?: { key: string; label: string; value: number }[];
+  children: React.ReactNode;
 }
 
-// 🧠 Known requirements per chart component
-const CHART_REQUIREMENTS: Record<string, (keyof DashboardWidget)[]> = {
-  ChartBar: ['filterType', 'rulesKey'],
-  ChartAreaInteractive: ['toggles'],
-  ChartByStatus: ['filterType'],
-  ChartDonut: ['filterType'],
-  ChartByProject: ['filterType'],
+// 🧠 Known requirements per chart component (loosened type to bypass TS limitation)
+const CHART_REQUIREMENTS: Record<string, string[]> = {
+  ChartBar: ["filterType", "rulesKey"],
+  ChartAreaInteractive: ["toggles"],
+  ChartByStatus: ["filterType"],
+  ChartDonut: ["filterType"],
+  ChartByProject: ["filterType"],
+};
+
+// 🔍 Check for base runtime data issues
+function getBaseErrors(data: unknown, from?: string, to?: string): string[] {
+  const errs: string[] = [];
+  if (!from || !to) errs.push("Missing `from` or `to` date range.");
+  if (!Array.isArray(data)) errs.push("Data is not an array.");
+  else if (data.length === 0) errs.push("Data array is empty.");
+  return errs;
 }
 
-export function ChartDiagnostics({
-  widget,
-  data,
-  from,
-  to,
-  rules = [],
-  children,
-}: Props) {
-  const {
-    component,
-    title,
-    description,
-    debug = false,
-  } = widget
+// 🔍 Check required keys based on widget type
+function getConfigErrors(widget: DashboardWidget): string[] {
+  const keys = CHART_REQUIREMENTS[widget.component] || [];
+  return keys
+    .filter((k) => (widget as Record<string, unknown>)[k] === undefined)
+    .map((k) => `Missing required config: \`${k}\` for ${widget.component}.`);
+}
 
-  const errors: string[] = []
+export function ChartDiagnostics({ widget, data, from, to, rules = [], children }: Props) {
+  const { component, title, description, debug = false } = widget;
 
-  // ⏳ Base runtime checks
-  if (!from || !to) errors.push('Missing `from` or `to` date range.')
-  if (!Array.isArray(data)) errors.push('Data is not an array.')
-  else if (data.length === 0) errors.push('Data array is empty.')
+  const errors = [...getBaseErrors(data, from, to), ...getConfigErrors(widget)];
 
-  // 📋 Required widget config checks
-  const requiredKeys = CHART_REQUIREMENTS[component] || []
-  for (const key of requiredKeys) {
-    if (widget[key] === undefined) {
-      errors.push(`Missing required config: \`${key}\` for ${component}.`)
+  if (component === "ChartBar") {
+    if (!Array.isArray(rules) || rules.length === 0) {
+      errors.push("No rules passed for ChartBar — check `rulesKey` or dataQuality config.");
     }
-  }
-
-  // 🧪 Chart-specific logic
-  if (component === 'ChartBar') {
-    const hasRules = Array.isArray(rules) && rules.length > 0
-    if (!hasRules) errors.push('No rules passed for ChartBar — check `rulesKey` or dataQuality config.')
   }
 
   if (debug) {
     console.warn(`[ChartDiagnostics] Debug: ${component}`, {
-      from, to, data, widget, rules,
-    })
+      from,
+      to,
+      data,
+      widget,
+      rules,
+    });
   }
 
   return (
@@ -102,5 +90,5 @@ export function ChartDiagnostics({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
