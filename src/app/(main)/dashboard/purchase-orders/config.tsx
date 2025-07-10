@@ -200,8 +200,8 @@ export const purchaseOrdersConfig: DashboardConfig = {
     {
       key: "po_value_by_vendor",
       title: "PO Value by Vendor",
-      field: "grand_total", // ✅ correct field name
-      metric: "sum", // ✅ sum grand_total
+      field: "grand_total",
+      metric: "sum",
       filter: { and: [{ column: "is_deleted", equals: false }] },
       clickable: true,
     },
@@ -245,15 +245,10 @@ export const purchaseOrdersConfig: DashboardConfig = {
       component: "ChartBarHorizontal",
       title: "PO Value by Vendor",
       description: "Sum of grand_total grouped by vendor_name",
-      column: "vendor_name", // 👈 group by this field
-      valueField: "grand_total", // 👈 sum this field
-      metric: "sum", // 👈 type of aggregation
-      format: "currency-no-decimals", // 👈 optional: clean display
-      filterType: "vendor_name", // 👈 enables click-to-filter
-      clickable: true, // 👈 optional: can be inferred
-      filter: {
-        and: [{ column: "is_deleted", equals: false }],
-      },
+      column: "vendor_name", // ✅ grouping key
+      format: "currency-no-decimals",
+      filterType: "vendor_name",
+      clickable: true,
       debug: true,
     },
   ],
