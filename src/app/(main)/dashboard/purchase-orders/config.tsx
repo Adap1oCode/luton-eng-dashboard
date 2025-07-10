@@ -27,23 +27,23 @@ export const purchaseOrdersConfig: DashboardConfig = {
     },
     {
       key: "issued",
-      title: "Issued",
+      title: "Open",
       subtitle: "All Time",
-      filter: { column: "status", contains: "issued" },
+      filter: { column: "status", contains: "open" },
       thresholds: {},
       clickable: true,
       noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%issued%'",
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%open%'",
     },
     {
       key: "inProgress",
       title: "In Progress",
       subtitle: "All Time",
-      filter: { column: "status", contains: "in progress" },
+      filter: { column: "status", contains: "progress" },
       thresholds: {},
       clickable: true,
       noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%in progress%'",
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%progress%'",
     },
     {
       key: "completed",
@@ -54,16 +54,6 @@ export const purchaseOrdersConfig: DashboardConfig = {
       clickable: true,
       noRangeFilter: true,
       sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%complete%'",
-    },
-    {
-      key: "cancelled",
-      title: "Cancelled",
-      subtitle: "All Time",
-      filter: { column: "status", contains: "cancel" },
-      thresholds: {},
-      clickable: true,
-      noRangeFilter: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%cancel%'",
     },
     {
       key: "total_po_value",
@@ -94,6 +84,22 @@ export const purchaseOrdersConfig: DashboardConfig = {
       },
       sql: "SELECT ROUND(AVG(grand_total)) FROM purchaseorders WHERE is_deleted = false AND grand_total IS NOT NULL",
     },
+    {
+      key: "missingOrderDate",
+      title: "Missing Order Date",
+      filter: { column: "order_date", isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE order_date IS NULL",
+    },
+    {
+      key: "missingDueDate",
+      title: "Missing Due Date",
+      filter: { column: "due_date", isNull: true },
+      thresholds: { warning: { gt: 0 } },
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE due_date IS NULL",
+    },
   ],
 
   trends: [
@@ -112,22 +118,6 @@ export const purchaseOrdersConfig: DashboardConfig = {
       thresholds: {},
       clickable: true,
       sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%closed%'",
-    },
-    {
-      key: "missingOrderDate",
-      title: "Missing Order Date",
-      filter: { column: "order_date", isNull: true },
-      thresholds: { warning: { gt: 0 } },
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE order_date IS NULL",
-    },
-    {
-      key: "missingDueDate",
-      title: "Missing Due Date",
-      filter: { column: "due_date", isNull: true },
-      thresholds: { warning: { gt: 0 } },
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE due_date IS NULL",
     },
   ],
 
@@ -157,24 +147,12 @@ export const purchaseOrdersConfig: DashboardConfig = {
       sql: "SELECT COUNT(*) FROM purchaseorders WHERE order_date IS NULL",
     },
     {
-      key: "missing_created_by",
-      title: "Missing Created By",
+      key: "missing_reference_number",
+      title: "Missing Reference Number",
       filter: {
         or: [
-          { column: "created_by", isNull: true },
-          { column: "created_by", equals: "" },
-        ],
-      },
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM purchaseorders WHERE created_by IS NULL",
-    },
-    {
-      key: "missing_project_number",
-      title: "Missing Project Number",
-      filter: {
-        or: [
-          { column: "project_number", isNull: true },
-          { column: "project_number", equals: "" },
+          { column: "reference_number", isNull: true },
+          { column: "reference_number", equals: "" },
         ],
       },
       clickable: true,
@@ -193,12 +171,24 @@ export const purchaseOrdersConfig: DashboardConfig = {
       sql: "SELECT COUNT(*) FROM purchaseorders WHERE warehouse IS NULL",
     },
     {
-      key: "missing_supplier",
-      title: "Missing Supplier",
+      key: "missing_vendor",
+      title: "Missing Vendor",
       filter: {
         or: [
-          { column: "supplier", isNull: true },
-          { column: "supplier", equals: "" },
+          { column: "vendor_name", isNull: true },
+          { column: "vendor_name", equals: "" },
+        ],
+      },
+      clickable: true,
+      sql: "SELECT COUNT(*) FROM purchaseorders WHERE supplier IS NULL",
+    },
+    {
+      key: "missing_grand_total",
+      title: "Missing Grand Total",
+      filter: {
+        or: [
+          { column: "grand_total", isNull: true },
+          { column: "grand_total", equals: "" },
         ],
       },
       clickable: true,
@@ -242,25 +232,29 @@ export const purchaseOrdersConfig: DashboardConfig = {
       debug: true,
     },
     {
-      key: "records_by_project",
+      key: "po_value_by_vendor",
       component: "ChartBarHorizontal",
-      title: "Records by Project",
-      description: "Breakdown by project_number",
-      column: "project_number",
-      filterType: "project_number",
-      debug: true,
+      title: "PO Value by Vendor",
+      description: "Sum of grand_total grouped by vendor_name",
+      column: "vendor_name", // 👈 group by this field
+      valueField: "grand_total", // 👈 sum this field
+      metric: "sum", // 👈 type of aggregation
+      format: "currency-no-decimals", // 👈 optional: clean display
+      filterType: "vendor_name", // 👈 enables click-to-filter
+      clickable: true, // 👈 optional: can be inferred
+      filter: {
+        and: [{ column: "is_deleted", equals: false }],
+      },
     },
   ],
 
   tableColumns: [
     { accessorKey: "po_number", header: "PO Number" },
     { accessorKey: "status", header: "Status" },
-    { accessorKey: "created_by", header: "Created By" },
-    { accessorKey: "project_number", header: "Project" },
     { accessorKey: "order_date", header: "Order Date" },
     { accessorKey: "due_date", header: "Due Date" },
     { accessorKey: "warehouse", header: "Warehouse" },
-    { accessorKey: "supplier", header: "Supplier" },
-    { accessorKey: "po_type", header: "PO Type" },
+    { accessorKey: "vendor_name", header: "Vendor" },
+    { accessorKey: "grand_total", header: "Grand Total" },
   ],
 };

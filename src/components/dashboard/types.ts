@@ -52,7 +52,11 @@ export type DashboardWidget = {
   }[];
 
   // 📊 Charting support
-  column?: string; // e.g. 'status', 'created_by' — used for dynamic grouping in bar/donut charts
+  column?: string; // e.g. 'status', 'created_by' — used for grouping
+  valueField?: string; // e.g. 'grand_total' — used for aggregation
+  metric?: MetricType; // e.g. 'sum', 'average', 'max'
+  format?: string; // e.g. 'currency-no-decimals'
+
   toggles?: {
     key: string;
     title: string;
@@ -67,6 +71,7 @@ export type DashboardWidget = {
       band?: string;
     }[];
   }[];
+
   fields?: {
     key: string;
     label: string;

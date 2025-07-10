@@ -64,6 +64,32 @@ function handleAggregationTile(tile: any, activeRecords: any[], previousRecords:
   return { value, previous, trend, direction, percent };
 }
 
+function handleGroupedAggregation(tile: any, activeRecords: any[]) {
+  const filterFn = tile.filter ? compileFilter(tile.filter) : () => true;
+  const matches = activeRecords.filter(filterFn);
+
+  const grouped = matches.reduce((acc: Record<string, number[]>, row: any) => {
+    const key = row[tile.column] ?? "Unknown";
+    const val = parseFloat(row[tile.field] ?? 0);
+    if (!isNaN(val)) {
+      acc[key] = acc[key] || [];
+      acc[key].push(val);
+    }
+    return acc;
+  }, {});
+
+  const tiles = Object.entries(grouped).map(([key, values]) => ({
+    key,
+    title: key,
+    value: computeAggregation(values, tile.metric),
+    filterType: tile.filterType,
+    clickable: true,
+    filter: { column: tile.column, equals: key },
+  }));
+
+  return { tiles };
+}
+
 function handleCountTile(tile: any, activeRecords: any[], previousRecords: any[]) {
   const filterFn = compileFilter(tile.filter);
   const matches = activeRecords.filter(filterFn);
@@ -130,6 +156,15 @@ function resolveTileResult(tile: any, activeRecords: any[], previousRecords: any
   const hasFilter = tile.filter && !tile.average && !tile.percentage && !tile.metric;
 
   if (
+    tile.metric &&
+    tile.field &&
+    tile.column &&
+    (tile.component?.includes("ChartBar") || tile.component?.includes("ChartPie"))
+  ) {
+    return handleGroupedAggregation(tile, activeRecords);
+  }
+
+  if (
     (tile.metric === "sum" ||
       tile.metric === "min" ||
       tile.metric === "max" ||
@@ -182,6 +217,7 @@ function processTile(
     clickFilter,
     clickable: tile.clickable ?? Boolean(clickFilter),
     percent: result.percent,
+    tiles: result.tiles,
   };
 }
 
