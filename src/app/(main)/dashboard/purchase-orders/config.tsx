@@ -83,17 +83,15 @@ export const purchaseOrdersConfig: DashboardConfig = {
       key: "avg_po_value",
       title: "Avg PO Value",
       subtitle: "All Time",
-      average: {
-        start: "grand_total",
-        end: "grand_total",
-      },
+      metric: "average",
+      field: "grand_total",
+      noRangeFilter: true,
       filter: {
         and: [
           { column: "is_deleted", equals: false },
           { column: "grand_total", isNotNull: true },
         ],
       },
-      noRangeFilter: true,
       sql: "SELECT ROUND(AVG(grand_total)) FROM purchaseorders WHERE is_deleted = false AND grand_total IS NOT NULL",
     },
   ],

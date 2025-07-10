@@ -87,7 +87,7 @@ export type DashboardWidget = {
 };
 
 // ✅ Tiles for summaries, sections, and trends
-export type MetricType = "count" | "sum" | "min" | "max" | "median";
+export type MetricType = "count" | "sum" | "min" | "max" | "median" | "average" | "aggregation";
 
 export type DashboardTile = {
   format?: "currency" | "number" | "percent";

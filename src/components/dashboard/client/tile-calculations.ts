@@ -22,6 +22,10 @@ function computeAggregation(values: number[], type: string): number {
       const mid = Math.floor(sorted.length / 2);
       return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
     }
+    case "average": {
+      const sum = values.reduce((a, b) => a + b, 0);
+      return Math.round(sum / values.length);
+    }
     default:
       return 0;
   }
@@ -126,7 +130,11 @@ function resolveTileResult(tile: any, activeRecords: any[], previousRecords: any
   const hasFilter = tile.filter && !tile.average && !tile.percentage && !tile.metric;
 
   if (
-    (tile.metric === "sum" || tile.metric === "min" || tile.metric === "max" || tile.metric === "median") &&
+    (tile.metric === "sum" ||
+      tile.metric === "min" ||
+      tile.metric === "max" ||
+      tile.metric === "median" ||
+      tile.metric === "average") &&
     tile.field
   ) {
     return handleAggregationTile(tile, activeRecords, previousRecords);
