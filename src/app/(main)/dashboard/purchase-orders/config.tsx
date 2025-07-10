@@ -65,6 +65,20 @@ export const purchaseOrdersConfig: DashboardConfig = {
       noRangeFilter: true,
       sql: "SELECT COUNT(*) FROM purchaseorders WHERE status ILIKE '%cancel%'",
     },
+    {
+      key: "total_po_value",
+      title: "Total PO Value",
+      subtitle: "All Time",
+      metric: "sum",
+      field: "grand_total",
+      filter: { and: [{ column: "is_deleted", equals: false }] },
+      noRangeFilter: true,
+      format: "currency",
+      thresholds: {
+        warning: { lt: 10000 },
+        danger: { lt: 1000 },
+      },
+    },
   ],
 
   trends: [

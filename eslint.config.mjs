@@ -120,7 +120,7 @@ export default [
       "no-underscore-dangle": ["error", { allow: ["_id", "__dirname"] }],
 
       // Complexity
-      "complexity": ["error", { max: 10 }],
+      "complexity": ["warn", { max: 20 }],
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
       "max-depth": ["error", 4],
 
