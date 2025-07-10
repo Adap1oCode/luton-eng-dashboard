@@ -196,7 +196,16 @@ export const purchaseOrdersConfig: DashboardConfig = {
     },
   ],
 
-  tiles: [],
+  tiles: [
+    {
+      key: "po_value_by_vendor",
+      title: "PO Value by Vendor",
+      field: "grand_total", // ✅ correct field name
+      metric: "sum", // ✅ sum grand_total
+      filter: { and: [{ column: "is_deleted", equals: false }] },
+      clickable: true,
+    },
+  ],
 
   widgets: [
     { component: "SummaryCards", key: "tiles", group: "summary" },
@@ -245,6 +254,7 @@ export const purchaseOrdersConfig: DashboardConfig = {
       filter: {
         and: [{ column: "is_deleted", equals: false }],
       },
+      debug: true,
     },
   ],
 
