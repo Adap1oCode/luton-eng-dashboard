@@ -75,8 +75,8 @@ const chartWidgets = [
 export const inventoryConfig: DashboardConfig = {
   id: 'inventory',
   title: 'Inventory Dashboard',
-  range: '3m',
   rowIdKey: 'item_number',
+  dateSearchEnabled: false,
   fetchRecords: getInventory,
 
   filters: {
@@ -88,22 +88,23 @@ export const inventoryConfig: DashboardConfig = {
 summary: [
 {
   key: 'totalAllTime',
-  title: 'Total Requisitions',
+  title: 'Total Inventory Records',
   subtitle: 'All Time',
-  filter: { column: 'requisition_order_number', isNotNull: true }, // ✅ cleaner than fudge
+  filter: { column: 'item_number', isNotNull: true }, // ✅ cleaner than fudge
   clickable: true,
   noRangeFilter: true,
-  sql: "SELECT COUNT(*) FROM requisitions"
+  sql: "SELECT COUNT(*) FROM inventory"
 },
   {
-    key: 'issued',
-    title: 'Issued',
+    key: 'uniqueItems',
+    title: 'Unique Items',
     subtitle: 'All Time',
-    filter: { column: 'status', contains: 'issue' },
+    filter: { column: 'item_number', isNotNull: true },
+    distinct: true,
+    distinctColumn: 'item_number',
     thresholds: {},
     clickable: true,
     noRangeFilter: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE status ILIKE '%issued%'"
   },
   {
     key: 'inProgress',

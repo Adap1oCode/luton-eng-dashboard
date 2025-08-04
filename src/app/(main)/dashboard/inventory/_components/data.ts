@@ -1,3 +1,5 @@
+// src/app/(main)/dashboard/inventory/_components/data.ts
+
 import { supabase } from '@/lib/supabase'
 
 export type Inventory = {
@@ -36,14 +38,39 @@ export type Inventory = {
 }
 
 export async function getInventory(): Promise<Inventory[]> {
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('*')
-    .limit(5)
+  const PAGE_SIZE = 1000
+  let from = 0
+  const allRecords: Inventory[] = []
 
-  if (error || !data) return []
+  while (true) {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('*')
+      .range(from, from + PAGE_SIZE - 1)
 
-  return data.map((r) => ({
+    if (error) {
+      console.error('Error fetching inventory batch:', { from, error })
+      break
+    }
+
+    if (!data) {
+      console.warn('No data returned for inventory batch at offset', from)
+      break
+    }
+
+    console.log(`Fetched ${data.length} rows from inventory (offset ${from})`)
+    allRecords.push(...data)
+
+    // if fewer than a full page, we’re done
+    if (data.length < PAGE_SIZE) {
+      break
+    }
+
+    from += PAGE_SIZE
+  }
+
+  // Normalize defaults
+  return allRecords.map((r) => ({
     ...r,
     item_number: r.item_number ?? 0,
     type: r.type ?? '',

@@ -1,5 +1,12 @@
 import type { Filter } from "@/components/dashboard/client/data-filters";
 
+// --- new: DateRange type for widgets ---
+/** Defines an optional from/to pair for use when date-search is enabled */
+export type DateRange = {
+  from: string
+  to:   string
+}
+
 // ✅ Toggle group for ChartAreaInteractive
 export type ToggleGroup = {
   key: string;
@@ -33,10 +40,10 @@ export type DashboardWidget = {
   group?: string; // e.g. 'tiles', 'trends', 'summary', 'dataQuality'
 
   // 🎯 Filtering & interactivity
-  clickable?: boolean; // Enables click-to-filter (default: false)
-  noRangeFilter?: boolean  // ✅ Add this line
-  filterType?: string; // e.g. 'status', 'creator', 'project_number' (used for onFilterChange)
-  filter?: Filter | { and: Filter[] } | { or: Filter[] }; // Used for static filtering (rarely here)
+  clickable?: boolean;           // Enables click-to-filter (default: false)
+  noRangeFilter?: boolean;       // Skip date-range filter when true
+  filterType?: string;           // e.g. 'status', 'creator', 'project_number'
+  filter?: Filter | { and: Filter[] } | { or: Filter[] };
 
   // 🧰 Tile values (precomputed — used by ChartBar, SummaryCards, etc.)
   tiles?: {
@@ -53,34 +60,13 @@ export type DashboardWidget = {
   }[];
 
   // 📊 Charting support
-  column?: string; // e.g. 'status', 'created_by' — used for grouping
-  valueField?: string; // e.g. 'grand_total' — used for aggregation
-  metric?: MetricType; // e.g. 'sum', 'average', 'max'
-  format?: string; // e.g. 'currency-no-decimals'
+  column?: string;
+  valueField?: string;
+  metric?: MetricType;
+  format?: string;
 
-  toggles?: {
-    key: string;
-    title: string;
-    description?: string;
-    filter?: Filter | { and: Filter[] } | { or: Filter[] };
-    fields: {
-      key: string;
-      label: string;
-      color?: string;
-      accessor?: (row: any) => string | null | undefined;
-      type?: string;
-      band?: string;
-    }[];
-  }[];
-
-  fields?: {
-    key: string;
-    label: string;
-    color?: string;
-    accessor?: (row: any) => string | null | undefined;
-    type?: string;
-    band?: string;
-  }[];
+  toggles?: ToggleGroup[];
+  fields?: ToggleGroup["fields"];
 
   // 🎨 Display modifiers
   sortBy?: "label-asc" | "label-desc" | "value-asc" | "value-desc";
@@ -89,7 +75,7 @@ export type DashboardWidget = {
   debug?: boolean;
 
   // 📐 Layout & sizing
-  span?: number; // e.g. 2 = half width, 3 = one-third width — used for responsive layout
+  span?: number;
 };
 
 // ✅ Tiles for summaries, sections, and trends
@@ -122,6 +108,10 @@ export type DashboardTile = {
     end: string;
   };
 
+   /** flag to dedupe before counting */
+  distinct?: boolean
+  /** which field to dedupe on (defaults to `rowIdKey`) */
+  distinctColumn?: string
   thresholds?: Thresholds;
   trend?: string;
   direction?: "up" | "down";
@@ -137,14 +127,21 @@ export type DashboardColumn = {
 };
 
 // ✅ Core async loader for any dashboard
-export type DashboardFetchFunction = (range: string, from?: string, to?: string) => Promise<any>;
+export type DashboardFetchFunction = (
+  range: string,
+  from?: string,
+  to?: string
+) => Promise<any>;
 
 // ✅ Complete top-level dashboard config
 export type DashboardConfig = {
   id: string;
   title: string;
-  range: "3m" | "6m" | "12m";
+  /** named preset (e.g. "3m", "6m", "12m"); optional when dateSearchEnabled=false */
+  range?: "3m" | "6m" | "12m";
   rowIdKey: string;
+  /** toggle date-pickers and date filtering */
+  dateSearchEnabled?: boolean;
 
   fetchRecords: DashboardFetchFunction;
   fetchMetrics?: DashboardFetchFunction;
@@ -166,8 +163,13 @@ export type DashboardConfig = {
 };
 
 // ✅ Client-friendly version with prefilled dates
-export type ClientDashboardConfig = Omit<DashboardConfig, "fetchRecords" | "fetchMetrics"> & {
-  range: string;
-  from?: string;
-  to?: string;
-};
+export type ClientDashboardConfig =
+  Omit<DashboardConfig, "fetchRecords" | "fetchMetrics"> & {
+    /** optional named preset */
+    range?: string;
+    /** raw from/to strings; only present when date-search is enabled */
+    from?: string;
+    to?: string;
+    /** convenience wrapper for both dates */
+    dateRange?: DateRange;
+  };

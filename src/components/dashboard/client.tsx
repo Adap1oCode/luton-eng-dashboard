@@ -43,9 +43,13 @@ export default function DashboardClient({
   config: ClientDashboardConfig
   metrics: any
   records: any[]
-  from: string
-  to: string
+  from?: string
+  to?: string
 }) {
+  // global date-search toggle (default on)
+  const dateSearchEnabled = config.dateSearchEnabled ?? true
+
+  // normalize records
   const normalizedRecords = records.map((r) => ({
     ...r,
     vendor_name: normalizeFieldValue(r.vendor_name),
@@ -53,21 +57,27 @@ export default function DashboardClient({
     created_by: normalizeFieldValue(r.created_by),
   }))
 
-  const currentFrom = new Date(from)
-  const currentTo = new Date(to)
-  const duration = currentTo.getTime() - currentFrom.getTime()
+  // filtered vs. full datasets
+  let rangeFilteredRecords = normalizedRecords
+  let previousRangeFilteredRecords = normalizedRecords
 
-  const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
-  const prevTo = new Date(currentTo.getTime() - duration).toISOString()
+  // compute date-based slices only when enabled and valid dates provided
+  if (dateSearchEnabled && from && to) {
+    const currentFrom = new Date(from)
+    const currentTo = new Date(to)
+    const duration = currentTo.getTime() - currentFrom.getTime()
+    const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
+    const prevTo = new Date(currentTo.getTime() - duration).toISOString()
 
-  const rangeFilteredRecords = normalizedRecords.filter(
-    (r) => r.order_date && r.order_date >= from && r.order_date <= to
-  )
+    rangeFilteredRecords = normalizedRecords.filter(
+      (r) => r.order_date && r.order_date >= from && r.order_date <= to
+    )
+    previousRangeFilteredRecords = normalizedRecords.filter(
+      (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
+    )
+  }
 
-  const previousRangeFilteredRecords = normalizedRecords.filter(
-    (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
-  )
-
+  // data viewer handles drawer, filters, table view
   const {
     filters,
     setFilters,
@@ -78,10 +88,10 @@ export default function DashboardClient({
     handleFilter,
   } = useDataViewer({ config, records: normalizedRecords })
 
+  // handle viewTable query param
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-
   const shouldOpen = searchParams.get('viewTable') === 'true'
 
   useEffect(() => {
@@ -108,10 +118,11 @@ export default function DashboardClient({
       />
 
       <div className="grid gap-4 lg:grid-cols-12">
-        {config.widgets.map((w, i) => {
+        {config.widgets.map((w: DashboardWidget, i) => {
           const Comp = widgetMap[w.component]
           if (!Comp) return null
 
+          // determine widget group and tiles
           const group = w.group ?? 'tiles'
           const configTiles =
             group === 'summary'
@@ -121,12 +132,13 @@ export default function DashboardClient({
               : group === 'dataQuality'
               ? config.dataQuality ?? []
               : config.tiles ?? []
-
           const metricTiles = metrics[group] ?? []
 
-          const useFiltered = w.noRangeFilter !== true
+          // apply global and per-widget date filtering
+          const useFiltered = dateSearchEnabled && w.noRangeFilter !== true
           const dataset = useFiltered ? rangeFilteredRecords : normalizedRecords
 
+          // common props for every widget
           const commonProps: any = {
             config: w,
             from,
@@ -134,14 +146,17 @@ export default function DashboardClient({
             data: dataset,
           }
 
+          // handle clickable tiles
           if (w.clickable && w.key) {
             commonProps.onClick = () => handleClickWidget(w as DashboardTile)
           }
 
+          // handle filter-type widgets
           if (w.filterType) {
             commonProps.onFilterChange = handleFilter(w.filterType)
           }
 
+          // clickable non-filter widgets open drawer
           if (typeof Comp === 'function' && w.clickable && !w.filterType) {
             commonProps.onFilterChange = (filters: Filter[]) => {
               const fullFilters = useFiltered
@@ -157,7 +172,10 @@ export default function DashboardClient({
             }
           }
 
-          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles'].includes(group)
+          // tile-based groups (summary, trends, dataQuality, tiles)
+          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles'].includes(
+            group
+          )
 
           if (isTileGroup) {
             const calculatedTiles = tileCalculations(
@@ -193,10 +211,12 @@ export default function DashboardClient({
             }
           }
 
+          // summary/section cards expect no data prop
           if (['SummaryCards', 'SectionCards'].includes(w.component)) {
             delete commonProps.data
           }
 
+          // grid span logic
           const spanClass =
             Number(w.span) === 2
               ? 'col-span-12 lg:col-span-6'
