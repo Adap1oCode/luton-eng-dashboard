@@ -34,6 +34,7 @@ export type DashboardWidget = {
 
   // 🎯 Filtering & interactivity
   clickable?: boolean; // Enables click-to-filter (default: false)
+  noRangeFilter?: boolean  // ✅ Add this line
   filterType?: string; // e.g. 'status', 'creator', 'project_number' (used for onFilterChange)
   filter?: Filter | { and: Filter[] } | { or: Filter[] }; // Used for static filtering (rarely here)
 

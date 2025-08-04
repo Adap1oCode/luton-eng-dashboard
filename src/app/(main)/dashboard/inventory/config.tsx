@@ -22,7 +22,7 @@
  * 🔪 This file powers both the frontend UI and the tile validator script.
  */
 
-import { getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
+import { getInventory } from '@/app/(main)/dashboard/inventory/_components/data'
 import type { DashboardConfig } from '@/components/dashboard/types'
 
 const chartWidgets = [
@@ -70,18 +70,19 @@ const chartWidgets = [
 ]
 
 
-export const requisitionsConfig: DashboardConfig = {
-  id: 'requisitions',
-  title: 'Requisitions Dashboard',
+// 📁 src/app/(main)/dashboard/inventory/config.tsx
+
+export const inventoryConfig: DashboardConfig = {
+  id: 'inventory',
+  title: 'Inventory Dashboard',
   range: '3m',
-  rowIdKey: 'requisition_order_number',
-  fetchRecords: getRequisitions,
+  rowIdKey: 'item_number',
+  fetchRecords: getInventory,
 
   filters: {
-    status: 'status',
-    creator: 'created_by',
-    project: 'project_number',
     issue: true,
+    project: 'location',
+    creator: 'manufacturer',
   },
 
 summary: [
@@ -254,38 +255,6 @@ filter: {
 ],
 
   trends: [
-    {
-      key: 'totalReqs',
-      title: 'Total Reqs',
-      filter: { column: 'requisition_order_number', isNotNull: true  },
-      thresholds: {},
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
-    },
-        {
-      key: 'totalissued',
-      title: 'Issued',
-      filter: { column: 'status', contains: 'issue'  },
-      thresholds: {},
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
-    },
-        {
-      key: 'totalinprogress',
-      title: 'In Progress',
-      filter: { column: 'status', contains: 'progress' },
-      thresholds: {},
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
-    },
-    {
-      key: 'totalcomplete',
-      title: 'Complete',
-      filter: { column: 'status', contains: 'complete' },
-      thresholds: {},
-      clickable: true,
-      sql: "SELECT COUNT(*) FROM requisitions WHERE status IS NOT NULL"
-    }
   ],
 
 dataQuality: [
@@ -366,8 +335,6 @@ filter: {
 
   widgets: [
   { component: 'SummaryCards', key: 'tiles', group: 'summary' },
-  { component: 'SectionCards', key: 'tiles', group: 'trends' },
-     ...chartWidgets,
   {
   component: 'ChartBarVertical',
   key: 'data_quality_chart',
@@ -381,43 +348,44 @@ filter: {
 {
   component: 'ChartBarVertical',
   key: 'status_chart',
-  title: 'Records by Status',
+  title: 'Records by Stocking Unit',
   description: 'Status distribution of requisitions in current range',
-  column: 'status',
+  column: 'stocking_unit', // this replaces hardcoded accessor logic
   clickable: true,
   sortBy: 'value-desc',
   span: 2,
   debug: true
 },
 {
-  key: 'records_by_creator',
+  key: 'records_by_warehouse',
   component: 'ChartDonut',
-  title: 'Records by Creator',
+  title: 'Records by Warehouse',
   description: 'Breakdown of records grouped by created_by',
-  column: 'created_by',       // this replaces hardcoded accessor logic
-  filterType: 'creator',
+  column: 'warehouse',       // this replaces hardcoded accessor logic
+  filterType: 'warehouse',
   span: 2,
   debug: true,                // optional: for console logs
 },
 {
-  key: 'records_by_project',
+  key: 'records_by_category',
   component: 'ChartBarHorizontal', // still pointing to ChartBarVertical for now
-  title: 'Records by Project',
-  description: 'Breakdown by project_number',
-  column: 'project_number',
-  filterType: 'project_number',
+  title: 'Records by Category',
+  description: 'Breakdown by category',
+  column: 'category',
+  filterType: 'category',
   debug: true,
 },
 
   ],
 
   tableColumns: [
-    { accessorKey: 'requisition_order_number', header: 'Req Number' },
-    { accessorKey: 'status', header: 'Status' },
-    { accessorKey: 'created_by', header: 'Created By' },
-    { accessorKey: 'project_number', header: 'Project' },
-    { accessorKey: 'order_date', header: 'Order Date' },
-    { accessorKey: 'due_date', header: 'Due Date' },
+    { accessorKey: 'item_number', header: 'Item Number' },
+    { accessorKey: 'description', header: 'Description' },
+    { accessorKey: 'total_availabe', header: 'Total Available' },
+    { accessorKey: 'item_cost', header: 'cost' },
+    { accessorKey: 'category', header: 'Category' },
+    { accessorKey: 'stocking_unit', header: 'Stocking Unit' },
+    { accessorKey: 'location', header: 'Location' },
     { accessorKey: 'warehouse', header: 'Warehouse' },
   ],
 };

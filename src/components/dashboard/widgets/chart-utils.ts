@@ -13,6 +13,8 @@ export type BarChartOptions = {
   fields?: { key: string; label?: string }[]
   sortBy?: 'label' | 'value'
   limit?: number
+  valueField?: string
+  metric?: 'count' | 'sum' | 'average' | 'min' | 'max'
 }
 
 type BucketOptions = {
@@ -54,7 +56,7 @@ export function getTimeBuckets(
   const toDate = new Date(options.to)
   toDate.setUTCHours(23, 59, 59, 999)
 
-  const bucketMap = new Map<string, { date: Date; [key: string]: any }>();
+  const bucketMap = new Map<string, { date: Date; [key: string]: any }>()
   const cursor = getBucketStart(fromDate)
 
   while (cursor <= toDate) {
@@ -86,16 +88,22 @@ export function getTimeBuckets(
 }
 
 /**
- * Bar chart: grouped count logic, based on simple key grouping only.
+ * Bar chart: grouped aggregation logic, now supports sum/avg/min/max/count.
  */
 export function getBarChartData(
   data: any[],
   key: string | undefined,
   options: BarChartOptions = {}
 ): { key: string; label: string; value: number }[] {
-  const { fields = [], sortBy = 'value', limit } = options
+  const {
+    fields = [],
+    sortBy = 'value',
+    limit,
+    valueField,
+    metric = 'count',
+  } = options
 
-  const counts: Record<string, number> = {}
+  const groups: Record<string, number[]> = {}
 
   if (key) {
     for (const row of data) {
@@ -106,15 +114,28 @@ export function getBarChartData(
       const keys = String(raw).split(',').map((k) => k.trim())
       for (const k of keys) {
         if (!k) continue
-        counts[k] = (counts[k] || 0) + 1
+        const val = Number(valueField ? row[valueField] ?? 0 : 1)
+        if (!groups[k]) groups[k] = []
+        groups[k].push(val)
       }
     }
   }
 
-  let output = Object.entries(counts).map(([label, value]) => {
-    const matchedLabel =
-      fields.find((f) => f.key === label)?.label ||
-      label
+  let output = Object.entries(groups).map(([label, values]) => {
+    let value = 0
+    if (metric === 'sum') {
+      value = values.reduce((a, b) => a + b, 0)
+    } else if (metric === 'average') {
+      value = values.reduce((a, b) => a + b, 0) / values.length
+    } else if (metric === 'min') {
+      value = Math.min(...values)
+    } else if (metric === 'max') {
+      value = Math.max(...values)
+    } else {
+      value = values.length // default count
+    }
+
+    const matchedLabel = fields.find((f) => f.key === label)?.label || label
 
     return {
       key: label,

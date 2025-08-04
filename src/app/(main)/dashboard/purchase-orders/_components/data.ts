@@ -1,16 +1,15 @@
 import { supabase } from '@/lib/supabase'
 
 export type PurchaseOrder = {
-  [key: string]: any
   po_number: string
   order_date: string | null
   due_date: string | null
   status: string
-  warehouse: string | null
-  created_by: string | null
-  project_number: string | null
-  supplier: string | null
-  po_type: string | null
+  warehouse: string
+  vendor_name: string
+  vendor_number: number
+  grand_total: string
+  is_deleted: boolean
 }
 
 export async function getPurchaseOrders(
@@ -25,15 +24,14 @@ export async function getPurchaseOrders(
   if (error || !data) return []
 
   return data.map((po) => ({
-    ...po,
     po_number: po.po_number ?? '',
-    order_date: po.order_date ?? '',
-    due_date: po.due_date ?? '',
+    order_date: po.order_date ?? null,
+    due_date: po.due_date ?? null,
     status: po.status ?? '',
     warehouse: po.warehouse ?? '',
-    created_by: po.created_by ?? '',
-    project_number: po.project_number ?? '',
-    supplier: po.supplier ?? 'N/A',
-    po_type: po.po_type ?? 'N/A',
+    vendor_name: po.vendor_name ?? 'N/A',
+    vendor_number: po.vendor_number ?? 0,
+    grand_total: po.grand_total ?? '0',
+    is_deleted: po.is_deleted ?? false,
   }))
 }

@@ -1,37 +1,80 @@
 import { supabase } from '@/lib/supabase'
 
-export type Requisition = {
+export type Inventory = {
   [key: string]: any
-  requisition_order_number: string
-  order_date: string | null
-  due_date: string | null
-  status: string
+  item_number: number
+  type: string
+  description: string
+  total_available: number | null
+  total_checked_out: number | null
+  total_in_house: number | null
+  on_order: number | null
+  committed: number | null
+  tax_code: string | null
+  item_cost: string
+  cost_method: string
+  item_list_price: string
+  item_sale_price: string
+  lot: string | null
+  date_code: string | null
+  manufacturer: string | null
+  category: string | null
+  stocking_unit: string | null
+  alt_item_number: string | null
+  serial_number: string | null
+  checkout_length: number | null
+  attachment: boolean | null
+  location: string | null
   warehouse: string | null
-  created_by: string | null
-  project_number: string | null
-  customer_name: string | null
+  height: string
+  width: string
+  depth: string
+  weight: string
+  max_volume: string
+  event_type: string | null
+  is_deleted: boolean
 }
 
-export async function getRequisitions(
-  _range: string, // retained for signature consistency
-  _from?: string,
-  _to?: string
-): Promise<Requisition[]> {
+export async function getInventory(): Promise<Inventory[]> {
   const { data, error } = await supabase
-    .from('requisitions')
-    .select('*') // ✅ No filtering — always get full dataset
+    .from('inventory')
+    .select('*')
+    .limit(5)
 
   if (error || !data) return []
 
   return data.map((r) => ({
     ...r,
-    requisition_order_number: r.requisition_order_number ?? '',
-    order_date: r.order_date ?? '',
-    due_date: r.due_date ?? '',
-    status: r.status ?? '',
+    item_number: r.item_number ?? 0,
+    type: r.type ?? '',
+    description: r.description ?? '',
+    total_available: r.total_available ?? 0,
+    total_checked_out: r.total_checked_out ?? 0,
+    total_in_house: r.total_in_house ?? 0,
+    on_order: r.on_order ?? 0,
+    committed: r.committed ?? 0,
+    tax_code: r.tax_code ?? '',
+    item_cost: r.item_cost ?? '',
+    cost_method: r.cost_method ?? '',
+    item_list_price: r.item_list_price ?? '',
+    item_sale_price: r.item_sale_price ?? '',
+    lot: r.lot ?? '',
+    date_code: r.date_code ?? '',
+    manufacturer: r.manufacturer ?? '',
+    category: r.category ?? '',
+    stocking_unit: r.stocking_unit ?? '',
+    alt_item_number: r.alt_item_number ?? '',
+    serial_number: r.serial_number ?? '',
+    checkout_length: r.checkout_length ?? null,
+    attachment: r.attachment ?? false,
+    location: r.location ?? '',
     warehouse: r.warehouse ?? '',
-    created_by: r.created_by ?? '',
-    project_number: r.project_number ?? '',
-    customer_name: r.customer_name ?? 'N/A',
+    height: r.height ?? '',
+    width: r.width ?? '',
+    depth: r.depth ?? '',
+    weight: r.weight ?? '',
+    max_volume: r.max_volume ?? '',
+    event_type: r.event_type ?? '',
+    is_deleted: r.is_deleted ?? false,
   }))
 }

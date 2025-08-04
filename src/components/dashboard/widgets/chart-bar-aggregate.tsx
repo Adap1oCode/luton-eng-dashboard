@@ -25,65 +25,70 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-type Tile = {
-  key: string;
-  title?: string;
-  value?: number;
-  onClick?: () => void;
-  onClickFilter?: Filter;
-};
+import { getBarChartData } from "@/components/dashboard/widgets/chart-utils";
+import { buildClickFilters } from "@/components/dashboard/client/tile-actions";
+import { normalizeFieldValue } from "@/components/dashboard/client/normalize"; // ✅
 
+// ✅ Match ChartBarVertical structure
+
+/** ✅ Props with consistent filtering support */
 type Props = {
   config: DashboardWidget & {
-    column?: string;
+    column: string;
+    valueField?: string;
+    metric?: "sum" | "average" | "min" | "max" | "count";
+    sortBy?: "label" | "value";
+    limit?: number;
     debug?: boolean;
+    from: string;
+    to: string;
+    noRangeFilter?: boolean;
   };
   data: Record<string, any>[];
-  tiles?: Tile[];
   onFilterChange?: (filters: Filter[]) => void;
 };
 
-/** ✅ Fallback utility: count values grouped by column */
-function generateColumnCounts(records: any[], column: string) {
-  const counts: Record<string, number> = {};
-  for (const row of records) {
-    const val = row[column] ?? "Unknown";
-    counts[val] = (counts[val] ?? 0) + 1;
-  }
-  return Object.entries(counts).map(([key, count]) => ({
-    key,
-    label: key,
-    count,
-  }));
-}
-
-export default function ChartBarHorizontal({
+export default function ChartBarAggregate({
   config,
   data,
-  tiles,
   onFilterChange,
 }: Props) {
-  const { title, description, column = "key", debug } = config;
+  const {
+    title,
+    description,
+    column,
+    valueField,
+    metric = "count",
+    sortBy = "value",
+    limit,
+    from,
+    to,
+    noRangeFilter = false,
+    debug,
+  } = config;
 
-  let chartData: { key: string; label: string; count: number }[] = [];
-
-  if (tiles && tiles.length > 0) {
-    chartData = tiles.map((tile) => ({
-      key: tile.key,
-      label: tile.title ?? tile.key,
-      count: tile.value ?? 0,
-    }));
-  } else {
-    chartData = generateColumnCounts(data, column);
-  }
+  const chartData = getBarChartData(data, column, {
+    valueField,
+    metric,
+    sortBy,
+    limit,
+  }).map((item) => ({
+    ...item,
+    key: normalizeFieldValue(item.key),       // ✅ normalize key
+    label: normalizeFieldValue(item.label),   // ✅ normalize label
+    count: item.value,
+  }));
 
   if (debug) {
-    console.group("[ChartBarHorizontal DEBUG]");
+    console.group("[ChartBarAggregate DEBUG]");
     console.log("📦 config:", config);
     console.log("📊 data.length:", data.length);
-    console.log("✅ tiles:", tiles);
-    console.log("✅ fallback column:", column);
-    console.log("📊 chartData:", chartData);
+    console.log("🔑 group column:", column);
+    console.log("💰 valueField:", valueField);
+    console.log("📐 metric:", metric);
+    console.table(chartData);
+    console.log("🗓️ from:", from);
+    console.log("🗓️ to:", to);
     console.groupEnd();
   }
 
@@ -151,10 +156,28 @@ export default function ChartBarHorizontal({
                 dataKey="count"
                 radius={[5, 5, 5, 5]}
                 onClick={(_, index) => {
-                  const tile = tiles?.[index];
-                  tile?.onClick?.();
-                  if (tile?.onClickFilter) {
-                    onFilterChange?.([tile.onClickFilter]);
+                  const key = chartData[index]?.key;
+                  const label = chartData[index]?.label;
+
+                  console.debug("[📊 Bar Clicked]", {
+                    index,
+                    label,
+                    key,
+                    column,
+                  });
+
+                  if (key && column && onFilterChange) {
+                    const filters = buildClickFilters({
+                      column,
+                      value: key,
+                      from,
+                      to,
+                      noRangeFilter,
+                    });
+
+                    console.debug("[🧩 Filters Generated on Click]", filters);
+
+                    onFilterChange(filters);
                   }
                 }}
                 cursor="pointer"

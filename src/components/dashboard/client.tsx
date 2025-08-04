@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
@@ -11,6 +11,7 @@ import ChartDonut from '@/components/dashboard/widgets/chart-donut'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
 import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
+import ChartBarAggregate from '@/components/dashboard/widgets/chart-bar-aggregate'
 
 import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
 import { attachTileActions } from '@/components/dashboard/client/tile-actions'
@@ -18,6 +19,7 @@ import { isFastFilter } from '@/components/dashboard/client/fast-filter'
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
 import type { Filter } from '@/components/dashboard/client/data-filters'
+import { normalizeFieldValue } from '@/components/dashboard/client/normalize'
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -28,12 +30,7 @@ const widgetMap: Record<string, any> = {
   ChartByProject,
   ChartBarVertical,
   ChartBarHorizontal,
-}
-
-function buildFilterFromWidget(widget: DashboardWidget | DashboardTile): Filter[] {
-  const filter = (widget as any).filter
-  if (!filter) return []
-  return isFastFilter(filter) ? [filter] : [filter]
+  ChartBarAggregate,
 }
 
 export default function DashboardClient({
@@ -49,6 +46,13 @@ export default function DashboardClient({
   from: string
   to: string
 }) {
+  const normalizedRecords = records.map((r) => ({
+    ...r,
+    vendor_name: normalizeFieldValue(r.vendor_name),
+    project_number: normalizeFieldValue(r.project_number),
+    created_by: normalizeFieldValue(r.created_by),
+  }))
+
   const currentFrom = new Date(from)
   const currentTo = new Date(to)
   const duration = currentTo.getTime() - currentFrom.getTime()
@@ -56,11 +60,11 @@ export default function DashboardClient({
   const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
   const prevTo = new Date(currentTo.getTime() - duration).toISOString()
 
-  const rangeFilteredRecords = records.filter(
+  const rangeFilteredRecords = normalizedRecords.filter(
     (r) => r.order_date && r.order_date >= from && r.order_date <= to
   )
 
-  const previousRangeFilteredRecords = records.filter(
+  const previousRangeFilteredRecords = normalizedRecords.filter(
     (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
   )
 
@@ -72,7 +76,7 @@ export default function DashboardClient({
     filteredData,
     handleClickWidget,
     handleFilter,
-  } = useDataViewer({ config, records })
+  } = useDataViewer({ config, records: normalizedRecords })
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -120,10 +124,14 @@ export default function DashboardClient({
 
           const metricTiles = metrics[group] ?? []
 
+          const useFiltered = w.noRangeFilter !== true
+          const dataset = useFiltered ? rangeFilteredRecords : normalizedRecords
+
           const commonProps: any = {
             config: w,
             from,
             to,
+            data: dataset,
           }
 
           if (w.clickable && w.key) {
@@ -134,8 +142,22 @@ export default function DashboardClient({
             commonProps.onFilterChange = handleFilter(w.filterType)
           }
 
-          // Generic tile-based calculation for any group using tile logic
-          const isTileGroup = ['summary', 'trends', 'dataQuality'].includes(group)
+          if (typeof Comp === 'function' && w.clickable && !w.filterType) {
+            commonProps.onFilterChange = (filters: Filter[]) => {
+              const fullFilters = useFiltered
+                ? [
+                    { column: 'order_date', gte: from },
+                    { column: 'order_date', lte: to },
+                    ...filters,
+                  ]
+                : [...filters]
+
+              setFilters(fullFilters)
+              setDrawerOpen(true)
+            }
+          }
+
+          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles'].includes(group)
 
           if (isTileGroup) {
             const calculatedTiles = tileCalculations(
@@ -143,7 +165,7 @@ export default function DashboardClient({
               metricTiles,
               rangeFilteredRecords,
               previousRangeFilteredRecords,
-              records
+              normalizedRecords
             )
 
             const interactiveTiles = attachTileActions(
@@ -151,26 +173,19 @@ export default function DashboardClient({
               w,
               (tile) => handleClickWidget(tile),
               (filter) => {
-                setFilters([
-                  { column: 'order_date', gte: from },
-                  { column: 'order_date', lte: to },
-                  filter,
-                ])
+                const wrapped = useFiltered
+                  ? [
+                      { column: 'order_date', gte: from },
+                      { column: 'order_date', lte: to },
+                      filter,
+                    ]
+                  : [filter]
+
+                setFilters(wrapped)
                 setDrawerOpen(true)
               }
             )
 
-            console.groupCollapsed(`[widget: ${w.key}] Calculated Tiles`)
-            console.table(
-              interactiveTiles.map(({ key, title, value }) => ({
-                key,
-                title,
-                value,
-              }))
-            )
-            console.groupEnd()
-
-            // Pass either config (for SummaryCards/SectionCards) or tiles (for charts)
             if (['SummaryCards', 'SectionCards'].includes(w.component)) {
               commonProps.config = interactiveTiles
             } else {
@@ -178,9 +193,8 @@ export default function DashboardClient({
             }
           }
 
-          // Always pass raw records for chart widgets
-          if (!['SummaryCards', 'SectionCards'].includes(w.component)) {
-            commonProps.data = records
+          if (['SummaryCards', 'SectionCards'].includes(w.component)) {
+            delete commonProps.data
           }
 
           const spanClass =

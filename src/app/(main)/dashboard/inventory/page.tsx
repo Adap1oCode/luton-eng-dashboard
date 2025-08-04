@@ -1,6 +1,6 @@
 import GenericDashboardPage from '@/components/dashboard/page'
-import { requisitionsConfig } from '@/app/(main)/dashboard/requisitions/config'
+import { inventoryConfig } from '@/app/(main)/dashboard/inventory/config'
 
-export default function RequisitionsPage() {
-  return <GenericDashboardPage config={requisitionsConfig} />
+export default function InventoryPage() {
+  return <GenericDashboardPage config={inventoryConfig} />
 }

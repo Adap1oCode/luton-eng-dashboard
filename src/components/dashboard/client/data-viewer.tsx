@@ -23,15 +23,40 @@ export function useDataViewer({
     if (filters.length === 0) setDrawerOpen(false)
   }, [filters])
 
+  useEffect(() => {
+    if (filters.length > 0) {
+      console.group('[🧪 FILTER APPLICATION]')
+      console.log('🧩 Filters being applied:', filters)
+      console.log('📄 Data BEFORE filtering:', records.slice(0, 5))
+      console.groupEnd()
+    }
+  }, [filters, records])
+
+  useEffect(() => {
+    console.groupCollapsed('[📊 useDataViewer]')
+    console.debug('🔍 Filters applied:', filters)
+    console.debug('📋 Filtered data length:', filteredData.length)
+    if (filteredData.length > 0) {
+      console.table(filteredData.slice(0, 5))
+    }
+    console.groupEnd()
+  }, [filters, filteredData])
+
   const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
     const filter = (widget as any).filter
     if (!filter) return
+    console.group('[🔍 Widget Click Tracking]')
+    console.log('📌 Clicked filter:', filter)
+    console.log('📦 Current records length:', records.length)
+    console.log('📦 Example record sample:', records.slice(0, 3))
+    console.groupEnd()
     setFilters([filter])
     setDrawerOpen(true)
   }
 
   const handleFilter = (type: string) => (values: string[]) => {
     const updated = values.map((val) => ({ column: type, contains: val }))
+    console.debug(`[🟧 handleFilter] ${type} contains:`, updated)
     setFilters(updated)
     setDrawerOpen(true)
   }
