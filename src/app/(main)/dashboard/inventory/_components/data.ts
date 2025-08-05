@@ -37,75 +37,6 @@ export type Inventory = {
   is_deleted: boolean;
 };
 
-// Fetch all inventory rows, paginated to avoid Supabase's 1,000-row limit
-export async function getInventory(): Promise<Inventory[]> {
-  const PAGE_SIZE = 1000;
-  let from = 0;
-  const allRecords: Inventory[] = [];
-
-  while (true) {
-    const { data, error } = await supabase
-      .from("inventory")
-      .select("*")
-      .range(from, from + PAGE_SIZE - 1);
-
-    if (error) {
-      console.error("Error fetching inventory batch:", { from, error });
-      break;
-    }
-
-    if (!data || data.length === 0) {
-      break;
-    }
-
-    console.log(`Fetched ${data.length} rows from inventory (offset ${from})`);
-    allRecords.push(...data);
-
-    if (data.length < PAGE_SIZE) {
-      break;
-    }
-
-    from += PAGE_SIZE;
-  }
-
-  // Normalize defaults
-  return allRecords.map((r) => ({
-    ...r,
-    item_number: r.item_number ?? 0,
-    type: r.type ?? "",
-    description: r.description ?? "",
-    total_available: r.total_available ?? 0,
-    total_checked_out: r.total_checked_out ?? 0,
-    total_in_house: r.total_in_house ?? 0,
-    on_order: r.on_order ?? 0,
-    committed: r.committed ?? 0,
-    tax_code: r.tax_code ?? "",
-    item_cost: r.item_cost ?? "",
-    cost_method: r.cost_method ?? "",
-    item_list_price: r.item_list_price ?? "",
-    item_sale_price: r.item_sale_price ?? "",
-    lot: r.lot ?? "",
-    date_code: r.date_code ?? "",
-    manufacturer: r.manufacturer ?? "",
-    category: r.category ?? "",
-    stocking_unit: r.stocking_unit ?? "",
-    alt_item_number: r.alt_item_number ?? "",
-    serial_number: r.serial_number ?? "",
-    checkout_length: r.checkout_length ?? null,
-    attachment: r.attachment ?? false,
-    location: r.location ?? "",
-    warehouse: r.warehouse ?? "",
-    height: r.height ?? "",
-    width: r.width ?? "",
-    depth: r.depth ?? "",
-    weight: r.weight ?? "",
-    max_volume: r.max_volume ?? "",
-    event_type: r.event_type ?? "",
-    is_deleted: r.is_deleted ?? false,
-  }));
-}
-
-// The shape of the single row returned by our materialized view
 export type InventorySummary = {
   total_inventory_records: number;
   unique_item_count: number;
@@ -120,20 +51,19 @@ export type InventorySummary = {
 
 /**
  * Fetch the pre-computed summary row from our materialized view.
- * We use `.select<InventorySummary>()` rather than a generic on `.from()`
- * to satisfy the Supabase typings without needing two type arguments.
  */
 export async function getInventorySummary(): Promise<InventorySummary> {
-  // don’t try to use .select<InventorySummary>() here
-  const { data, error } = await supabase.from("vw_dashboard_inventory_summary").select("*").single();
+  const { data, error } = await supabase
+.from<'vw_dashboard_inventory_summary', InventorySummary>("vw_dashboard_inventory_summary")
+    .select("*")
+    .single();
 
   if (error || !data) {
     console.error("Error fetching inventory summary:", error);
     throw error;
   }
 
-  // assert that the returned row matches our TS type
-  return data as InventorySummary;
+  return data;
 }
 
 /**
@@ -149,7 +79,7 @@ export async function getInventoryRows(
   filter: Record<string, any>,
   distinct = false,
   from = 0,
-  to = 49,
+  to = 49
 ): Promise<Inventory[]> {
   const { data, error } = await supabase.rpc("get_inventory_rows", {
     _filter: filter,
@@ -165,3 +95,33 @@ export async function getInventoryRows(
 
   return (data as Inventory[]) || [];
 }
+
+// 1️⃣ Type for each row in your new view
+export type WarehouseInventoryMetrics = {
+  warehouse: string;
+  total_available_stock: number;
+  total_on_order_quantity: number;
+  total_committed_quantity: number;
+  out_of_stock_count: number;
+  total_on_order_value: number;
+  total_inventory_value: number;
+  total_committed_value: number;
+};
+
+/**
+ * Fetch all per-warehouse metrics from vw_dashboard_inventory_by_warehouse
+ */
+export async function getWarehouseInventoryMetrics(): Promise<WarehouseInventoryMetrics[]> {
+  const { data, error } = await supabase
+    .from<'vw_dashboard_inventory_by_warehouse', WarehouseInventoryMetrics>(
+      'vw_dashboard_inventory_by_warehouse'
+    )
+    .select('*');
+
+  if (error || !data) {
+    console.error('Error fetching warehouse metrics:', error);
+    throw error;
+  }
+  return data;
+}
+

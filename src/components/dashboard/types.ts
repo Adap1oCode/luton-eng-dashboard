@@ -44,6 +44,8 @@ export type DashboardWidget = {
   noRangeFilter?: boolean; // Skip date-range filter when true
   filterType?: string; // e.g. 'status', 'creator', 'project_number'
   filter?: Filter | { and: Filter[] } | { or: Filter[] };
+  preCalculated?: boolean;
+
 
   // 🧰 Tile values (precomputed — used by ChartBar, SummaryCards, etc.)
   tiles?: {
@@ -135,6 +137,7 @@ export type DashboardFetchFunction = (range: string, from?: string, to?: string)
 export type DashboardConfig = {
   id: string;
   title: string;
+  tableName: string;
   /** named preset (e.g. "3m", "6m", "12m"); optional when dateSearchEnabled=false */
   range?: "3m" | "6m" | "12m";
   rowIdKey: string;
@@ -169,4 +172,5 @@ export type ClientDashboardConfig = Omit<DashboardConfig, "fetchRecords" | "fetc
   to?: string;
   /** convenience wrapper for both dates */
   dateRange?: DateRange;
+  tableLimit?: number;
 };

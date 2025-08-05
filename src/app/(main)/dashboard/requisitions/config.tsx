@@ -73,6 +73,7 @@ const chartWidgets = [
 export const requisitionsConfig: DashboardConfig = {
   id: 'requisitions',
   title: 'Requisitions Dashboard',
+   tableName: "requisitions",
   range: '3m',
   rowIdKey: 'requisition_order_number',
   fetchRecords: getRequisitions,

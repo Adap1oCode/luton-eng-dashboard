@@ -138,12 +138,16 @@ export default function DashboardClient({
           const useFiltered = dateSearchEnabled && w.noRangeFilter !== true
           const dataset = useFiltered ? rangeFilteredRecords : normalizedRecords
 
+          // ▶ NEW: decide whether to feed raw rows or pre-aggregated metrics
+          const isMetricWidget = Boolean((w as any).valueField || (w as any).preCalculated)
+          const inputData = isMetricWidget ? metrics ?? [] : dataset
+
           // common props for every widget
           const commonProps: any = {
             config: w,
             from,
             to,
-            data: dataset,
+            data: inputData,
           }
 
           // handle clickable tiles

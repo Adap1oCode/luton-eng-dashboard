@@ -10,6 +10,8 @@ export type ChartField = {
 }
 
 export type BarChartOptions = {
+  /** Toggle to use pre-aggregated values directly */
+  preCalculated?: boolean
   fields?: { key: string; label?: string }[]
   sortBy?: 'label' | 'value'
   limit?: number
@@ -88,7 +90,8 @@ export function getTimeBuckets(
 }
 
 /**
- * Bar chart: grouped aggregation logic, now supports sum/avg/min/max/count.
+ * Bar chart: grouped aggregation logic, now supports sum/avg/min/max/count
+ * and direct pre-calculated passthrough when flagged.
  */
 export function getBarChartData(
   data: any[],
@@ -101,10 +104,32 @@ export function getBarChartData(
     limit,
     valueField,
     metric = 'count',
+    preCalculated = false,
   } = options
 
-  const groups: Record<string, number[]> = {}
+  // ─── 1) PRE-CALCULATED PASS-THROUGH ─────────────────────────────────────
+  if (preCalculated && valueField) {
+    let output = data.map((row) => {
+      const rawKey = (key ? String(row[key]) : '') || 'Unknown'
+      const label = fields.find((f) => f.key === rawKey)?.label || rawKey
+      const value = Number(row[valueField]) || 0
+      return { key: rawKey, label, value }
+    })
+    // apply sorting
+    if (sortBy === 'label') {
+      output.sort((a, b) => a.label.localeCompare(b.label))
+    } else {
+      output.sort((a, b) => b.value - a.value)
+    }
+    // apply limit
+    if (limit && limit > 0) {
+      output = output.slice(0, limit)
+    }
+    return output
+  }
 
+  // ─── 2) STANDARD GROUPING & AGGREGATION ─────────────────────────────────
+  const groups: Record<string, number[]> = {}
   if (key) {
     for (const row of data) {
       if (!(key in row)) continue
@@ -132,24 +157,21 @@ export function getBarChartData(
     } else if (metric === 'max') {
       value = Math.max(...values)
     } else {
-      value = values.length // default count
+      value = values.length
     }
 
     const matchedLabel = fields.find((f) => f.key === label)?.label || label
-
-    return {
-      key: label,
-      label: matchedLabel,
-      value,
-    }
+    return { key: label, label: matchedLabel, value }
   })
 
+  // apply sorting
   if (sortBy === 'label') {
     output.sort((a, b) => a.label.localeCompare(b.label))
   } else {
     output.sort((a, b) => b.value - a.value)
   }
 
+  // apply limit
   if (limit && limit > 0) {
     output = output.slice(0, limit)
   }

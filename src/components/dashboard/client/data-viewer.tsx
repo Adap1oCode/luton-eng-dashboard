@@ -5,6 +5,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { DataTable } from '@/components/dashboard/widgets/data-table'
 import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters'
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
+import { supabase } from '@/lib/supabase' // ⬇️ NEW: import Supabase client
 
 export function useDataViewer({
   config,
@@ -13,43 +14,90 @@ export function useDataViewer({
   config: ClientDashboardConfig
   records: any[]
 }) {
-  const [filters, setFilters] = useState<Filter[]>([])
+  const [filters, setFilters]       = useState<Filter[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const filteredData =
+  // ⬇️ NEW: state for RPC results & loading
+  const [rpcData, setRpcData]       = useState<any[] | null>(null)
+  const [loading, setLoading]       = useState(false)
+
+  // apply either RPC data or client-filtered records
+  const clientFiltered =
     filters.length === 0 ? records : applyDataFilters(records, filters, config)
 
-  useEffect(() => {
-    if (filters.length === 0) setDrawerOpen(false)
-  }, [filters])
+  const filteredData = rpcData ?? clientFiltered
 
   useEffect(() => {
-    if (filters.length > 0) {
-      console.group('[🧪 FILTER APPLICATION]')
-      console.log('🧩 Filters being applied:', filters)
-      console.log('📄 Data BEFORE filtering:', records.slice(0, 5))
+    if (filters.length === 0 && rpcData === null) {
+      setDrawerOpen(false)
+    }
+  }, [filters, rpcData])
+
+  useEffect(() => {
+    if (filters.length > 0 || rpcData !== null) {
+      console.group('[🧪 FILTER/RPC DATA]')
+      console.log('Filters:', filters)
+      console.log('Using RPC data?', rpcData !== null)
+      console.log('Result count:', filteredData.length)
       console.groupEnd()
     }
-  }, [filters, records])
+  }, [filters, rpcData, filteredData])
 
-  useEffect(() => {
-    console.groupCollapsed('[📊 useDataViewer]')
-    console.debug('🔍 Filters applied:', filters)
-    console.debug('📋 Filtered data length:', filteredData.length)
-    if (filteredData.length > 0) {
-      console.table(filteredData.slice(0, 5))
+  const handleClickWidget = async (widget: DashboardWidget | DashboardTile) => {
+    const filter  = (widget as any).filter
+    const rpcName = (widget as any).rpcName
+
+    if (rpcName) {
+      // Build an RPC-friendly filter object (ensuring op & value)
+      let rpcFilter: Record<string, string | number> = {}
+      if (filter) {
+        // Already in full { column, op, value } form
+        if ('op' in (filter as any) && 'value' in (filter as any)) {
+          rpcFilter = { ...(filter as any) }
+        }
+        // Shorthand equals
+        else if ('equals' in (filter as any)) {
+          const { column, equals } = filter as any
+          rpcFilter = { column, op: '=', value: equals! }
+        }
+        // Shorthand contains
+        else if ('contains' in (filter as any)) {
+          const { column, contains } = filter as any
+          rpcFilter = { column, op: 'ILIKE', value: `%${contains}%` }
+        }
+      }
+
+      setFilters([])
+      setRpcData(null)
+      setLoading(true)
+
+      const limit = config.tableLimit ?? 50
+      const { data, error } = await supabase.rpc(rpcName, {
+        _filter:     rpcFilter,
+        _distinct:   (widget as any).distinct ?? false,
+        _range_from: 0,
+        _range_to:   limit - 1,
+      })
+
+      setLoading(false)
+      if (error) {
+        console.error('RPC error:', error)
+      } else {
+        setRpcData(data as any[])
+        setDrawerOpen(true)
+      }
+      return
     }
-    console.groupEnd()
-  }, [filters, filteredData])
 
-  const handleClickWidget = (widget: DashboardWidget | DashboardTile) => {
-    const filter = (widget as any).filter
+    // ⬇️ existing client-filter path
     if (!filter) return
-    console.group('[🔍 Widget Click Tracking]')
-    console.log('📌 Clicked filter:', filter)
-    console.log('📦 Current records length:', records.length)
-    console.log('📦 Example record sample:', records.slice(0, 3))
+
+    console.group('[🔍 Widget Click]')
+    console.log('Filter:', filter)
+    console.log('Records before filter:', records.length)
     console.groupEnd()
+
+    setRpcData(null)
     setFilters([filter])
     setDrawerOpen(true)
   }
@@ -57,6 +105,7 @@ export function useDataViewer({
   const handleFilter = (type: string) => (values: string[]) => {
     const updated = values.map((val) => ({ column: type, contains: val }))
     console.debug(`[🟧 handleFilter] ${type} contains:`, updated)
+    setRpcData(null)
     setFilters(updated)
     setDrawerOpen(true)
   }
@@ -69,6 +118,7 @@ export function useDataViewer({
     filteredData,
     handleClickWidget,
     handleFilter,
+    loading, // ⬇️ NEW: expose loading if you want a spinner
   }
 }
 
@@ -92,8 +142,13 @@ export function DataViewer({
         aria-labelledby="drawer-title"
         className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
       >
-        <h2 className="text-xl font-semibold mb-4">Filtered Requisition Records</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {/* Always use the same label and display the total shown */}
+          Number of Records ({filteredData.length})
+        </h2>
         <div className="p-4">
+          {/* Optional: show loader */}
+          {/** loading && <Spinner /> **/}
           <DataTable
             key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
             data={filteredData}
