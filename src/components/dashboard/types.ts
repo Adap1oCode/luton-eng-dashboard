@@ -3,9 +3,9 @@ import type { Filter } from "@/components/dashboard/client/data-filters";
 // --- new: DateRange type for widgets ---
 /** Defines an optional from/to pair for use when date-search is enabled */
 export type DateRange = {
-  from: string
-  to:   string
-}
+  from: string;
+  to: string;
+};
 
 // ✅ Toggle group for ChartAreaInteractive
 export type ToggleGroup = {
@@ -40,9 +40,9 @@ export type DashboardWidget = {
   group?: string; // e.g. 'tiles', 'trends', 'summary', 'dataQuality'
 
   // 🎯 Filtering & interactivity
-  clickable?: boolean;           // Enables click-to-filter (default: false)
-  noRangeFilter?: boolean;       // Skip date-range filter when true
-  filterType?: string;           // e.g. 'status', 'creator', 'project_number'
+  clickable?: boolean; // Enables click-to-filter (default: false)
+  noRangeFilter?: boolean; // Skip date-range filter when true
+  filterType?: string; // e.g. 'status', 'creator', 'project_number'
   filter?: Filter | { and: Filter[] } | { or: Filter[] };
 
   // 🧰 Tile values (precomputed — used by ChartBar, SummaryCards, etc.)
@@ -97,6 +97,7 @@ export type DashboardTile = {
 
   metric?: MetricType;
   field?: string;
+  rpcName?: string;
 
   filter?: Filter | { and: Filter[] } | { or: Filter[] };
   percentage?: {
@@ -108,10 +109,11 @@ export type DashboardTile = {
     end: string;
   };
 
-   /** flag to dedupe before counting */
-  distinct?: boolean
+  /** flag to dedupe before counting */
+  distinct?: boolean;
   /** which field to dedupe on (defaults to `rowIdKey`) */
-  distinctColumn?: string
+  distinctColumn?: string;
+  preCalculated?: boolean;
   thresholds?: Thresholds;
   trend?: string;
   direction?: "up" | "down";
@@ -127,11 +129,7 @@ export type DashboardColumn = {
 };
 
 // ✅ Core async loader for any dashboard
-export type DashboardFetchFunction = (
-  range: string,
-  from?: string,
-  to?: string
-) => Promise<any>;
+export type DashboardFetchFunction = (range: string, from?: string, to?: string) => Promise<any>;
 
 // ✅ Complete top-level dashboard config
 export type DashboardConfig = {
@@ -163,13 +161,12 @@ export type DashboardConfig = {
 };
 
 // ✅ Client-friendly version with prefilled dates
-export type ClientDashboardConfig =
-  Omit<DashboardConfig, "fetchRecords" | "fetchMetrics"> & {
-    /** optional named preset */
-    range?: string;
-    /** raw from/to strings; only present when date-search is enabled */
-    from?: string;
-    to?: string;
-    /** convenience wrapper for both dates */
-    dateRange?: DateRange;
-  };
+export type ClientDashboardConfig = Omit<DashboardConfig, "fetchRecords" | "fetchMetrics"> & {
+  /** optional named preset */
+  range?: string;
+  /** raw from/to strings; only present when date-search is enabled */
+  from?: string;
+  to?: string;
+  /** convenience wrapper for both dates */
+  dateRange?: DateRange;
+};

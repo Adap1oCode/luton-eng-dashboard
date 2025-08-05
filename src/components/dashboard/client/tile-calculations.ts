@@ -1,3 +1,5 @@
+// src/app/(main)/dashboard/inventory/_components/tile-calculations.ts
+
 import { isDateString, compileFilter } from "./data-filters";
 
 function getActiveRecords(tile: any, rangeFiltered: any[], full: any[]): any[] {
@@ -32,6 +34,14 @@ function computeAggregation(values: number[], type: string): number {
 }
 
 function handleAggregationTile(tile: any, activeRecords: any[], previousRecords: any[]) {
+  if (tile.key === "totalAvailableAllTime") {
+    console.group("🔢 totalAvailableAllTime debug");
+    console.log("activeRecords.length:", activeRecords.length);
+    console.log(
+      "sample values:",
+      activeRecords.slice(0, 10).map((r) => r.total_available),
+    );
+  }
   const filterFn = tile.filter ? compileFilter(tile.filter) : () => true;
   const matches = activeRecords.filter(filterFn);
   const prevMatches = previousRecords.filter(filterFn);
@@ -40,10 +50,13 @@ function handleAggregationTile(tile: any, activeRecords: any[], previousRecords:
   const previousValues = getValues(prevMatches, tile.field);
 
   const value = computeAggregation(currentValues, tile.metric);
+  if (tile.key === "totalAvailableAllTime") {
+    console.log("computed value:", value);
+    console.groupEnd();
+  }
   const previous = computeAggregation(previousValues, tile.metric);
 
   let trend, direction, percent;
-
   if (!tile.noRangeFilter) {
     if (previous > 0) {
       const delta = ((value - previous) / previous) * 100;
@@ -55,8 +68,6 @@ function handleAggregationTile(tile: any, activeRecords: any[], previousRecords:
       direction = "up";
       percent = 100;
     } else {
-      trend = undefined;
-      direction = undefined;
       percent = 0;
     }
   }
@@ -72,8 +83,7 @@ function handleGroupedAggregation(tile: any, activeRecords: any[]) {
     const key = row[tile.column] ?? "Unknown";
     const val = parseFloat(row[tile.field] ?? 0);
     if (!isNaN(val)) {
-      acc[key] = acc[key] || [];
-      acc[key].push(val);
+      (acc[key] ||= []).push(val);
     }
     return acc;
   }, {});
@@ -92,17 +102,34 @@ function handleGroupedAggregation(tile: any, activeRecords: any[]) {
 
 function handleCountTile(tile: any, activeRecords: any[], previousRecords: any[]) {
   const filterFn = compileFilter(tile.filter);
-  const matches = activeRecords.filter(filterFn);
-  const prevMatches = previousRecords.filter(filterFn);
+
+  // 1) filter
+  let matches = activeRecords.filter(filterFn);
+  let prevMatches = previousRecords.filter(filterFn);
+
+  // DEBUG (server-side):
+  console.log(`[${tile.key}] post-filter count:`, matches.length);
+
+  // 2) distinct?
+  if (tile.distinct) {
+    const col = tile.distinctColumn!;
+    // coerce to string to unify types
+    const rawKeys = matches.map((r) => String(r[col]));
+    matches = Array.from(new Set(rawKeys));
+    prevMatches = Array.from(new Set(previousRecords.filter(filterFn).map((r) => String(r[col]))));
+    console.log(`[${tile.key}] distinct count:`, matches.length);
+  }
 
   const value = matches.length;
   const previous = prevMatches.length;
 
   let trend, direction, percent;
-
   if (tile.noRangeFilter) {
-    const total = activeRecords.length ?? 1;
-    percent = parseFloat(((value / total) * 100).toFixed(1));
+    // compute percent of total base (dedupe total if needed)
+    const baseTotal = tile.distinct
+      ? new Set(activeRecords.map((r) => r[tile.distinctColumn!])).size
+      : activeRecords.length || 1;
+    percent = parseFloat(((value / baseTotal) * 100).toFixed(1));
   } else {
     if (previous > 0) {
       const delta = ((value - previous) / previous) * 100;
@@ -114,8 +141,6 @@ function handleCountTile(tile: any, activeRecords: any[], previousRecords: any[]
       direction = "up";
       percent = 100;
     } else {
-      trend = undefined;
-      direction = undefined;
       percent = 0;
     }
   }
@@ -128,7 +153,7 @@ function handlePercentageTile(tile: any, activeRecords: any[]) {
   const denomFn = compileFilter(tile.percentage.denominator);
 
   const numerator = activeRecords.filter(numFn).length;
-  const denominator = activeRecords.filter(denomFn).length ?? 1;
+  const denominator = activeRecords.filter(denomFn).length || 1;
   const value = parseFloat(((numerator / denominator) * 100).toFixed(1));
 
   return { value, previous: 0, trend: undefined, direction: undefined, percent: undefined };
@@ -136,7 +161,8 @@ function handlePercentageTile(tile: any, activeRecords: any[]) {
 
 function handleAverageTile(tile: any, activeRecords: any[]) {
   const valid = activeRecords
-    .filter((r) => isDateString(r[tile.average!.start]) && isDateString(r[tile.average!.end]))
+    .filter((r) => isDateString(r[tile.average!.start]))
+    .filter((r) => isDateString(r[tile.average!.end]))
     .filter(tile.filter ? compileFilter(tile.filter) : () => true);
 
   const deltas = valid
@@ -164,25 +190,22 @@ function resolveTileResult(tile: any, activeRecords: any[], previousRecords: any
     return handleGroupedAggregation(tile, activeRecords);
   }
 
-  if (
-    (tile.metric === "sum" ||
-      tile.metric === "min" ||
-      tile.metric === "max" ||
-      tile.metric === "median" ||
-      tile.metric === "average") &&
-    tile.field
-  ) {
+  if (["sum", "min", "max", "median", "average"].includes(tile.metric) && tile.field) {
     return handleAggregationTile(tile, activeRecords, previousRecords);
   }
+
   if (hasFilter) {
     return handleCountTile(tile, activeRecords, previousRecords);
   }
+
   if (tile.percentage) {
     return handlePercentageTile(tile, activeRecords);
   }
+
   if (tile.average) {
     return handleAverageTile(tile, activeRecords);
   }
+
   if (typeof tile.value === "number") {
     return { value: tile.value, previous: 0, trend: undefined, direction: undefined, percent: undefined };
   }
@@ -210,13 +233,13 @@ function processTile(
   return {
     ...tile,
     value: result.value,
+    previous: result.previous,
     trend: result.trend,
     direction: result.direction,
-    previous: result.previous,
+    percent: result.percent,
     subtitle: tile.subtitle ?? match?.subtitle,
     clickFilter,
     clickable: tile.clickable ?? Boolean(clickFilter),
-    percent: result.percent,
     tiles: result.tiles,
   };
 }
