@@ -45,8 +45,7 @@ export type DashboardWidget = {
   filterType?: string; // e.g. 'status', 'creator', 'project_number'
   filter?: Filter | { and: Filter[] } | { or: Filter[] };
   preCalculated?: boolean;
-
-
+  rpcName?: string; // RPC function to fetch data
   // 🧰 Tile values (precomputed — used by ChartBar, SummaryCards, etc.)
   tiles?: {
     key: string;

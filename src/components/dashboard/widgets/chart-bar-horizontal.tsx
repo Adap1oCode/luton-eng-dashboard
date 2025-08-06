@@ -43,15 +43,13 @@ type Props = {
     preCalculated?: boolean;
     /** enable automatic unit scaling */
     autoScale?: boolean;
+    clickable?: boolean;
   };
   data: Record<string, any>[];
   tiles?: Tile[];
   onFilterChange?: (filters: Filter[]) => void;
 };
 
-/**
- * Fallback: count records grouped by column
- */
 function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {};
   for (const row of records) {
@@ -67,6 +65,14 @@ export default function ChartBarHorizontal({
   tiles,
   onFilterChange,
 }: Props) {
+
+console.group("[ChartBarHorizontal PROPS]");
+console.log("config.clickable:", config.clickable);
+console.log("tiles:", tiles);
+console.log("onFilterChange:", onFilterChange);
+console.groupEnd();
+
+
   const {
     title,
     description,
@@ -75,27 +81,39 @@ export default function ChartBarHorizontal({
     valueField,
     preCalculated,
     autoScale = true,
+    clickable,
   } = config;
+
+  // STEP 0: DEBUG LOG which branch we’ll take
+  if (debug) {
+    console.group("[ChartBarHorizontal DEBUG] incoming tiles");
+    console.log("  clickable:", clickable);
+    console.log("  tiles:", tiles);
+    console.groupEnd();
+  }
 
   // Step 1: build raw chartData
   let chartData: { key: string; label: string; count: number }[] = [];
-  if (tiles && tiles.length > 0) {
+  if (clickable && tiles && tiles.length > 0) {
+    // TILE-BASED branch
     chartData = tiles.map((tile) => ({
       key: tile.key,
       label: tile.title ?? tile.key,
       count: tile.value ?? 0,
     }));
   } else if (preCalculated && valueField) {
+    // RAW-DATA branch
     chartData = data.map((row) => {
       const rawKey = row[column] ?? "Unknown";
       const cnt = Number(row[valueField]) || 0;
       return { key: String(rawKey), label: String(rawKey), count: cnt };
     });
   } else {
+    // FALLBACK branch
     chartData = generateColumnCounts(data, column);
   }
 
-  // Step 2: apply auto-scale if enabled
+  // Step 2: auto-scale…
   let suffix = "";
   if (autoScale && chartData.length) {
     const maxVal = Math.max(...chartData.map((d) => d.count));
@@ -117,19 +135,16 @@ export default function ChartBarHorizontal({
     }));
   }
 
-  // Step 3: compute uniform "nice" ticks (4 intervals)
+  // Step 3: nice y-ticks…
   const intervals = 4;
   const maxCount = chartData.length ? Math.max(...chartData.map((d) => d.count)) : 0;
   const rawStep = maxCount / intervals;
-  // round step up to nearest power-of-ten multiple
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
   const niceStep = Math.ceil(rawStep / magnitude) * magnitude;
   const yTicks: number[] = Array.from({ length: intervals + 1 }, (_, i) => i * niceStep);
 
   if (debug) {
     console.group("[ChartBarHorizontal DEBUG]");
-    console.log("config:", config);
-    console.log("raw data rows:", data.length);
     console.log("computed chartData:", chartData);
     console.log("yTicks:", yTicks);
     console.groupEnd();
@@ -188,12 +203,22 @@ export default function ChartBarHorizontal({
               <Bar
                 dataKey="count"
                 radius={[5, 5, 5, 5]}
-                onClick={(_, i) => {
-                  const tile = tiles?.[i];
-                  tile?.onClick?.();
-                  if (tile?.onClickFilter) onFilterChange?.([tile.onClickFilter]);
-                }}
                 cursor="pointer"
+                onClick={(data, index) => {
+                  console.group("[ChartBarHorizontal] click event");
+                  console.log("  click payload:", data, "index:", index);
+                  const tile = tiles?.[index];
+                  console.log("  matched tile:", tile);
+                  console.log("  calling tile.onClick()");
+                  tile?.onClick?.();
+                  if (tile?.onClickFilter) {
+                    console.log("  calling tile.onClickFilter()");
+                    onFilterChange?.([tile.onClickFilter]);
+                  } else {
+                    console.log("  no onClickFilter for this tile");
+                  }
+                  console.groupEnd();
+                }}
               >
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />

@@ -1,3 +1,5 @@
+
+
 "use client"
 
 import { useEffect } from 'react'
@@ -20,6 +22,8 @@ import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/co
 import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
 import type { Filter } from '@/components/dashboard/client/data-filters'
 import { normalizeFieldValue } from '@/components/dashboard/client/normalize'
+
+console.log("🏷️ chart-bar-horizontal module loaded");
 
 const widgetMap: Record<string, any> = {
   SectionCards,
@@ -119,6 +123,8 @@ export default function DashboardClient({
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w: DashboardWidget, i) => {
+            console.log(`[DashboardClient] Widget #${i} key="${w.key}" component="${w.component}"`);
+
           const Comp = widgetMap[w.component]
           if (!Comp) return null
 
@@ -131,8 +137,22 @@ export default function DashboardClient({
               ? config.trends ?? []
               : group === 'dataQuality'
               ? config.dataQuality ?? []
+              : group === 'tiles' || group === 'widgets'
+    ? [w]
               : config.tiles ?? []
-          const metricTiles = metrics[group] ?? []
+          // NEW: when group is 'tiles' (or 'widgets'), use the full metrics array
+const metricTiles =
+  (group === 'tiles' || group === 'widgets')
+    ? metrics
+    : metrics[group] ?? []
+
+          // ADD THIS:
+  console.log(
+    `[DashboardClient] metrics for '${w.key}' (group=${group}):`,
+    metrics,
+    "→ metricTiles:",
+    metricTiles
+  );
 
           // apply global and per-widget date filtering
           const useFiltered = dateSearchEnabled && w.noRangeFilter !== true
@@ -177,18 +197,21 @@ export default function DashboardClient({
           }
 
           // tile-based groups (summary, trends, dataQuality, tiles)
-          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles'].includes(
+          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles', 'widgets'].includes(
             group
           )
 
           if (isTileGroup) {
             const calculatedTiles = tileCalculations(
+              
               configTiles,
               metricTiles,
               rangeFilteredRecords,
               previousRangeFilteredRecords,
               normalizedRecords
             )
+            console.log(`[DashboardClient] calculatedTiles for '${w.key}':`, calculatedTiles)
+
 
             const interactiveTiles = attachTileActions(
               calculatedTiles,
@@ -207,6 +230,8 @@ export default function DashboardClient({
                 setDrawerOpen(true)
               }
             )
+            console.log(`[DashboardClient] interactiveTiles for '${w.key}':`, interactiveTiles)
+
 
             if (['SummaryCards', 'SectionCards'].includes(w.component)) {
               commonProps.config = interactiveTiles

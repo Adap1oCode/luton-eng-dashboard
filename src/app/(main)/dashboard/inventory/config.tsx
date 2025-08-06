@@ -132,76 +132,6 @@ fetchMetrics: getWarehouseInventoryMetrics,
   // placeholders for other sections
   trends: [],
   dataQuality: [
-  {
-    key: 'missing_due_date',
-    title: 'Missing Due Date',
-filter: {
-  or: [
-    { column: 'due_date', isNull: true },
-    { column: 'due_date', equals: '' }
-  ]
-},
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE due_date IS NULL"
-  },
-  {
-    key: 'missing_order_date',
-    title: 'Missing Order Date',
-filter: {
-  or: [
-    { column: 'order_date', isNull: true },
-    { column: 'order_date', equals: '' }
-  ]
-},
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE order_date IS NULL"
-  },
-  {
-    key: 'missing_created_by',
-    title: 'Missing Created By',
-    filter: {
-  or: [
-    { column: 'created_by', isNull: true },
-    { column: 'created_by', equals: '' }
-  ]
-},
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE created_by IS NULL"
-  },
-  {
-    key: 'missing_project_number',
-    title: 'Missing Project Number',
-    filter: {
-  or: [
-    { column: 'project_number', isNull: true },
-    { column: 'project_number', equals: '' }
-  ]
-},
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE project_number IS NULL"
-  },
-  {
-    key: 'missing_warehouse',
-    title: 'Missing Warehouse',
-    filter: {
-  or: [
-    { column: 'warehouse', isNull: true },
-    { column: 'warehouse', equals: '' }
-  ]
-},
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE warehouse IS NULL"
-  },
-  {
-    key: 'invalid_requisition_order_number',
-    title: 'Invalid Requisition Order Number',
-    filter: {
-      column: 'requisition_order_number',
-      notMatches: "^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$"
-    },
-    clickable: true,
-    sql: "SELECT COUNT(*) FROM requisitions WHERE requisition_order_number IS NOT NULL AND requisition_order_number !~ '^LUT[-/]REQ[-/](BP1|BP2|AMC|AM|BDI|CCW|RTZ|BC)[-/]([\\d\\-]+)[-/](\\d{2})[-/](\\d{2}|\\d{4})(?:-\\d{1,3})?$'"
-  }
 ],
   widgets: [
     { component: "SummaryCards", key: "tiles", group: "summary" },
@@ -215,6 +145,34 @@ filter: {
   sortBy: 'label-asc',
   debug: true
 },
+// inventory/config.tsx
+{
+  key: "missing_cost",
+  component: "ChartBarHorizontal",
+  title: "Items Missing Cost by Warehouse",
+  preCalculated: true,
+  filterType: 'warehouse',
+  noRangeFilter: true,
+  clickable: true,
+  column: 'warehouse',  
+  // → still a pure JSON object—no functions!
+  filter: {
+    and: [
+      // placeholder "__KEY__" will be swapped out at click time
+      { column: "warehouse", equals: "__KEY__" },
+      {
+        or: [
+          { column: "item_cost", isNull: true },
+          { column: "item_cost", equals: 0 }
+        ]
+      }
+    ]
+  },
+  rpcName: "get_inventory_rows",
+  valueField: "missing_cost_count",
+  sortBy: "value-desc",
+  debug: true,
+},
 {
       key: 'available_stock',
       component: 'ChartBarHorizontal',
@@ -224,7 +182,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_available_stock',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },
@@ -237,7 +194,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_inventory_value',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },
@@ -250,7 +206,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_on_order_quantity',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },
@@ -263,7 +218,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_on_order_value',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },
@@ -276,7 +230,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_committed_quantity',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },
@@ -289,7 +242,6 @@ filter: {
       column: 'warehouse',                   // ← NEW
       valueField: 'total_committed_value',   // ← NEW
       preCalculated: true,
-      debug: true,
       sortBy: 'value-desc',
       span: 2,
     },

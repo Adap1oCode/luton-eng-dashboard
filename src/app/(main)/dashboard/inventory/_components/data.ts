@@ -1,5 +1,3 @@
-// src/app/(main)/dashboard/inventory/_components/data.ts
-
 import { supabase } from "@/lib/supabase";
 
 export type Inventory = {
@@ -54,7 +52,7 @@ export type InventorySummary = {
  */
 export async function getInventorySummary(): Promise<InventorySummary> {
   const { data, error } = await supabase
-.from<'vw_dashboard_inventory_summary', InventorySummary>("vw_dashboard_inventory_summary")
+    .from<'vw_dashboard_inventory_summary', InventorySummary>("vw_dashboard_inventory_summary")
     .select("*")
     .single();
 
@@ -96,7 +94,9 @@ export async function getInventoryRows(
   return (data as Inventory[]) || [];
 }
 
-// 1️⃣ Type for each row in your new view
+/**
+ * Fetch all per-warehouse metrics from vw_dashboard_inventory_by_warehouse
+ */
 export type WarehouseInventoryMetrics = {
   warehouse: string;
   total_available_stock: number;
@@ -106,11 +106,9 @@ export type WarehouseInventoryMetrics = {
   total_on_order_value: number;
   total_inventory_value: number;
   total_committed_value: number;
+  missing_cost_count: number;  // newly added per-warehouse missing-cost metric
 };
 
-/**
- * Fetch all per-warehouse metrics from vw_dashboard_inventory_by_warehouse
- */
 export async function getWarehouseInventoryMetrics(): Promise<WarehouseInventoryMetrics[]> {
   const { data, error } = await supabase
     .from<'vw_dashboard_inventory_by_warehouse', WarehouseInventoryMetrics>(
@@ -124,4 +122,3 @@ export async function getWarehouseInventoryMetrics(): Promise<WarehouseInventory
   }
   return data;
 }
-
