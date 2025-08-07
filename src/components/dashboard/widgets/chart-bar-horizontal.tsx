@@ -66,6 +66,16 @@ export default function ChartBarHorizontal({
   onFilterChange,
 }: Props) {
 
+  console.log(
+    "📊 ChartBarHorizontal received data keys:",
+    data.map((d) => d.key),
+    "length:",
+    data.length
+  );
+
+console.group("[ChartBarHorizontal PROPS]");
+
+
 console.group("[ChartBarHorizontal PROPS]");
 console.log("config.clickable:", config.clickable);
 console.log("tiles:", tiles);
@@ -94,7 +104,7 @@ console.groupEnd();
 
   // Step 1: build raw chartData
   let chartData: { key: string; label: string; count: number }[] = [];
-  if (clickable && tiles && tiles.length > 0) {
+  if (tiles && tiles.length > 0) {
     // TILE-BASED branch
     chartData = tiles.map((tile) => ({
       key: tile.key,
@@ -184,8 +194,8 @@ console.groupEnd();
               />
               <YAxis
                 type="number"
-                domain={[0, yTicks[yTicks.length - 1]]}
-                ticks={yTicks}
+                domain={[0, "dataMax"]}  // let Recharts discover the max for you
+                tickCount={6}            // now it will approximate 6 “nice” steps       // ← ask for roughly 6 ticks
                 tickFormatter={(v) => `${v}${suffix}`}
                 tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                 axisLine={false}

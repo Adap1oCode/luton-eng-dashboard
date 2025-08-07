@@ -2,7 +2,7 @@
 
 import { getInventoryRows } from '@/app/(main)/dashboard/inventory/_components/data'
 import type { DashboardConfig } from "@/components/dashboard/types";
-import { getWarehouseInventoryMetrics } from './_components/data';
+import * as dataAPI from './_components/data'
 
 export const inventoryConfig: DashboardConfig = {
   id: "inventory",
@@ -28,14 +28,24 @@ export const inventoryConfig: DashboardConfig = {
     )
   },
 
-  // drive all valueField widgets off this single RPC-backed fetcher
-  fetchMetrics: getWarehouseInventoryMetrics,
+// drive all valueField widgets off our two materialized‐view fetchers
+fetchMetrics: async () => {
+  const [wh, uom] = await Promise.all([
+    dataAPI.getWarehouseInventoryMetrics(),
+    dataAPI.getUomMetrics(),
+  ])
+  const merged = [...wh, ...uom]
+  console.log('🔍 fetchMetrics merged rows:', merged.length, merged)
+  return merged
+},
+
 
   // no global filters on this page
   filters: {
     warehouse: 'warehouse',
     status: 'status',
     creator: 'created_by',
+    uom:       'uom',          // ← add this line
   },
 
   summary: [
@@ -143,34 +153,43 @@ export const inventoryConfig: DashboardConfig = {
 
   widgets: [
     { component: "SummaryCards", key: "tiles", group: "summary" },
-    {
-      component: 'ChartBarVertical',
-      key: 'data_quality_chart',
-      group: 'dataQuality',
-      title: 'Data Quality Issues',
-      description: 'Breakdown of validation issues found in current dataset',
-      clickable: true,
-      sortBy: 'label-asc',
-      debug: true
-    },
 {
   key: "missing_cost",
   component: "ChartBarHorizontal",
   title: "Items Missing Cost by Warehouse",
   preCalculated: true,
   filterType: "warehouse",      // tells DataViewer to pass widget.key
+  group: 'tiles',        // ← this must be set
   noRangeFilter: true,
   clickable: true,
   column: "warehouse",
   rpcName: "fetchItemsMissingCostByWarehouse",   // use the view-based fetcher
   valueField: "missing_cost_count",
   sortBy: "value-desc",
+  debug: false,
+        span: 2,
+},
+{
+  key: 'items_by_uom',
+  component: 'ChartBarHorizontal',
+  title: 'Items by Unit of Measure',
+  column: 'uom',
+  filterType: 'uom',
+  group: 'tiles',        // ← this must be set
+  preCalculated: true,
+  noRangeFilter: true,
+  clickable: true,
+  rpcName: 'fetchItemsByUom',
+  valueField: 'item_count',
+  sortBy: 'value-desc',
   debug: true,
+        span: 2,
 },
     {
       key: 'available_stock',
       component: 'ChartBarHorizontal',
       title: 'Available Stock by Warehouse',
+      group: 'tiles',
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -183,6 +202,7 @@ export const inventoryConfig: DashboardConfig = {
       key: 'available_stock_value',
       component: 'ChartBarHorizontal',
       title: 'Value of Total Available Stock by Warehouse',
+      group: 'tiles',
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -195,6 +215,8 @@ export const inventoryConfig: DashboardConfig = {
       key: 'total_on_order_quantity',
       component: 'ChartBarHorizontal',
       title: 'Total On Order by Warehouse',
+        group: 'tiles',
+
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -207,6 +229,7 @@ export const inventoryConfig: DashboardConfig = {
       key: 'total_on_order_value_value',
       component: 'ChartBarHorizontal',
       title: 'Value of Total On-Order Stock by Warehouse',
+        group: 'tiles',
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -219,6 +242,7 @@ export const inventoryConfig: DashboardConfig = {
       key: 'total_committed_quantity',
       component: 'ChartBarHorizontal',
       title: 'Total Committed by Warehouse',
+        group: 'tiles',
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -231,6 +255,7 @@ export const inventoryConfig: DashboardConfig = {
       key: 'total_committed_value',
       component: 'ChartBarHorizontal',
       title: 'Value of Total Committed Stock by Warehouse',
+      group: 'tiles',
       filterType: 'warehouse',
       clickable: false,
       column: 'warehouse',
@@ -246,10 +271,10 @@ export const inventoryConfig: DashboardConfig = {
   tableColumns: [
     { accessorKey: "item_number", header: "Item Number" },
     { accessorKey: "description", header: "Description" },
-    { accessorKey: "total_availabe", header: "Total Available" },
-    { accessorKey: "item_cost", header: "cost" },
+    { accessorKey: "total_available", header: "Total Available" },
+    { accessorKey: "item_cost", header: "Cost" },
     { accessorKey: "category", header: "Category" },
-    { accessorKey: "stocking_unit", header: "Stocking Unit" },
+    { accessorKey: "unit_of_measure", header: "UoM" },
     { accessorKey: "location", header: "Location" },
     { accessorKey: "warehouse", header: "Warehouse" },
   ],

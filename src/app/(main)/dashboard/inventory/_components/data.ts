@@ -27,7 +27,7 @@ export type Inventory = {
   date_code: string | null
   manufacturer: string | null
   category: string | null
-  stocking_unit: string | null
+  unit_of_measure: string | null
   alt_item_number: string | null
   serial_number: string | null
   checkout_length: number | null
@@ -171,4 +171,42 @@ export async function fetchItemsMissingCostByWarehouse(
   }
 
   return (data as Inventory[]) || []
+}
+
+/**
+ * Per-UOM counts
+ */
+export type UomMetrics = {
+  uom: string
+  item_count: number
+}
+
+export async function getUomMetrics(): Promise<UomMetrics[]> {
+  const { data, error } = await supabase
+    .from('vw_dashboard_inventory_items_by_uom')
+    .select('*')               // ← no generics here
+
+  if (error || !data) {
+    console.error('Error fetching UoM metrics:', error)
+    throw error
+  }
+  return data as UomMetrics[]   // ← cast to your row type
+}
+
+/**
+ * Detail rows for a single UoM
+ */
+export async function fetchItemsByUom(
+  uom: string,
+): Promise<Inventory[]> {
+  const { data, error } = await supabase
+    .from('vw_dashboard_inventory_details_by_uom')
+    .select('*')               // ← again, no generics
+    .eq('uom', uom)
+
+  if (error || !data) {
+    console.error('Error fetching items by UoM:', error)
+    throw error
+  }
+  return data as Inventory[]   // ← cast here as well
 }

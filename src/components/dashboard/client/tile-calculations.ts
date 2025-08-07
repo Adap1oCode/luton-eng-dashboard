@@ -1,8 +1,6 @@
-// src/app/(main)/dashboard/inventory/_components/tile-calculations.ts
-
 import { isDateString, compileFilter } from "./data-filters";
 
-/** Helper: deep‐clone + replace all "__KEY__" placeholders in your filter tree */
+/** Helper: deep‑clone + replace all "__KEY__" placeholders in your filter tree */
 function hydrateFilterTree(filter: any, key: string): any {
   if (Array.isArray(filter)) {
     return filter.map((f) => hydrateFilterTree(f, key));
@@ -186,35 +184,41 @@ function handleAverageTile(tile: any, active: any[]) {
 }
 
 function resolveTileResult(tile: any, active: any[], previous: any[]): any {
-  // summary cards or single-value pre-calc
+  // summary cards or single‑value pre‑calc
   if (tile.preCalculated && !tile.valueField) {
     const val = typeof tile.value === "number" ? tile.value : 0;
     return { value: val, previous: 0, trend: undefined, direction: undefined, percent: undefined };
   }
 
-  // bar/pie grouped off valueField comes via our new branch in processTile()
-  const hasFilter = tile.filter && !tile.average && !tile.percentage && !tile.metric;
+  // grouped aggregation for bar/pie charts
+  const hasGrouped = tile.metric && tile.field && tile.column &&
+    (tile.component?.includes("ChartBar") || tile.component?.includes("ChartPie"));
 
-  if (tile.metric && tile.field && tile.column && (tile.component?.includes("ChartBar") || tile.component?.includes("ChartPie"))) {
+  if (hasGrouped) {
     return handleGroupedAggregation(tile, active);
   }
 
+  // metric‑based aggregation (sum, min, max, median, average)
   if (["sum", "min", "max", "median", "average"].includes(tile.metric) && tile.field) {
     return handleAggregationTile(tile, active, previous);
   }
 
-  if (hasFilter) {
+  // count or distinct count
+  if (tile.filter && !tile.percentage && !tile.average && !tile.metric) {
     return handleCountTile(tile, active, previous);
   }
 
+  // percentage
   if (tile.percentage) {
     return handlePercentageTile(tile, active);
   }
 
+  // average duration
   if (tile.average) {
     return handleAverageTile(tile, active);
   }
 
+  // literal value fallback
   if (typeof tile.value === "number") {
     return { value: tile.value, previous: 0, trend: undefined, direction: undefined, percent: undefined };
   }
@@ -229,48 +233,59 @@ export function tileCalculations(
   previousRangeFilteredRecords: any[],
   allRecords: any[]
 ): any[] {
-  return configTiles.map((tile) => {
-    const active = getActiveRecords(tile, rangeFilteredRecords, allRecords);
-    const previous = getActiveRecords(tile, previousRangeFilteredRecords, allRecords);
+  const allTiles = configTiles
+    .map((tile) => {
+      const active = getActiveRecords(tile, rangeFilteredRecords, allRecords);
+      const previous = getActiveRecords(tile, previousRangeFilteredRecords, allRecords);
 
-    // ◀─ PRECALC BRANCH: build one tile/person per warehouse via RPC metrics
-    if (tile.preCalculated && (tile as any).valueField) {
-      const keyCol = tile.column!;
-      const valField = (tile as any).valueField;
-      return metricTiles.map((m) => {
-        const warehouse = m[keyCol] ?? "Unknown";
-        return {
-          ...tile,
-          key: warehouse,
-          title: warehouse,
-          value: parseFloat(m[valField] ?? 0),
-          filter: hydrateFilterTree(tile.filter, warehouse),
-          clickable: true,
-          rpcName: tile.rpcName,
-          preCalculated: true,
-        };
-      });
-    }
+      // precalc branch: one tile per metric row
+      if (tile.preCalculated && (tile as any).valueField) {
+        const keyCol = tile.column!;
+        const valField = (tile as any).valueField;
+        return metricTiles.map((m) => {
+          const contextKey = m[keyCol] ?? "Unknown";
+          return {
+            ...tile,
+            key: contextKey,
+            title: contextKey,
+            value: parseFloat(m[valField] ?? 0),
+            filter: hydrateFilterTree(tile.filter, contextKey),
+            clickable: true,
+            rpcName: tile.rpcName,
+            preCalculated: true,
+          };
+        });
+      }
 
-    // Otherwise run through your normal single‐tile logic
-    const result = resolveTileResult(tile, active, previous);
-    const clickFilter =
-      tile.clickFilter ??
-      (tile.filter && tile.matchKey
-        ? { column: tile.matchKey, contains: tile.key }
-        : undefined);
+      // otherwise, compute single tile or grouped tiles
+      const result = resolveTileResult(tile, active, previous);
+      const clickFilter =
+        tile.clickFilter ??
+        (tile.filter && tile.matchKey
+          ? { column: tile.matchKey, contains: tile.key }
+          : undefined);
 
-    return {
-      ...tile,
-      value: result.value,
-      previous: result.previous,
-      trend: result.trend,
-      direction: result.direction,
-      percent: result.percent,
-      subtitle: tile.subtitle,
-      clickFilter,
-      clickable: tile.clickable ?? Boolean(clickFilter),
-      tiles: (result as any).tiles ?? [],  // grouped-aggregation populates result.tiles
-    };
-  }).flat(); // flatten: some entries return arrays of tiles
+      return {
+        ...tile,
+        value: result.value,
+        previous: result.previous,
+        trend: result.trend,
+        direction: result.direction,
+        percent: result.percent,
+        subtitle: tile.subtitle,
+        clickFilter,
+        clickable: tile.clickable ?? Boolean(clickFilter),
+        tiles: (result as any).tiles ?? [],
+      };
+    })
+    .flat();
+
+  console.log(
+    "▶ tileCalculations output keys:",
+    allTiles.map((t) => t.key),
+    "(total rows):",
+    allTiles.length
+  );
+
+  return allTiles;
 }

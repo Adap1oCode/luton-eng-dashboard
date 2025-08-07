@@ -1,14 +1,14 @@
 // src/app/(main)/dashboard/inventory/page.tsx
 
-import GenericDashboardPage from "@/components/dashboard/page"
-import { inventoryConfig as baseConfig } from "@/app/(main)/dashboard/inventory/config"
-import { getInventorySummary } from "@/app/(main)/dashboard/inventory/_components/data"
+import GenericDashboardPage from '@/components/dashboard/page'
+import { inventoryConfig as baseConfig } from '@/app/(main)/dashboard/inventory/config'
+import { getInventorySummary } from '@/app/(main)/dashboard/inventory/_components/data'
 
 export default async function InventoryPage() {
-  // 1. fetch materialized‐view summary
+  // 1. Fetch the precomputed summary
   const summary = await getInventorySummary()
 
-  // 2. map DB fields → summary tile keys
+  // 2. Map your materialized-view fields to tile keys
   const valueMap: Record<string, number> = {
     totalInventoryRecords: summary.total_inventory_records,
     uniqueItems:            summary.unique_item_count,
@@ -21,7 +21,7 @@ export default async function InventoryPage() {
     totalCommittedValue:    summary.total_committed_value,
   }
 
-  // 3. inject into your config
+  // 3. Inject those values into your summary tiles
   const inventoryConfig = {
     ...baseConfig,
     summary: baseConfig.summary!.map((tile) => ({
@@ -30,6 +30,6 @@ export default async function InventoryPage() {
     })),
   }
 
-  // 4. render fully‐hydrated dashboard
+  // 4. Render the generic dashboard
   return <GenericDashboardPage config={inventoryConfig} />
 }

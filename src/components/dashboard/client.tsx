@@ -141,10 +141,16 @@ export default function DashboardClient({
     ? [w]
               : config.tiles ?? []
           // NEW: when group is 'tiles' (or 'widgets'), use the full metrics array
-const metricTiles =
-  (group === 'tiles' || group === 'widgets')
-    ? metrics
-    : metrics[group] ?? []
+ // only keep those records that actually have our widget’s column (uom vs warehouse)
+  const rawTiles =
+    (group === 'tiles' || group === 'widgets')
+      ? metrics
+      : metrics[group] ?? [];
+  // only keep rows that actually have our widget’s column key
+  const metricTiles = rawTiles.filter((row: any) =>
+    typeof w.column === 'string' && (row as any)[w.column] !== undefined
+  );
+  
 
           // ADD THIS:
   console.log(
