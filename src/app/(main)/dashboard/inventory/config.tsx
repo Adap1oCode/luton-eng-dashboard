@@ -1,51 +1,42 @@
 // src/app/(main)/dashboard/inventory/config.tsx
 
-import { getInventoryRows } from '@/app/(main)/dashboard/inventory/_components/data'
+import { getInventoryRows } from "@/app/(main)/dashboard/inventory/_components/data";
 import type { DashboardConfig } from "@/components/dashboard/types";
-import * as dataAPI from './_components/data'
+
+import * as dataAPI from "./_components/data";
 
 export const inventoryConfig: DashboardConfig = {
   id: "inventory",
-  tableName: 'inventory',
+  tableName: "inventory",
   title: "Inventory Dashboard",
   rowIdKey: "item_number",
   dateSearchEnabled: false,
 
   // ◀─ UPDATED: accept _filter & _distinct
-  fetchRecords: async (
-    _range: string,
-    _from?: string,
-    _to?: string,
-    _filter?: any,
-    _distinct?: boolean
-  ) => {
-    const limit = 50
+  fetchRecords: async (_range: string, _from?: string, _to?: string, _filter?: any, _distinct?: boolean) => {
+    const limit = 50;
     return getInventoryRows(
-      _filter ?? {},          // ← send your logged filter object here
-      _distinct ?? false,     // ← support distinct if used
+      _filter ?? {}, // ← send your logged filter object here
+      _distinct ?? false, // ← support distinct if used
       0,
-      limit - 1
-    )
+      limit - 1,
+    );
   },
 
-// drive all valueField widgets off our two materialized‐view fetchers
-fetchMetrics: async () => {
-  const [wh, uom] = await Promise.all([
-    dataAPI.getWarehouseInventoryMetrics(),
-    dataAPI.getUomMetrics(),
-  ])
-  const merged = [...wh, ...uom]
-  console.log('🔍 fetchMetrics merged rows:', merged.length, merged)
-  return merged
-},
-
+  // drive all valueField widgets off our two materialized‐view fetchers
+  fetchMetrics: async () => {
+    const [wh, uom] = await Promise.all([dataAPI.getWarehouseInventoryMetrics(), dataAPI.getUomMetrics()]);
+    const merged = [...wh, ...uom];
+    console.log("🔍 fetchMetrics merged rows:", merged.length, merged);
+    return merged;
+  },
 
   // no global filters on this page
   filters: {
-    warehouse: 'warehouse',
-    status: 'status',
-    creator: 'created_by',
-    uom:       'uom',          // ← add this line
+    warehouse: "warehouse",
+    status: "status",
+    creator: "created_by",
+    uom: "uom", // ← add this line
   },
 
   summary: [
@@ -75,7 +66,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalAvailableStock",
-      title: "Total Available",
+      title: "Total Available (Qty)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -85,7 +76,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalOnOrderQuantity",
-      title: "Total On-Order Quantity",
+      title: "Total On Order (Qty)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -95,7 +86,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalCommittedQuantity",
-      title: "Total Committed Quantity",
+      title: "Total Committed (Qty)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -117,7 +108,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalOnOrderValue",
-      title: "Value On-Order",
+      title: "Total On Order Value (£)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -127,7 +118,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalInventoryValue",
-      title: "Total Inventory Value",
+      title: "Total Available Value (£)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -137,7 +128,7 @@ fetchMetrics: async () => {
     },
     {
       key: "totalCommittedValue",
-      title: "Total Committed Value",
+      title: "Total Committed Value (£)",
       subtitle: "All Time",
       preCalculated: true,
       noRangeFilter: true,
@@ -153,115 +144,115 @@ fetchMetrics: async () => {
 
   widgets: [
     { component: "SummaryCards", key: "tiles", group: "summary" },
-{
-  key: "missing_cost",
-  component: "ChartBarHorizontal",
-  title: "Items Missing Cost by Warehouse",
-  preCalculated: true,
-  filterType: "warehouse",      // tells DataViewer to pass widget.key
-  group: 'tiles',        // ← this must be set
-  noRangeFilter: true,
-  clickable: true,
-  column: "warehouse",
-  rpcName: "fetchItemsMissingCostByWarehouse",   // use the view-based fetcher
-  valueField: "missing_cost_count",
-  sortBy: "value-desc",
-  debug: false,
-        span: 2,
-},
-{
-  key: 'items_by_uom',
-  component: 'ChartBarHorizontal',
-  title: 'Items by Unit of Measure',
-  column: 'uom',
-  filterType: 'uom',
-  group: 'tiles',        // ← this must be set
-  preCalculated: true,
-  noRangeFilter: true,
-  clickable: true,
-  rpcName: 'fetchItemsByUom',
-  valueField: 'item_count',
-  sortBy: 'value-desc',
-  debug: true,
-        span: 2,
-},
     {
-      key: 'available_stock',
-      component: 'ChartBarHorizontal',
-      title: 'Available Stock by Warehouse',
-      group: 'tiles',
-      filterType: 'warehouse',
-      clickable: false,
-      column: 'warehouse',
-      valueField: 'total_available_stock',
+      key: "missing_cost",
+      component: "ChartBarHorizontal",
+      title: "Items Missing Cost by Warehouse",
       preCalculated: true,
-      sortBy: 'value-desc',
+      filterType: "warehouse", // tells DataViewer to pass widget.key
+      group: "tiles", // ← this must be set
+      noRangeFilter: true,
+      clickable: true,
+      column: "warehouse",
+      rpcName: "fetchItemsMissingCostByWarehouse", // use the view-based fetcher
+      valueField: "missing_cost_count",
+      sortBy: "value-desc",
+      debug: false,
       span: 2,
     },
     {
-      key: 'available_stock_value',
-      component: 'ChartBarHorizontal',
-      title: 'Value of Total Available Stock by Warehouse',
-      group: 'tiles',
-      filterType: 'warehouse',
-      clickable: false,
-      column: 'warehouse',
-      valueField: 'total_inventory_value',
+      key: "items_by_uom",
+      component: "ChartBarHorizontal",
+      title: "Items by Unit of Measure",
+      column: "uom",
+      filterType: "uom",
+      group: "tiles", // ← this must be set
       preCalculated: true,
-      sortBy: 'value-desc',
+      noRangeFilter: true,
+      clickable: true,
+      rpcName: "fetchItemsByUom",
+      valueField: "item_count",
+      sortBy: "value-desc",
+      debug: true,
       span: 2,
     },
     {
-      key: 'total_on_order_quantity',
-      component: 'ChartBarHorizontal',
-      title: 'Total On Order by Warehouse',
-        group: 'tiles',
+      key: "available_stock",
+      component: "ChartBarHorizontal",
+      title: "Available Stock by Warehouse",
+      group: "tiles",
+      filterType: "warehouse",
+      clickable: false,
+      column: "warehouse",
+      valueField: "total_available_stock",
+      preCalculated: true,
+      sortBy: "value-desc",
+      span: 2,
+    },
+    {
+      key: "available_stock_value",
+      component: "ChartBarHorizontal",
+      title: "Value of Total Available Stock by Warehouse",
+      group: "tiles",
+      filterType: "warehouse",
+      clickable: false,
+      column: "warehouse",
+      valueField: "total_inventory_value",
+      preCalculated: true,
+      sortBy: "value-desc",
+      span: 2,
+    },
+    {
+      key: "total_on_order_quantity",
+      component: "ChartBarHorizontal",
+      title: "Total On Order by Warehouse",
+      group: "tiles",
 
-      filterType: 'warehouse',
+      filterType: "warehouse",
       clickable: false,
-      column: 'warehouse',
-      valueField: 'total_on_order_quantity',
+      column: "warehouse",
+      valueField: "total_on_order_quantity",
       preCalculated: true,
-      sortBy: 'value-desc',
+      sortBy: "value-desc",
       span: 2,
     },
     {
-      key: 'total_on_order_value_value',
-      component: 'ChartBarHorizontal',
-      title: 'Value of Total On-Order Stock by Warehouse',
-        group: 'tiles',
-      filterType: 'warehouse',
+      key: "total_on_order_value_value",
+      component: "ChartBarHorizontal",
+      title: "Value of Total On-Order Stock by Warehouse",
+      group: "tiles",
+      filterType: "warehouse",
       clickable: false,
-      column: 'warehouse',
-      valueField: 'total_on_order_value',
+      column: "warehouse",
+      valueField: "total_on_order_value",
       preCalculated: true,
-      sortBy: 'value-desc',
+      sortBy: "value-desc",
       span: 2,
     },
     {
-      key: 'total_committed_quantity',
-      component: 'ChartBarHorizontal',
-      title: 'Total Committed by Warehouse',
-        group: 'tiles',
-      filterType: 'warehouse',
+      key: "total_committed_quantity",
+      component: "ChartBarHorizontal",
+      title: "Total Committed by Warehouse",
+      group: "tiles",
+      filterType: "warehouse",
       clickable: false,
-      column: 'warehouse',
-      valueField: 'total_committed_quantity',
+      column: "warehouse",
+      valueField: "total_committed_quantity",
       preCalculated: true,
-      sortBy: 'value-desc',
+      sortBy: "value-desc",
       span: 2,
     },
     {
-      key: 'total_committed_value',
-      component: 'ChartBarHorizontal',
-      title: 'Value of Total Committed Stock by Warehouse',
-      group: 'tiles',
-      filterType: 'warehouse',
+      key: "total_committed_value",
+      component: "ChartBarHorizontal",
+      title: "Value of Total Committed Stock by Warehouse",
+      group: "tiles",
+      filterType: "warehouse",
       clickable: false,
-      column: 'warehouse',
-      valueField: 'total_committed_value',
+      column: "warehouse",
+      valueField: "total_committed_value",
       preCalculated: true,
-      sortBy: 'value-desc',
+      sortBy: "value-desc",
       span: 2,
     },
   ],

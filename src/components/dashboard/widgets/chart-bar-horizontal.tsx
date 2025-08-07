@@ -2,30 +2,12 @@
 
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 
 import type { Filter } from "@/components/dashboard/client/data-filters";
 import type { DashboardWidget } from "@/components/dashboard/types";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 type Tile = {
   key: string;
@@ -59,40 +41,23 @@ function generateColumnCounts(records: any[], column: string) {
   return Object.entries(counts).map(([key, count]) => ({ key, label: key, count }));
 }
 
-export default function ChartBarHorizontal({
-  config,
-  data,
-  tiles,
-  onFilterChange,
-}: Props) {
-
+export default function ChartBarHorizontal({ config, data, tiles, onFilterChange }: Props) {
   console.log(
     "📊 ChartBarHorizontal received data keys:",
     data.map((d) => d.key),
     "length:",
-    data.length
+    data.length,
   );
 
-console.group("[ChartBarHorizontal PROPS]");
+  console.group("[ChartBarHorizontal PROPS]");
 
+  console.group("[ChartBarHorizontal PROPS]");
+  console.log("config.clickable:", config.clickable);
+  console.log("tiles:", tiles);
+  console.log("onFilterChange:", onFilterChange);
+  console.groupEnd();
 
-console.group("[ChartBarHorizontal PROPS]");
-console.log("config.clickable:", config.clickable);
-console.log("tiles:", tiles);
-console.log("onFilterChange:", onFilterChange);
-console.groupEnd();
-
-
-  const {
-    title,
-    description,
-    column = "key",
-    debug,
-    valueField,
-    preCalculated,
-    autoScale = true,
-    clickable,
-  } = config;
+  const { title, description, column = "key", debug, valueField, preCalculated, autoScale = true, clickable } = config;
 
   // STEP 0: DEBUG LOG which branch we’ll take
   if (debug) {
@@ -166,21 +131,14 @@ console.groupEnd();
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6 flex-1">
+      <CardContent className="flex-1 px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
           className="h-full w-full"
-          config={Object.fromEntries(
-            chartData.map((d) => [d.label, { label: d.label }])
-          )}
+          config={Object.fromEntries(chartData.map((d) => [d.label, { label: d.label }]))}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--border)"
-                horizontal={false}
-                vertical={false}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} vertical={false} />
               <XAxis
                 type="category"
                 dataKey="label"
@@ -194,8 +152,8 @@ console.groupEnd();
               />
               <YAxis
                 type="number"
-                domain={[0, "dataMax"]}  // let Recharts discover the max for you
-                tickCount={6}            // now it will approximate 6 “nice” steps       // ← ask for roughly 6 ticks
+                domain={[0, yTicks[yTicks.length - 1]]}
+                ticks={yTicks}
                 tickFormatter={(v) => `${v}${suffix}`}
                 tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                 axisLine={false}
@@ -203,12 +161,7 @@ console.groupEnd();
               />
               <ChartTooltip
                 cursor={{ fill: "var(--muted)" }}
-                content={
-                  <ChartTooltipContent
-                    indicator="dot"
-                    labelFormatter={(label) => label}
-                  />
-                }
+                content={<ChartTooltipContent indicator="dot" labelFormatter={(label) => label} />}
               />
               <Bar
                 dataKey="count"
