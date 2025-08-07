@@ -13,8 +13,6 @@ import ChartDonut from '@/components/dashboard/widgets/chart-donut'
 import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
 import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
 import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
-import ChartBarAggregate from '@/components/dashboard/widgets/chart-bar-aggregate'
-
 import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
 import { attachTileActions } from '@/components/dashboard/client/tile-actions'
 import { isFastFilter } from '@/components/dashboard/client/fast-filter'
@@ -34,7 +32,6 @@ const widgetMap: Record<string, any> = {
   ChartByProject,
   ChartBarVertical,
   ChartBarHorizontal,
-  ChartBarAggregate,
 }
 
 export default function DashboardClient({
