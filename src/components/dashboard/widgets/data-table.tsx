@@ -51,6 +51,11 @@ export function DataTable({ data: initialData, columns, rowIdKey = 'id' }: Props
   const dndEnabled = true
 
   const [data, setData] = React.useState(() => initialData)
+  // whenever the parent gives us a new data array, overwrite our local state
+React.useEffect(() => {
+  setData(initialData);
+}, [initialData]);
+
   const fullColumns = dndEnabled ? withDndColumn(columns) : columns
 
   const table = useDataTableInstance({

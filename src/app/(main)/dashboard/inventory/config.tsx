@@ -4,7 +4,6 @@ import { getInventoryRows } from '@/app/(main)/dashboard/inventory/_components/d
 import type { DashboardConfig } from "@/components/dashboard/types";
 import { getWarehouseInventoryMetrics } from './_components/data';
 
-
 export const inventoryConfig: DashboardConfig = {
   id: "inventory",
   tableName: 'inventory',
@@ -12,24 +11,33 @@ export const inventoryConfig: DashboardConfig = {
   rowIdKey: "item_number",
   dateSearchEnabled: false,
 
-  // click-through table data (used when a card is clicked)
- fetchRecords: async (_range: string, _from?: string, _to?: string) => {
-    // ignore the incoming range/from/to since we drive paging via tableLimit
-    const limit = 50     // or pull from a constant/Config value
-    return getInventoryRows({}, false, 0, limit - 1)
+  // ◀─ UPDATED: accept _filter & _distinct
+  fetchRecords: async (
+    _range: string,
+    _from?: string,
+    _to?: string,
+    _filter?: any,
+    _distinct?: boolean
+  ) => {
+    const limit = 50
+    return getInventoryRows(
+      _filter ?? {},          // ← send your logged filter object here
+      _distinct ?? false,     // ← support distinct if used
+      0,
+      limit - 1
+    )
   },
 
-// ← new: drive all valueField widgets off this single RPC-backed fetcher
-fetchMetrics: getWarehouseInventoryMetrics,
+  // drive all valueField widgets off this single RPC-backed fetcher
+  fetchMetrics: getWarehouseInventoryMetrics,
 
   // no global filters on this page
-    filters: {
+  filters: {
     warehouse: 'warehouse',
     status: 'status',
     creator: 'created_by',
   },
 
-  // only summary cards for now; we'll add trends, widgets, etc. later
   summary: [
     {
       key: "totalInventoryRecords",
@@ -129,58 +137,44 @@ fetchMetrics: getWarehouseInventoryMetrics,
     },
   ],
 
-  // placeholders for other sections
   trends: [],
-  dataQuality: [
-],
+
+  dataQuality: [],
+
   widgets: [
     { component: "SummaryCards", key: "tiles", group: "summary" },
-  {
-  component: 'ChartBarVertical',
-  key: 'data_quality_chart',
-  group: 'dataQuality',
-  title: 'Data Quality Issues',
-  description: 'Breakdown of validation issues found in current dataset',
-  clickable: true,
-  sortBy: 'label-asc',
-  debug: true
-},
-// inventory/config.tsx
+    {
+      component: 'ChartBarVertical',
+      key: 'data_quality_chart',
+      group: 'dataQuality',
+      title: 'Data Quality Issues',
+      description: 'Breakdown of validation issues found in current dataset',
+      clickable: true,
+      sortBy: 'label-asc',
+      debug: true
+    },
 {
   key: "missing_cost",
   component: "ChartBarHorizontal",
   title: "Items Missing Cost by Warehouse",
   preCalculated: true,
-  filterType: 'warehouse',
+  filterType: "warehouse",      // tells DataViewer to pass widget.key
   noRangeFilter: true,
   clickable: true,
-  column: 'warehouse',  
-  // → still a pure JSON object—no functions!
-  filter: {
-    and: [
-      // placeholder "__KEY__" will be swapped out at click time
-      { column: "warehouse", equals: "__KEY__" },
-      {
-        or: [
-          { column: "item_cost", isNull: true },
-          { column: "item_cost", equals: 0 }
-        ]
-      }
-    ]
-  },
-  rpcName: "get_inventory_rows",
+  column: "warehouse",
+  rpcName: "fetchItemsMissingCostByWarehouse",   // use the view-based fetcher
   valueField: "missing_cost_count",
   sortBy: "value-desc",
   debug: true,
 },
-{
+    {
       key: 'available_stock',
       component: 'ChartBarHorizontal',
       title: 'Available Stock by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_available_stock',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_available_stock',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
@@ -191,8 +185,8 @@ fetchMetrics: getWarehouseInventoryMetrics,
       title: 'Value of Total Available Stock by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_inventory_value',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_inventory_value',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
@@ -203,8 +197,8 @@ fetchMetrics: getWarehouseInventoryMetrics,
       title: 'Total On Order by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_on_order_quantity',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_on_order_quantity',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
@@ -215,20 +209,20 @@ fetchMetrics: getWarehouseInventoryMetrics,
       title: 'Value of Total On-Order Stock by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_on_order_value',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_on_order_value',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
     },
-        {
+    {
       key: 'total_committed_quantity',
       component: 'ChartBarHorizontal',
       title: 'Total Committed by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_committed_quantity',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_committed_quantity',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
@@ -239,14 +233,16 @@ fetchMetrics: getWarehouseInventoryMetrics,
       title: 'Value of Total Committed Stock by Warehouse',
       filterType: 'warehouse',
       clickable: false,
-      column: 'warehouse',                   // ← NEW
-      valueField: 'total_committed_value',   // ← NEW
+      column: 'warehouse',
+      valueField: 'total_committed_value',
       preCalculated: true,
       sortBy: 'value-desc',
       span: 2,
     },
-],
+  ],
+
   tiles: [],
+
   tableColumns: [
     { accessorKey: "item_number", header: "Item Number" },
     { accessorKey: "description", header: "Description" },
