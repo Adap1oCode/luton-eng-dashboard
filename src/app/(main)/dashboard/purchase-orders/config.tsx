@@ -4,6 +4,7 @@ import type { DashboardConfig } from "@/components/dashboard/types";
 export const purchaseOrdersConfig: DashboardConfig = {
   id: "purchaseorders",
   title: "Purchase Orders Dashboard",
+  tableName: "purchase_orders",
   range: "3m",
   rowIdKey: "po_number",
   fetchRecords: getPurchaseOrders,
@@ -15,8 +16,7 @@ export const purchaseOrdersConfig: DashboardConfig = {
     issue: true,
   },
 
-  tiles: [
-],
+  tiles: [],
 
   widgets: [
     {
@@ -24,9 +24,9 @@ export const purchaseOrdersConfig: DashboardConfig = {
       component: "ChartBarAggregate",
       title: "PO Value by Vendor",
       description: "Total PO value grouped by vendor",
-      column: "vendor_name",       // group by
-      valueField: "grand_total",   // numeric field
-      metric: "sum",               // aggregation type
+      column: "vendor_name", // group by
+      valueField: "grand_total", // numeric field
+      metric: "sum", // aggregation type
       limit: 10,
       debug: true,
     },
