@@ -149,6 +149,7 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
                 tick={{ fontSize: 12, fill: "var(--foreground)", fontWeight: 500 }}
                 axisLine={false}
                 tickLine={false}
+                allowDuplicatedCategory={true}
               />
               <YAxis
                 type="number"
@@ -183,8 +184,8 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
                   console.groupEnd();
                 }}
               >
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
+                {chartData.map((entry, i) => (
+                  <Cell key={`${entry.key}-${i}`} fill={`var(--chart-${(i % 5) + 1})`} />
                 ))}
               </Bar>
             </BarChart>

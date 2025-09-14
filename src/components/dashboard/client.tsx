@@ -1,25 +1,24 @@
+"use client";
 
+import { useEffect } from "react";
 
-"use client"
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
-import { useEffect } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-
-import SectionCards from '@/components/dashboard/widgets/section-cards'
-import SummaryCards from '@/components/dashboard/widgets/summary-cards'
-import ChartAreaInteractive from '@/components/dashboard/widgets/chart-area-interactive'
-import ChartByStatus from '@/components/dashboard/widgets/chart-by-status'
-import ChartDonut from '@/components/dashboard/widgets/chart-donut'
-import ChartByProject from '@/components/dashboard/widgets/chart-by-project'
-import ChartBarVertical from '@/components/dashboard/widgets/chart-bar-vertical'
-import ChartBarHorizontal from '@/components/dashboard/widgets/chart-bar-horizontal'
-import { tileCalculations } from '@/components/dashboard/client/tile-calculations'
-import { attachTileActions } from '@/components/dashboard/client/tile-actions'
-import { isFastFilter } from '@/components/dashboard/client/fast-filter'
-import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
-import { useDataViewer, DataViewer } from '@/components/dashboard/client/data-viewer'
-import type { Filter } from '@/components/dashboard/client/data-filters'
-import { normalizeFieldValue } from '@/components/dashboard/client/normalize'
+import type { Filter } from "@/components/dashboard/client/data-filters";
+import { useDataViewer, DataViewer } from "@/components/dashboard/client/data-viewer";
+import { normalizeFieldValue } from "@/components/dashboard/client/normalize";
+import { attachTileActions } from "@/components/dashboard/client/tile-actions";
+import { tileCalculations } from "@/components/dashboard/client/tile-calculations";
+import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from "@/components/dashboard/types";
+import ChartAreaInteractive from "@/components/dashboard/widgets/chart-area-interactive";
+import ChartBarHorizontal from "@/components/dashboard/widgets/chart-bar-horizontal";
+import ChartBarVertical from "@/components/dashboard/widgets/chart-bar-vertical";
+import ChartByProject from "@/components/dashboard/widgets/chart-by-project";
+import ChartByStatus from "@/components/dashboard/widgets/chart-by-status";
+import ChartDonut from "@/components/dashboard/widgets/chart-donut";
+import SectionCards from "@/components/dashboard/widgets/section-cards";
+import SummaryCards from "@/components/dashboard/widgets/summary-cards";
+// Remove isFastFilter if not used
 
 console.log("🏷️ chart-bar-horizontal module loaded");
 
@@ -32,7 +31,7 @@ const widgetMap: Record<string, any> = {
   ChartByProject,
   ChartBarVertical,
   ChartBarHorizontal,
-}
+};
 
 export default function DashboardClient({
   config,
@@ -41,14 +40,14 @@ export default function DashboardClient({
   from,
   to,
 }: {
-  config: ClientDashboardConfig
-  metrics: any
-  records: any[]
-  from?: string
-  to?: string
+  config: ClientDashboardConfig;
+  metrics: any;
+  records: any[];
+  from?: string;
+  to?: string;
 }) {
   // global date-search toggle (default on)
-  const dateSearchEnabled = config.dateSearchEnabled ?? true
+  const dateSearchEnabled = config.dateSearchEnabled ?? true;
 
   // normalize records
   const normalizedRecords = records.map((r) => ({
@@ -56,57 +55,48 @@ export default function DashboardClient({
     vendor_name: normalizeFieldValue(r.vendor_name),
     project_number: normalizeFieldValue(r.project_number),
     created_by: normalizeFieldValue(r.created_by),
-  }))
+  }));
 
   // filtered vs. full datasets
-  let rangeFilteredRecords = normalizedRecords
-  let previousRangeFilteredRecords = normalizedRecords
+  let rangeFilteredRecords = normalizedRecords;
+  let previousRangeFilteredRecords = normalizedRecords;
 
   // compute date-based slices only when enabled and valid dates provided
   if (dateSearchEnabled && from && to) {
-    const currentFrom = new Date(from)
-    const currentTo = new Date(to)
-    const duration = currentTo.getTime() - currentFrom.getTime()
-    const prevFrom = new Date(currentFrom.getTime() - duration).toISOString()
-    const prevTo = new Date(currentTo.getTime() - duration).toISOString()
+    const currentFrom = new Date(from);
+    const currentTo = new Date(to);
+    const duration = currentTo.getTime() - currentFrom.getTime();
+    const prevFrom = new Date(currentFrom.getTime() - duration).toISOString();
+    const prevTo = new Date(currentTo.getTime() - duration).toISOString();
 
-    rangeFilteredRecords = normalizedRecords.filter(
-      (r) => r.order_date && r.order_date >= from && r.order_date <= to
-    )
+    rangeFilteredRecords = normalizedRecords.filter((r) => r.order_date && r.order_date >= from && r.order_date <= to);
     previousRangeFilteredRecords = normalizedRecords.filter(
-      (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo
-    )
+      (r) => r.order_date && r.order_date >= prevFrom && r.order_date <= prevTo,
+    );
   }
 
   // data viewer handles drawer, filters, table view
-  const {
-    filters,
-    setFilters,
-    drawerOpen,
-    setDrawerOpen,
-    filteredData,
-    handleClickWidget,
-    handleFilter,
-  } = useDataViewer({ config, records: normalizedRecords })
+  const { filters, setFilters, drawerOpen, setDrawerOpen, filteredData, handleClickWidget, handleFilter } =
+    useDataViewer({ config, records: normalizedRecords });
 
   // handle viewTable query param
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-  const shouldOpen = searchParams.get('viewTable') === 'true'
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const shouldOpen = searchParams.get("viewTable") === "true";
 
   useEffect(() => {
-    if (shouldOpen) setDrawerOpen(true)
-  }, [shouldOpen])
+    if (shouldOpen) setDrawerOpen(true);
+  }, [shouldOpen, setDrawerOpen]);
 
   const handleDrawerClose = (open: boolean) => {
-    setDrawerOpen(open)
+    setDrawerOpen(open);
     if (!open) {
-      const params = new URLSearchParams(searchParams.toString())
-      params.delete('viewTable')
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("viewTable");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }
+  };
 
   return (
     <>
@@ -120,50 +110,46 @@ export default function DashboardClient({
 
       <div className="grid gap-4 lg:grid-cols-12">
         {config.widgets.map((w: DashboardWidget, i) => {
-            console.log(`[DashboardClient] Widget #${i} key="${w.key}" component="${w.component}"`);
+          console.log(`[DashboardClient] Widget #${i} key="${w.key}" component="${w.component}"`);
 
-          const Comp = widgetMap[w.component]
-          if (!Comp) return null
+          const Comp = widgetMap[w.component];
+          if (!Comp) return null;
 
           // determine widget group and tiles
-          const group = w.group ?? 'tiles'
+          const group = w.group ?? "tiles";
           const configTiles =
-            group === 'summary'
-              ? config.summary ?? []
-              : group === 'trends'
-              ? config.trends ?? []
-              : group === 'dataQuality'
-              ? config.dataQuality ?? []
-              : group === 'tiles' || group === 'widgets'
-    ? [w]
-              : config.tiles ?? []
+            group === "summary"
+              ? (config.summary ?? [])
+              : group === "trends"
+                ? (config.trends ?? [])
+                : group === "dataQuality"
+                  ? (config.dataQuality ?? [])
+                  : group === "tiles" || group === "widgets"
+                    ? [w]
+                    : (config.tiles ?? []);
           // NEW: when group is 'tiles' (or 'widgets'), use the full metrics array
- // only keep those records that actually have our widget’s column (uom vs warehouse)
-  const rawTiles =
-    (group === 'tiles' || group === 'widgets')
-      ? metrics
-      : metrics[group] ?? [];
-  // only keep rows that actually have our widget’s column key
-  const metricTiles = rawTiles.filter((row: any) =>
-    typeof w.column === 'string' && (row as any)[w.column] !== undefined
-  );
-  
+          // only keep those records that actually have our widget’s column (uom vs warehouse)
+          const rawTiles = group === "tiles" || group === "widgets" ? metrics : (metrics[group] ?? []);
+          // only keep rows that actually have our widget's column key
+          const metricTiles = Array.isArray(rawTiles)
+            ? rawTiles.filter((row: any) => typeof w.column === "string" && row[w.column] !== undefined)
+            : [];
 
           // ADD THIS:
-  console.log(
-    `[DashboardClient] metrics for '${w.key}' (group=${group}):`,
-    metrics,
-    "→ metricTiles:",
-    metricTiles
-  );
+          console.log(
+            `[DashboardClient] metrics for '${w.key}' (group=${group}):`,
+            metrics,
+            "→ metricTiles:",
+            metricTiles,
+          );
 
           // apply global and per-widget date filtering
-          const useFiltered = dateSearchEnabled && w.noRangeFilter !== true
-          const dataset = useFiltered ? rangeFilteredRecords : normalizedRecords
+          const useFiltered = dateSearchEnabled && w.noRangeFilter !== true;
+          const dataset = useFiltered ? rangeFilteredRecords : normalizedRecords;
 
           // ▶ NEW: decide whether to feed raw rows or pre-aggregated metrics
-          const isMetricWidget = Boolean((w as any).valueField || (w as any).preCalculated)
-          const inputData = isMetricWidget ? metrics ?? [] : dataset
+          const isMetricWidget = Boolean((w as any).valueField ?? (w as any).preCalculated);
+          const inputData = isMetricWidget ? (metrics ?? []) : dataset;
 
           // common props for every widget
           const commonProps: any = {
@@ -171,50 +157,42 @@ export default function DashboardClient({
             from,
             to,
             data: inputData,
-          }
+          };
 
           // handle clickable tiles
           if (w.clickable && w.key) {
-            commonProps.onClick = () => handleClickWidget(w as DashboardTile)
+            commonProps.onClick = () => handleClickWidget(w as DashboardTile);
           }
 
           // handle filter-type widgets
           if (w.filterType) {
-            commonProps.onFilterChange = handleFilter(w.filterType)
+            commonProps.onFilterChange = handleFilter(w.filterType);
           }
 
           // clickable non-filter widgets open drawer
-          if (typeof Comp === 'function' && w.clickable && !w.filterType) {
+          if (typeof Comp === "function" && w.clickable && !w.filterType) {
             commonProps.onFilterChange = (filters: Filter[]) => {
               const fullFilters = useFiltered
-                ? [
-                    { column: 'order_date', gte: from },
-                    { column: 'order_date', lte: to },
-                    ...filters,
-                  ]
-                : [...filters]
+                ? [{ column: "order_date", gte: from }, { column: "order_date", lte: to }, ...filters]
+                : [...filters];
 
-              setFilters(fullFilters)
-              setDrawerOpen(true)
-            }
+              setFilters(fullFilters);
+              setDrawerOpen(true);
+            };
           }
 
           // tile-based groups (summary, trends, dataQuality, tiles)
-          const isTileGroup = ['summary', 'trends', 'dataQuality', 'tiles', 'widgets'].includes(
-            group
-          )
+          const isTileGroup = ["summary", "trends", "dataQuality", "tiles", "widgets"].includes(group);
 
           if (isTileGroup) {
             const calculatedTiles = tileCalculations(
-              
               configTiles,
               metricTiles,
               rangeFilteredRecords,
               previousRangeFilteredRecords,
-              normalizedRecords
-            )
-            console.log(`[DashboardClient] calculatedTiles for '${w.key}':`, calculatedTiles)
-
+              normalizedRecords,
+            );
+            console.log(`[DashboardClient] calculatedTiles for '${w.key}':`, calculatedTiles);
 
             const interactiveTiles = attachTileActions(
               calculatedTiles,
@@ -222,55 +200,48 @@ export default function DashboardClient({
               (tile) => handleClickWidget(tile),
               (filter) => {
                 const wrapped = useFiltered
-                  ? [
-                      { column: 'order_date', gte: from },
-                      { column: 'order_date', lte: to },
-                      filter,
-                    ]
-                  : [filter]
+                  ? [{ column: "order_date", gte: from }, { column: "order_date", lte: to }, filter]
+                  : [filter];
 
-                setFilters(wrapped)
-                setDrawerOpen(true)
-              }
-            )
-            console.log(`[DashboardClient] interactiveTiles for '${w.key}':`, interactiveTiles)
+                setFilters(wrapped);
+                setDrawerOpen(true);
+              },
+            );
+            console.log(`[DashboardClient] interactiveTiles for '${w.key}':`, interactiveTiles);
 
-
-            if (['SummaryCards', 'SectionCards'].includes(w.component)) {
-              commonProps.config = interactiveTiles
+            if (["SummaryCards", "SectionCards"].includes(w.component)) {
+              commonProps.config = interactiveTiles;
             } else {
-              commonProps.tiles = interactiveTiles
+              commonProps.tiles = interactiveTiles;
             }
           }
 
           // summary/section cards expect no data prop
-          if (['SummaryCards', 'SectionCards'].includes(w.component)) {
-            delete commonProps.data
+          if (["SummaryCards", "SectionCards"].includes(w.component)) {
+            delete commonProps.data;
           }
 
           // grid span logic
           const spanClass =
             Number(w.span) === 2
-              ? 'col-span-12 lg:col-span-6'
+              ? "col-span-12 lg:col-span-6"
               : Number(w.span) === 3
-              ? 'col-span-12 lg:col-span-4'
-              : 'col-span-12'
+                ? "col-span-12 lg:col-span-4"
+                : "col-span-12";
 
           return (
             <div key={i} className={`${spanClass} flex flex-col`}>
               <div
-                className={`flex-1 flex flex-col ${
-                  !['SummaryCards', 'SectionCards'].includes(w.component)
-                    ? 'min-h-[280px]'
-                    : ''
+                className={`flex flex-1 flex-col ${
+                  !["SummaryCards", "SectionCards"].includes(w.component) ? "min-h-[280px]" : ""
                 }`}
               >
                 <Comp {...commonProps} />
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </>
-  )
+  );
 }
