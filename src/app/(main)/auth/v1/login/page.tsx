@@ -1,42 +1,54 @@
 import Link from "next/link";
-
 import { Command } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-
 import { LoginFormV1 } from "./_components/login-form";
 
 export default function LoginV1() {
   return (
-    <div className="flex h-dvh">
-      <div className="bg-primary hidden lg:block lg:w-1/3">
-        <div className="flex h-full flex-col items-center justify-center p-12 text-center">
-          <div className="space-y-6">
-            <Command className="text-primary-foreground mx-auto size-12" />
-            <div className="space-y-2">
-              <h1 className="text-primary-foreground text-5xl font-light">Hello again</h1>
-              <p className="text-primary-foreground/80 text-xl">Login to continue</p>
+    <div className="min-h-screen flex">
+      {/* Left Side - Welcome Section */}
+      <div className="hidden lg:flex lg:w-1/3 bg-gradient-to-br from-orange-500 to-orange-600">
+        <div className="flex flex-col items-center justify-center p-12 text-center w-full">
+          <div className="space-y-8">
+            {/* Logo/Icon */}
+            <div className="relative flex justify-center">
+              <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                <Command className="w-10 h-10 text-white" />
+              </div>
+            </div>
+            
+            {/* Welcome Text */}
+            <div className="space-y-4">
+              <h1 className="text-6xl font-light text-white tracking-tight">
+                Hello again
+              </h1>
+              <p className="text-xl text-white/90 font-light max-w-md leading-relaxed">
+                Login to continue
+              </p>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className="flex space-x-2 mt-12 justify-center">
+              <div className="w-2 h-2 bg-white/40 rounded-full"></div>
+              <div className="w-2 h-2 bg-white/60 rounded-full"></div>
+              <div className="w-2 h-2 bg-white/80 rounded-full"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-background flex w-full items-center justify-center p-8 lg:w-2/3">
-        <div className="w-full max-w-md space-y-10 py-24 lg:py-32">
-          <div className="space-y-4 text-center">
-            <div className="text-foreground font-medium tracking-tight">Login</div>
-            <div className="text-muted-foreground mx-auto max-w-xl">
-              Welcome back. Enter your email and password, let&apos;s hope you remember them this time.
-            </div>
-          </div>
-          <div className="space-y-4">
-            <LoginFormV1 />
-            <Button className="w-full" variant="outline">
-              Continue with Google
-            </Button>
-            <p className="text-muted-foreground text-center text-xs font-medium">
-              Don&apos;t have an account?{" "}
-              <Link href="register" className="text-primary font-semibold">
+      {/* Right Side - Form */}
+      <div className="w-full lg:w-2/3 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-lg">
+          <LoginFormV1 />
+          
+          {/* Register Link */}
+          <div className="mt-8 text-center">
+            <p className="text-gray-600 text-base">
+              Don't have an account?{" "}
+              <Link 
+                href="/register" 
+                className="text-orange-500 font-semibold hover:text-orange-600 transition-colors duration-200 underline-offset-2 hover:underline"
+              >
                 Register
               </Link>
             </p>
