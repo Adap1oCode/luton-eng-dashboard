@@ -24,6 +24,7 @@ export interface NavSubItem {
   icon?: LucideIcon;
   comingSoon?: boolean;
   newTab?: boolean;
+  subItems?: NavSubItem[];
 }
 
 export interface NavMainItem {
@@ -52,11 +53,26 @@ export const sidebarItems: NavGroup[] = [
         icon: Home,
         subItems: [
           { title: "Default", url: "/dashboard/default", icon: ChartPie },
-          { title: "Requisitions", url: "/dashboard/requisitions", icon: Grid2X2 },
           { title: "Purchase Orders", url: "/dashboard/purchase-orders", icon: ChartLine },
           { title: "Inventory", url: "/dashboard/inventory", icon: ShoppingBag },
           { title: "Customers", url: "/dashboard/customers", icon: BookA },
           { title: "Transactions", url: "/dashboard/transactions", icon: Forklift, comingSoon: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 1.5,
+    label: "Requisitions",
+    items: [
+      {
+        title: "Requisitions",
+        url: "/dashboard",
+        icon: Grid2X2,
+        subItems: [
+          { title: "Requisitions", url: "/dashboard/requisitions", icon: Grid2X2 },
+          { title: "New Requisition", url: "/dashboard/requisitions/new", icon: Grid2X2 },
+          { title: "View All Requisitions", url: "/dashboard/requisitions/all", icon: Grid2X2 },
         ],
       },
     ],

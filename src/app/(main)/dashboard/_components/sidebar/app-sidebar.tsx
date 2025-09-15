@@ -57,25 +57,25 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
+    <Sidebar {...props} className="border-r">
+      <SidebarHeader className="border-b">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="#">
-                <Command />
-                <span className="text-base font-semibold">{APP_CONFIG.name}</span>
+              <a href="#" className="flex items-center gap-2">
+                <Command className="h-5 w-5 shrink-0" />
+                <span className="truncate text-sm font-semibold sm:text-base">{APP_CONFIG.name}</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={sidebarItems} />
-        {/* <NavDocuments items={data.documents} /> */}
-        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
+      <SidebarContent className="flex-1 overflow-y-auto">
+        <div className="p-2">
+          <NavMain items={sidebarItems} />
+        </div>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t p-2">
         <NavUser user={rootUser} />
       </SidebarFooter>
     </Sidebar>
