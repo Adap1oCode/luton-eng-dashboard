@@ -14,6 +14,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 const RequisitionOrderForm = () => {
   const [orderDate, setOrderDate] = useState("10/04/2025 20:36");
   const [dueDate, setDueDate] = useState("18/04/2025 20:00");
@@ -27,6 +29,22 @@ const RequisitionOrderForm = () => {
   const [printReport, setPrintReport] = useState(false);
   const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(true);
   const [addItemExpanded, setAddItemExpanded] = useState(false);
+
+  // Add Item Form States
+  const [itemNumber, setItemNumber] = useState("1");
+  const [quantity, setQuantity] = useState(0);
+  const [unit, setUnit] = useState("Ea");
+  const [salesPrice, setSalesPrice] = useState(0.0);
+  const [description, setDescription] = useState("SINGLE SEAT RECEPTION");
+  const [altNumber, setAltNumber] = useState("");
+
+  // Mock inventory data
+  const inventoryData = {
+    available: 38,
+    onOrder: 0,
+    onPick: 0,
+    forecasted: 38,
+  };
 
   const [inventoryItems] = useState([
     {
@@ -109,6 +127,10 @@ const RequisitionOrderForm = () => {
     } else {
       setSelectedItems(new Set(inventoryItems.map((item) => item.id)));
     }
+  };
+
+  const calculateTotal = () => {
+    return (quantity * salesPrice).toFixed(2);
   };
 
   return (
@@ -340,48 +362,61 @@ const RequisitionOrderForm = () => {
 
           {addItemExpanded && (
             <div className="p-6">
-              <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Left Column - Description */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    rows={4}
-                  ></textarea>
-                </div>
-
-                {/* Right Column - Item Details */}
+              <div className="mb-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
+                {/* Left Column - Editable Form */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Item Number</label>
+                    <input
+                      type="text"
+                      value={itemNumber}
+                      onChange={(e) => setItemNumber(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-gray-700">Quantity</label>
                       <input
                         type="number"
-                        defaultValue="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(Number(e.target.value))}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">Choose Unit</label>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">Unit</label>
                       <div className="relative">
-                        <select className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                          <option>Choose Unit</option>
+                        <select
+                          value={unit}
+                          onChange={(e) => setUnit(e.target.value)}
+                          className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        >
+                          <option value="Ea">Ea</option>
+                          <option value="Kg">Kg</option>
+                          <option value="Lt">Lt</option>
                         </select>
                         <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="w-full">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Sales Price</label>
-                    <div className="flex flex-col sm:flex-row">
+                    <div className="flex">
                       <input
                         type="number"
-                        defaultValue="0.00"
-                        className="w-full rounded-t-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none sm:flex-1 sm:rounded-l-lg sm:rounded-r-none"
+                        step="0.01"
+                        value={salesPrice}
+                        onChange={(e) => setSalesPrice(Number(e.target.value))}
+                        className="flex-1 rounded-l-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
-                      <button className="rounded-b-lg border border-t-0 border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-sm font-medium whitespace-nowrap text-blue-600 transition-colors hover:bg-gray-100 sm:rounded-l-none sm:rounded-r-lg sm:border-t">
-                        Price Tiers
+                      <span className="flex items-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                        / {unit}
+                      </span>
+                      <button className="ml-2 px-3 py-2 text-sm text-blue-600 underline hover:text-blue-700">
+                        View Price Tiers
                       </button>
                     </div>
                   </div>
@@ -389,37 +424,63 @@ const RequisitionOrderForm = () => {
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Total</label>
                     <input
-                      type="number"
-                      defaultValue="0.00"
-                      className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      type="text"
+                      value={calculateTotal()}
+                      className="border-input bg-muted text-muted-foreground w-full rounded-lg border px-3 py-2"
                       readOnly
                     />
                   </div>
+
+                  <Button className="w-full sm:w-auto">Add</Button>
+                </div>
+
+                {/* Right Column - View Only Information */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">ALT Number</label>
+                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                      {altNumber || "-"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
+                    <div className="min-h-[96px] w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900">
+                      {description}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">(Unit - {unit})</label>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="text-center">
+                        <div className="mb-1 text-xs text-gray-600">Available</div>
+                        <div className="rounded border border-gray-200 bg-white px-2 py-1">
+                          <span className="text-lg font-semibold text-gray-900">{inventoryData.available}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="mb-1 text-xs text-gray-600">On Order</div>
+                        <div className="rounded border border-gray-200 bg-white px-2 py-1">
+                          <span className="text-lg font-semibold text-gray-900">{inventoryData.onOrder}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="mb-1 text-xs text-gray-600">On Pick</div>
+                        <div className="rounded border border-gray-200 bg-white px-2 py-1">
+                          <span className="text-lg font-semibold text-gray-900">{inventoryData.onPick}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="mb-1 text-xs text-gray-600">Forecasted</div>
+                        <div className="rounded border border-gray-200 bg-white px-2 py-1">
+                          <span className="text-lg font-semibold text-gray-900">{inventoryData.forecasted}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="mb-1 text-xs font-medium text-gray-600">Available</div>
-                  <div className="text-2xl font-bold text-gray-900">0</div>
-                </div>
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="mb-1 text-xs font-medium text-gray-600">On Order</div>
-                  <div className="text-2xl font-bold text-gray-900">0</div>
-                </div>
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="mb-1 text-xs font-medium text-gray-600">On Pick</div>
-                  <div className="text-2xl font-bold text-gray-900">0</div>
-                </div>
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="mb-1 text-xs font-medium text-gray-600">Forecasted</div>
-                  <div className="text-2xl font-bold text-gray-900">0</div>
-                </div>
-              </div>
-
-              <button className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700">
-                Add Item
-              </button>
             </div>
           )}
         </div>
@@ -428,57 +489,67 @@ const RequisitionOrderForm = () => {
         <div className="mb-6 rounded-lg bg-white shadow-sm">
           <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200 p-4 sm:flex-row sm:items-center">
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setShowFilter(!showFilter)}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-blue-600 transition-colors hover:bg-blue-50"
-              >
+              <Button onClick={() => setShowFilter(!showFilter)} variant="ghost" className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 Show Filter
-              </button>
-              <button className="rounded-lg px-3 py-2 font-medium text-red-600 transition-colors hover:bg-red-50">
+              </Button>
+              <Button variant="destructive" className="hover:bg-destructive/90">
                 Remove
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Desktop Table */}
           <div className="hidden lg:block">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-muted/50">
                 <tr>
                   <th className="w-12 p-3">
-                    <button onClick={toggleAllItems} className="text-gray-400 hover:text-gray-600">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleAllItems}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       {selectedItems.size === inventoryItems.length ? (
                         <CheckSquare className="h-4 w-4" />
                       ) : (
                         <Square className="h-4 w-4" />
                       )}
-                    </button>
+                    </Button>
                   </th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Type</th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Item No.</th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                    Type
+                  </th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                    Item No.
+                  </th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
                     Description
                   </th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
                     Requested
                   </th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Unit</th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Picked</th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                    Unit
+                  </th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                    Picked
+                  </th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
                     Outstanding
                   </th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
                     Sales Price
                   </th>
-                  <th className="p-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
                     Line Total
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-border divide-y">
                 {inventoryItems.map((item) => (
-                  <tr key={item.id} className="transition-colors hover:bg-gray-50">
+                  <tr key={item.id} className="hover:bg-muted/50 transition-colors">
                     <td className="p-3">
                       <button
                         onClick={() => toggleItemSelection(item.id)}
@@ -623,10 +694,10 @@ const RequisitionOrderForm = () => {
                 Cancel
               </button>
               <div className="relative">
-                <button className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 sm:flex-none">
+                <Button className="w-full sm:w-auto">
                   Save, Send & Issue
                   <ChevronDown className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -638,10 +709,10 @@ const RequisitionOrderForm = () => {
 
 export default function NewRequisitionPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-background min-h-screen">
       <div className="w-full p-4 sm:p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">New Requisition</h1>
+          <h1 className="text-foreground text-2xl font-bold sm:text-3xl">New Requisition</h1>
         </div>
         <RequisitionOrderForm />
       </div>
