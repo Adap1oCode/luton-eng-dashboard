@@ -44,18 +44,53 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof schema>[
 
   const [data, setData] = React.useState(() => initialData);
   const columns = dndEnabled ? withDndColumn(dashboardColumns) : dashboardColumns;
-  const table = useDataTableInstance({ data, columns, getRowId: (row) => row.id.toString() });
+
+  // New: per-column filters (mode is string to match child component prop types)
+  const [filters, setFilters] = React.useState<Record<string, { mode: string; value: string }>>({});
+
+  // Compute filtered data from the original data and active filters
+  const filteredData = React.useMemo(() => {
+    const activeFilters = Object.entries(filters).filter(([, v]) => v.value && v.value.trim() !== "");
+    if (activeFilters.length === 0) return data;
+
+    return data.filter((row) => {
+      return activeFilters.every(([key, { mode, value }]) => {
+        const cell = String((row as any)[key] ?? "").toLowerCase();
+        const q = value.toLowerCase();
+        switch (mode) {
+          case "is":
+            return cell === q;
+          case "isNot":
+            return cell !== q;
+          case "contains":
+            return cell.includes(q);
+          case "notContains":
+            return !cell.includes(q);
+          case "startsWith":
+            return cell.startsWith(q);
+          case "endsWith":
+            return cell.endsWith(q);
+          default:
+            return true;
+        }
+      });
+    });
+  }, [data, filters]);
+
+  const table = useDataTableInstance({ data: filteredData, columns, getRowId: (row) => row.id.toString() });
   const sortableId = React.useId();
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
-  const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) || [], [data]);
+  const dataIds = React.useMemo<UniqueIdentifier[]>(() => filteredData?.map(({ id }) => id) || [], [filteredData]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id);
-        const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(data, oldIndex, newIndex);
+      setData((currentData) => {
+        // Find indices in the original data array so the reorder persists in the main source
+        const oldIndex = currentData.findIndex((r) => String((r as any).id) === String(active.id));
+        const newIndex = currentData.findIndex((r) => String((r as any).id) === String(over.id));
+        if (oldIndex === -1 || newIndex === -1) return currentData;
+        return arrayMove(currentData, oldIndex, newIndex);
       });
     }
   }
@@ -95,16 +130,25 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof schema>[
           </Button>
         </div>
       </div>
-      <TabsContent value="outline" className="relative flex flex-col gap-4 overflow-auto">
-        <div className="overflow-hidden rounded-lg border">
-          <DataTableNew
-            dndEnabled={dndEnabled}
-            table={table}
-            dataIds={dataIds}
-            handleDragEnd={handleDragEnd}
-            sensors={sensors}
-            sortableId={sortableId}
-          />
+      <TabsContent value="outline" className="relative flex flex-col gap-4 overflow-visible">
+        <div className="overflow-visible rounded-lg border">
+          {/* Filters moved into DataTable header for perfect alignment */}
+          {/* use an any-typed alias so we can pass filters without TS errors */}
+          {(() => {
+            const Dt: any = DataTableNew as any;
+            return (
+              <Dt
+                dndEnabled={dndEnabled}
+                table={table}
+                dataIds={dataIds}
+                handleDragEnd={handleDragEnd}
+                sensors={sensors}
+                sortableId={sortableId}
+                filters={filters}
+                setFilters={setFilters}
+              />
+            );
+          })()}
         </div>
         <DataTablePagination table={table} />
       </TabsContent>
