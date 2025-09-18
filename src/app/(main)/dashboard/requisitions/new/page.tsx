@@ -1,21 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 
-import {
-  Search,
-  Filter,
-  CheckSquare,
-  Square,
-  ChevronDown,
-  ChevronUp,
-  CalendarIcon,
-  Check,
-} from "lucide-react";
+import { Search, Filter, CheckSquare, Square, ChevronDown, ChevronUp, CalendarIcon, Check, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-
-
 
 // Add this component before RequisitionOrderForm
 interface Option {
@@ -39,19 +30,17 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   onChange,
   placeholder = "Select option...",
   className = "",
-  searchPlaceholder = "Search..."
+  searchPlaceholder = "Search...",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter options based on the search term
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = options.filter((option) => option.label.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // Find the currently selected option to display its label
-  const selectedOption = options.find(option => option.value === value);
+  const selectedOption = options.find((option) => option.value === value);
 
   useEffect(() => {
     // 1. Type the event parameter as a MouseEvent
@@ -63,8 +52,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -78,19 +67,21 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           {selectedOption ? selectedOption.label : placeholder}
         </span>
       </button>
-      <ChevronDown className={`pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      <ChevronDown
+        className={`pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 transition-transform dark:text-gray-300 ${isOpen ? "rotate-180" : ""}`}
+      />
 
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700">
-          <div className="p-2 border-b border-gray-200 dark:border-gray-600">
+          <div className="border-b border-gray-200 p-2 dark:border-gray-600">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-300" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-300" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-md border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                 autoFocus
               />
             </div>
@@ -106,21 +97,18 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     setIsOpen(false);
                     setSearchTerm("");
                   }}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-between ${value === option.value
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                      : 'text-gray-900 dark:text-gray-100'
-                    }`}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 ${
+                    value === option.value
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}
                 >
                   <span>{option.label}</span>
-                  {value === option.value && (
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  )}
+                  {value === option.value && <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
                 </button>
               ))
             ) : (
-              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                No options found
-              </div>
+              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No options found</div>
             )}
           </div>
         </div>
@@ -159,6 +147,11 @@ const RequisitionOrderForm = () => {
   // ---------- New: pickers visibility states ----------
   const [showOrderDatePicker, setShowOrderDatePicker] = useState(false);
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
+
+  // ---------- New: Modal states ----------
+  const [showPriceTiersModal, setShowPriceTiersModal] = useState(false);
+  const [showItemDetailsModal, setShowItemDetailsModal] = useState(false);
+  const [selectedItemForDetails, setSelectedItemForDetails] = useState<any>(null);
 
   // Add Item Form States
   const [itemNumber, setItemNumber] = useState("1");
@@ -643,19 +636,19 @@ const RequisitionOrderForm = () => {
                       />
                     </div>
                     <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Unit</label>
-                    <SearchableSelect
-                      options={[
-                        { value: "Ea", label: "Ea" },
-                        { value: "Kg", label: "Kg" },
-                        { value: "Lt", label: "Lt" },
-                      ]}
-                      value={unit}
-                      onChange={setUnit}
-                      placeholder="Select unit..."
-                      searchPlaceholder="Search units..."
-                    />
-                  </div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Unit</label>
+                      <SearchableSelect
+                        options={[
+                          { value: "Ea", label: "Ea" },
+                          { value: "Kg", label: "Kg" },
+                          { value: "Lt", label: "Lt" },
+                        ]}
+                        value={unit}
+                        onChange={setUnit}
+                        placeholder="Select unit..."
+                        searchPlaceholder="Search units..."
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -673,7 +666,10 @@ const RequisitionOrderForm = () => {
                       <span className="flex items-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
                         / {unit}
                       </span>
-                      <button className="ml-2 px-3 py-2 text-sm text-blue-600 underline hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
+                      <button
+                        onClick={() => setShowPriceTiersModal(true)}
+                        className="ml-2 px-3 py-2 text-sm text-blue-600 underline hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
                         View Price Tiers
                       </button>
                     </div>
@@ -836,7 +832,13 @@ const RequisitionOrderForm = () => {
                     </td>
                     <td className="p-3 text-sm text-gray-900 dark:text-gray-100">{item.type}</td>
                     <td className="p-3">
-                      <div className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-800">
+                      <div
+                        onClick={() => {
+                          setSelectedItemForDetails(item);
+                          setShowItemDetailsModal(true);
+                        }}
+                        className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
                         {item.itemNo}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">INV</div>
@@ -890,7 +892,13 @@ const RequisitionOrderForm = () => {
                           )}
                         </button>
                         <div>
-                          <div className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-800">
+                          <div
+                            onClick={() => {
+                              setSelectedItemForDetails(item);
+                              setShowItemDetailsModal(true);
+                            }}
+                            className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                          >
                             {item.itemNo}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">{item.type} - INV</div>
@@ -988,6 +996,170 @@ const RequisitionOrderForm = () => {
             </div>
           </div>
         </div>
+
+        {/* Price Tiers Modal */}
+        <Dialog open={showPriceTiersModal} onOpenChange={setShowPriceTiersModal}>
+          <DialogContent className="max-w-4xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-700">
+              <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Price Tiers</DialogTitle>
+              <button
+                onClick={() => setShowPriceTiersModal(false)}
+                className="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </DialogHeader>
+
+            <div className="p-6">
+              {/* Header Row */}
+              <div className="mb-4 grid grid-cols-6 gap-4 border-b border-gray-200 pb-3 dark:border-gray-700">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Tier Name</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Adjustment</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Starts On</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Expires On</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Minimum</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum</div>
+              </div>
+
+              {/* Data Rows */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-6 gap-4 border-b border-gray-100 py-3 dark:border-gray-700">
+                  <div className="text-sm text-gray-900 dark:text-gray-100">Standard</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">0%</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">-</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">-</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">1</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">∞</div>
+                </div>
+
+                <div className="grid grid-cols-6 gap-4 border-b border-gray-100 py-3 dark:border-gray-700">
+                  <div className="text-sm text-gray-900 dark:text-gray-100">Bulk Discount</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">-10%</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">01/01/2024</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">31/12/2024</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">50</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">∞</div>
+                </div>
+
+                <div className="grid grid-cols-6 gap-4 py-3">
+                  <div className="text-sm text-gray-900 dark:text-gray-100">Premium</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">+15%</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">-</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">-</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">1</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">10</div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Item Details Modal */}
+        <Dialog open={showItemDetailsModal} onOpenChange={setShowItemDetailsModal}>
+          <DialogContent className="max-w-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <DialogHeader className="border-b border-gray-200 pb-4 dark:border-gray-700">
+              <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Item Details</DialogTitle>
+            </DialogHeader>
+
+            {selectedItemForDetails && (
+              <div className="space-y-6 p-6">
+                {/* Location Section */}
+                <div>
+                  <h3 className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Location</h3>
+                  <div className="grid grid-cols-8 gap-2 text-center">
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">On Ha...</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">39</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">Availa...</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">39</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">On Pick</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">25</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">B/O</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">0</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">Requir...</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">25</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">Reserv...</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">25</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">On Or...</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">0</div>
+                    </div>
+                    <div className="rounded bg-gray-50 p-2 dark:bg-gray-700">
+                      <div className="mb-1 text-xs text-gray-600 dark:text-gray-400">Unit</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Ea</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Item Information */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Item Number
+                    </label>
+                    <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                      {selectedItemForDetails.itemNo}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Description
+                    </label>
+                    <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                      {selectedItemForDetails.description}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Requested
+                      </label>
+                      <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                        {selectedItemForDetails.requested}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Unit</label>
+                      <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                        {selectedItemForDetails.unit}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Picked</label>
+                      <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                        {selectedItemForDetails.picked}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Outstanding
+                      </label>
+                      <div className="rounded bg-gray-50 p-2 text-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100">
+                        {selectedItemForDetails.outstanding}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
