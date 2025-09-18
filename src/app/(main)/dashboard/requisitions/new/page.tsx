@@ -1,25 +1,151 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import {
-  Calendar,
-  Clock,
-  Plus,
-  Minus,
   Search,
   Filter,
   CheckSquare,
   Square,
   ChevronDown,
   ChevronUp,
+  CalendarIcon,
+  Check,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+
+
+// Add this component before RequisitionOrderForm
+interface Option {
+  value: string | number;
+  label: string;
+}
+
+interface SearchableSelectProps {
+  options: Option[];
+  value: string | number | null;
+  onChange: (value: string | number | null) => void;
+  placeholder?: string;
+  className?: string;
+  searchPlaceholder?: string;
+}
+
+// --- The Component ---
+const SearchableSelect: React.FC<SearchableSelectProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder = "Select option...",
+  className = "",
+  searchPlaceholder = "Search..."
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter options based on the search term
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Find the currently selected option to display its label
+  const selectedOption = options.find(option => option.value === value);
+
+  useEffect(() => {
+    // 1. Type the event parameter as a MouseEvent
+    const handleClickOutside = (event: MouseEvent) => {
+      // 2. Assert that event.target is a Node
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-left focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 ${className}`}
+      >
+        <span className={selectedOption ? "text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+      </button>
+      <ChevronDown className={`pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-600">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-300" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-md border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="max-h-60 overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-between ${value === option.value
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
+                      : 'text-gray-900 dark:text-gray-100'
+                    }`}
+                >
+                  <span>{option.label}</span>
+                  {value === option.value && (
+                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  )}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                No options found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function NewRequisitionPage() {
+  return (
+    <div className="bg-background min-h-screen">
+      <div className="w-full p-4 sm:p-6">
+        <div className="mb-6">
+          <h1 className="text-foreground text-2xl font-bold sm:text-3xl">New Requisition</h1>
+        </div>
+        <RequisitionOrderForm />
+      </div>
+    </div>
+  );
+}
 
 const RequisitionOrderForm = () => {
-  const [orderDate, setOrderDate] = useState("10/04/2025 20:36");
-  const [dueDate, setDueDate] = useState("18/04/2025 20:00");
-  const [warehouse, setWarehouse] = useState("AM - WH 1");
+  const [orderDate, setOrderDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [warehouse, setWarehouse] = useState<string | number | null>(null);
   const [email, setEmail] = useState("");
   const [contractNumber, setContractNumber] = useState("SALTPOND TOWERLINE");
   const [notes, setNotes] = useState("");
@@ -30,10 +156,14 @@ const RequisitionOrderForm = () => {
   const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(true);
   const [addItemExpanded, setAddItemExpanded] = useState(false);
 
+  // ---------- New: pickers visibility states ----------
+  const [showOrderDatePicker, setShowOrderDatePicker] = useState(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
+
   // Add Item Form States
   const [itemNumber, setItemNumber] = useState("1");
   const [quantity, setQuantity] = useState(0);
-  const [unit, setUnit] = useState("Ea");
+  const [unit, setUnit] = useState<string | number | null>(null);
   const [salesPrice, setSalesPrice] = useState(0.0);
   const [description, setDescription] = useState("SINGLE SEAT RECEPTION");
   const [altNumber, setAltNumber] = useState("");
@@ -132,6 +262,78 @@ const RequisitionOrderForm = () => {
   const calculateTotal = () => {
     return (quantity * salesPrice).toFixed(2);
   };
+
+  // ---------- Refs to handle outside clicks ----------
+  const orderPickerRef = useRef<HTMLDivElement | null>(null);
+  const duePickerRef = useRef<HTMLDivElement | null>(null);
+  const orderButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dueButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // ---------- Helpers to parse/format date while keeping time part ----------
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  const formatDateDDMMYYYY = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+
+  const splitDateTime = (input: string) => {
+    if (!input) return { datePart: "", timePart: "" };
+    const parts = input.trim().split(" ");
+    if (parts.length === 1) return { datePart: parts[0], timePart: "" };
+    const time = parts.slice(1).join(" ");
+    return { datePart: parts[0], timePart: time };
+  };
+
+  const parseDDMMYYYYToDate = (s: string) => {
+    if (!s) return new Date();
+    const [d, m, y] = s.split("/").map((p) => Number(p));
+    if (!d || !m || !y) return new Date();
+    return new Date(y, m - 1, d);
+  };
+
+  // handlers for calendar selection
+  const handleOrderDateSelect = (sel: Date | undefined) => {
+    if (!sel) return;
+    const { timePart } = splitDateTime(orderDate);
+    setOrderDate(`${formatDateDDMMYYYY(sel)}${timePart ? " " + timePart : ""}`);
+    setShowOrderDatePicker(false);
+  };
+
+  const handleDueDateSelect = (sel: Date | undefined) => {
+    if (!sel) return;
+    const { timePart } = splitDateTime(dueDate);
+    setDueDate(`${formatDateDDMMYYYY(sel)}${timePart ? " " + timePart : ""}`);
+    setShowDueDatePicker(false);
+  };
+
+  // ---------- Close pickers on outside click ----------
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as Node | null;
+      // Order picker
+      if (showOrderDatePicker) {
+        if (
+          orderPickerRef.current &&
+          !orderPickerRef.current.contains(target) &&
+          orderButtonRef.current &&
+          !orderButtonRef.current.contains(target)
+        ) {
+          setShowOrderDatePicker(false);
+        }
+      }
+      // Due picker
+      if (showDueDatePicker) {
+        if (
+          duePickerRef.current &&
+          !duePickerRef.current.contains(target) &&
+          dueButtonRef.current &&
+          !dueButtonRef.current.contains(target)
+        ) {
+          setShowDueDatePicker(false);
+        }
+      }
+    }
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [showOrderDatePicker, showDueDatePicker]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -235,16 +437,21 @@ const RequisitionOrderForm = () => {
                 <div className="space-y-6">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Warehouse</label>
-                    <div className="relative">
-                      <select
-                        value={warehouse}
-                        onChange={(e) => setWarehouse(e.target.value)}
-                        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
-                      >
-                        <option value="AM - WH 1">AM - WH 1</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300" />
-                    </div>
+                    <SearchableSelect
+                      options={[
+                        { value: "AM - WH 1", label: "AM - WH 1" },
+                        { value: "AM - WH 2", label: "AM - WH 2" },
+                        { value: "AM - WH 3", label: "AM - WH 3" },
+                        { value: "Cape Coast - WH 1", label: "Cape Coast - WH 1" },
+                        { value: "Cape Coast - WH 2", label: "Cape Coast - WH 2" },
+                        { value: "Accra - Main WH", label: "Accra - Main WH" },
+                        { value: "Kumasi - Storage", label: "Kumasi - Storage" },
+                      ]}
+                      value={warehouse}
+                      onChange={setWarehouse}
+                      placeholder="Select warehouse..."
+                      searchPlaceholder="Search warehouses..."
+                    />
                   </div>
 
                   <div>
@@ -256,12 +463,31 @@ const RequisitionOrderForm = () => {
                         type="text"
                         value={orderDate}
                         onChange={(e) => setOrderDate(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+                        placeholder="DD/MM/YYYY HH:MM"
                       />
-                      <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
-                        <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                        <Clock className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                      </div>
+                      <Popover open={showOrderDatePicker} onOpenChange={setShowOrderDatePicker}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={parseDDMMYYYYToDate(splitDateTime(orderDate).datePart)}
+                            onSelect={(d) => {
+                              if (d) handleOrderDateSelect(d);
+                              setShowOrderDatePicker(false);
+                            }}
+                            initialFocus
+                            required
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
@@ -272,12 +498,31 @@ const RequisitionOrderForm = () => {
                         type="text"
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+                        placeholder="DD/MM/YYYY HH:MM"
                       />
-                      <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
-                        <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                        <Clock className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                      </div>
+                      <Popover open={showDueDatePicker} onOpenChange={setShowDueDatePicker}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={parseDDMMYYYYToDate(splitDateTime(dueDate).datePart)}
+                            onSelect={(d) => {
+                              if (d) handleDueDateSelect(d);
+                              setShowDueDatePicker(false);
+                            }}
+                            initialFocus
+                            required
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
@@ -398,20 +643,19 @@ const RequisitionOrderForm = () => {
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Unit</label>
-                      <div className="relative">
-                        <select
-                          value={unit}
-                          onChange={(e) => setUnit(e.target.value)}
-                          className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
-                        >
-                          <option value="Ea">Ea</option>
-                          <option value="Kg">Kg</option>
-                          <option value="Lt">Lt</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300" />
-                      </div>
-                    </div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Unit</label>
+                    <SearchableSelect
+                      options={[
+                        { value: "Ea", label: "Ea" },
+                        { value: "Kg", label: "Kg" },
+                        { value: "Lt", label: "Lt" },
+                      ]}
+                      value={unit}
+                      onChange={setUnit}
+                      placeholder="Select unit..."
+                      searchPlaceholder="Search units..."
+                    />
+                  </div>
                   </div>
 
                   <div>
@@ -713,9 +957,20 @@ const RequisitionOrderForm = () => {
                 <span className="text-gray-700 dark:text-gray-200">Print Report</span>
               </label>
               <div className="relative">
-                <select className="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700">
-                  <option>Pick Order Report - DO...</option>
-                </select>
+                <SearchableSelect
+                  options={[
+                    { value: "pick-order-report", label: "Pick Order Report - DO..." },
+                    { value: "inventory-report", label: "Inventory Report" },
+                    { value: "warehouse-summary", label: "Warehouse Summary" },
+                    { value: "stock-movement", label: "Stock Movement Report" },
+                    { value: "requisition-summary", label: "Requisition Summary" },
+                  ]}
+                  value=""
+                  onChange={(value) => console.log("Selected report:", value)}
+                  placeholder="Pick Order Report - DO..."
+                  searchPlaceholder="Search reports..."
+                  className="text-sm"
+                />
                 <ChevronDown className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300" />
               </div>
             </div>
@@ -737,16 +992,3 @@ const RequisitionOrderForm = () => {
     </div>
   );
 };
-
-export default function NewRequisitionPage() {
-  return (
-    <div className="bg-background min-h-screen">
-      <div className="w-full p-4 sm:p-6">
-        <div className="mb-6">
-          <h1 className="text-foreground text-2xl font-bold sm:text-3xl">New Requisition</h1>
-        </div>
-        <RequisitionOrderForm />
-      </div>
-    </div>
-  );
-}

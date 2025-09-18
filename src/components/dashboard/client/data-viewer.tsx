@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useId } from 'react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { DataTable } from '@/components/dashboard/widgets/data-table'
+import { DataTable as DataTableLowLevel } from '@/components/data-table/data-table'
 import { applyDataFilters, Filter } from '@/components/dashboard/client/data-filters'
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from '@/components/dashboard/types'
 import * as dataAPI from '@/app/(main)/dashboard/inventory/_components/data'
 import { supabase } from '@/lib/supabase'
+import { useSensor, useSensors, MouseSensor, TouchSensor, KeyboardSensor } from '@dnd-kit/core'
+import { useDataTableInstance } from '@/hooks/use-data-table-instance'
 
 export function useDataViewer({
   config,
@@ -193,6 +195,54 @@ export function DataViewer({
     filteredData[0]
   );
 
+    // map filteredData to ensure each row has a numeric `id` field
+    const mappedData = useMemo(() => {
+      const idKey = (config && config.rowIdKey) ? config.rowIdKey : 'id'
+      return (filteredData ?? []).map((row, idx) => {
+        const rawId = (row as any)[idKey] ?? (row as any).id ?? idx
+        const idNum = typeof rawId === 'number' ? rawId : Number(rawId) || idx
+        return { id: idNum, ...row }
+      })
+    }, [filteredData, config?.rowIdKey])
+
+  // compute column keys and initialize header filters only for first two and last column
+  const columnKeys = useMemo(() => {
+    return (config?.tableColumns ?? [])
+      .map((col: any) => col.accessorKey ?? col.id ?? col.header)
+      .filter(Boolean)
+  }, [config?.tableColumns])
+
+  // header filters state used by the table header UI
+  const [headerFilters, setHeaderFilters] = useState<Record<string, { mode: string; value: string }>>({})
+
+  // keep headerFilters synced: initialize filters for every column
+  useEffect(() => {
+    const result: Record<string, { mode: string; value: string }> = {}
+    for (const col of (config?.tableColumns ?? [])) {
+      const key = col.accessorKey ?? col.header
+      if (!key) continue
+      // default: Status uses exact match, others use contains
+      result[key] = { mode: (col.header === 'Status') ? 'is' : 'contains', value: '' }
+    }
+    setHeaderFilters(result)
+  }, [config?.tableColumns])
+
+  // compute modifiedColumns: enable the table header filter for every column
+  const modifiedColumns = useMemo(() => {
+    return (config?.tableColumns ?? []).map((col: any) => ({
+      ...col,
+      enableColumnFilter: true,
+    }))
+  }, [config?.tableColumns])
+
+  const table = useDataTableInstance({ data: mappedData, columns: modifiedColumns, getRowId: (row) => String((row as any)[config?.rowIdKey ?? 'id']) })
+  const sortableId = useId()
+  const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}))
+  const dataIds = useMemo(() => mappedData?.map((r) => (r as any).id) || [], [mappedData])
+  const handleDragEnd = (event: any) => {
+    // viewer: don't persist reorder here; keep a no-op or implement if needed
+  }
+
   return (
     <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
       <SheetContent
@@ -200,17 +250,31 @@ export function DataViewer({
         aria-labelledby="drawer-title"
         className="w-full max-w-none sm:max-w-[92vw] lg:max-w-[1300px] xl:max-w-[1500px] 2xl:max-w-[1600px] overflow-auto"
       >
-        <h2 className="text-xl font-semibold mb-4">
-          Number of Records ({filteredData.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Number of Records ({mappedData.length})
+          </h2>
+          <div className="flex items-center space-x-2">
+            <div />
+          </div>
+        </div>
+
+        {/* The table's own header contains the column filters used on the dashboard page. */}
         <div className="p-4">
-          {/* loading && <Spinner /> */}
-          <DataTable
-            key={filteredData.length + filters.map((f) => JSON.stringify(f)).join('|')}
-            data={filteredData}
-            columns={config.tableColumns}
-            rowIdKey={config.rowIdKey}
-          />
+          {/* enable column filters for first, second and last columns so the table shows header filter UI in those cells */}
+          <div className="overflow-visible rounded-lg border">
+            {/* loading && <Spinner /> */}
+            <DataTableLowLevel
+              dndEnabled={true}
+              table={table}
+              dataIds={dataIds}
+              handleDragEnd={handleDragEnd}
+              sensors={sensors}
+              sortableId={sortableId}
+              filters={headerFilters}
+              setFilters={setHeaderFilters}
+            />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
