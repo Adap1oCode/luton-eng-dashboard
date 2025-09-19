@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -37,7 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// Mock data - في التطبيق الحقيقي ستأتي من API
+// Mock data - in real application this will come from API
 const mockRequisitions = [
   {
     requisition_order_number: "LUT/REQ/AM/005/02/25",
@@ -97,15 +97,24 @@ const mockRequisitions = [
   },
 ];
 
-// إضافة المزيد من البيانات الوهمية للوصول إلى 455 عنصر
+// Generate more mock data to reach 455 items
 const generateMockData = () => {
   const data = [...mockRequisitions];
-  for (let i = 0; i < 448; i++) {
-    const baseItem = mockRequisitions[i % mockRequisitions.length];
+  const statuses = ["Open - Pick Order Issued", "In Progress - Pick Order Picked Short", "Closed - Pick Complete"];
+  const warehouses = ["AM - WH 1", "AMC - WH 2", "BD - WH 3", "KM - WH 4"];
+
+  for (let i = 8; i <= 455; i++) {
     data.push({
-      ...baseItem,
-      requisition_order_number: `${baseItem.requisition_order_number}-${i + 1}`,
-      reference_number: `${baseItem.reference_number}-${i + 1}`,
+      requisition_order_number: `LUT/REQ/GEN/${String(i).padStart(4, "0")}/01/25`,
+      warehouse: warehouses[i % warehouses.length],
+      status: statuses[i % statuses.length],
+      order_date: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+        .toISOString()
+        .split("T")[0],
+      due_date: new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+        .toISOString()
+        .split("T")[0],
+      reference_number: `REF-${String(i).padStart(4, "0")}`,
     });
   }
   return data;
@@ -114,255 +123,274 @@ const generateMockData = () => {
 const allRequisitions = generateMockData();
 
 const getStatusBadgeVariant = (status: string) => {
-  if (status.includes("Complete")) return "default";
-  if (status.includes("Progress")) return "secondary";
-  if (status.includes("Open")) return "outline";
+  if (status.includes("Open")) return "default";
+  if (status.includes("In Progress")) return "secondary";
+  if (status.includes("Closed")) return "outline";
   return "default";
 };
 
 export default function AllRequisitionsPage() {
   const router = useRouter();
+  const checkboxRef = useRef<HTMLButtonElement>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [warehouseFilter, setWarehouseFilter] = useState("All Warehouses");
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [onlyOpen, setOnlyOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [onlyMine, setOnlyMine] = useState(true);
-  const [onlyOpen, setOnlyOpen] = useState(true);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // فلترة البيانات مع إضافة فلاتر Only Mine و Only Open
+  // Filter data with Only Mine and Only Open filters
   const filteredData = useMemo(() => {
-    return allRequisitions.filter((req) => {
-      const matchesSearch =
-        req.requisition_order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.reference_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.warehouse.toLowerCase().includes(searchTerm.toLowerCase());
+    let filtered = allRequisitions;
 
-      const matchesStatus = statusFilter === "all" || req.status === statusFilter;
-      const matchesWarehouse = warehouseFilter === "all" || req.warehouse === warehouseFilter;
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (item) =>
+          item.requisition_order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.warehouse.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.reference_number.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    }
 
-      // فلترة Only Open - إظهار الطلبات المفتوحة فقط
-      const matchesOnlyOpen = !onlyOpen || req.status.includes("Open") || req.status.includes("Progress");
+    // Only Open filter - show only open orders
+    if (onlyOpen) {
+      filtered = filtered.filter((item) => item.status.includes("Open"));
+    }
 
-      // فلترة Only Mine - في التطبيق الحقيقي ستعتمد على المستخدم الحالي
-      // هنا سنفترض أن "Mine" تعني الطلبات من مستودع معين
-      const matchesOnlyMine = !onlyMine || req.warehouse.includes("AM");
+    // Only Mine filter - in real app this would depend on current user
+    // Here we'll assume "Mine" means orders from specific warehouse
+    if (onlyMine) {
+      filtered = filtered.filter((item) => item.warehouse === "AM - WH 1");
+    }
 
-      return matchesSearch && matchesStatus && matchesWarehouse && matchesOnlyOpen && matchesOnlyMine;
-    });
+    if (statusFilter !== "All Statuses") {
+      filtered = filtered.filter((item) => item.status === statusFilter);
+    }
+
+    if (warehouseFilter !== "All Warehouses") {
+      filtered = filtered.filter((item) => item.warehouse === warehouseFilter);
+    }
+
+    return filtered;
   }, [searchTerm, statusFilter, warehouseFilter, onlyMine, onlyOpen]);
 
-  // تقسيم الصفحات
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  // الحصول على القيم الفريدة للفلاتر
-  const uniqueStatuses = [...new Set(allRequisitions.map((req) => req.status))];
-  const uniqueWarehouses = [...new Set(allRequisitions.map((req) => req.warehouse))];
+  // Get unique values for filters
+  const uniqueStatuses = Array.from(new Set(allRequisitions.map((item) => item.status)));
+  const uniqueWarehouses = Array.from(new Set(allRequisitions.map((item) => item.warehouse)));
 
-  // وظائف الأزرار
+  // Button functions
   const handleNewRequisition = () => {
     router.push("/dashboard/requisitions/new");
   };
 
   const handleDeleteSelected = () => {
     if (selectedRows.length === 0) {
-      toast.error("يرجى تحديد عناصر للحذف");
+      toast.error("Please select items to delete");
       return;
     }
 
-    // في التطبيق الحقيقي ستكون هناك API call للحذف
-    toast.success(`تم حذف ${selectedRows.length} عنصر بنجاح`);
+    // In real app there would be an API call for deletion
+    toast.success(`Successfully deleted ${selectedRows.length} items`);
     setSelectedRows([]);
   };
 
   const handleDuplicateSelected = () => {
     if (selectedRows.length === 0) {
-      toast.error("يرجى تحديد عناصر للنسخ");
+      toast.error("Please select items to duplicate");
       return;
     }
 
-    // في التطبيق الحقيقي ستكون هناك API call للنسخ
-    toast.success(`تم نسخ ${selectedRows.length} عنصر بنجاح`);
+    // In real app there would be an API call for duplication
+    toast.success(`Successfully duplicated ${selectedRows.length} items`);
     setSelectedRows([]);
   };
 
   const handlePrintReport = (type: string) => {
     if (selectedRows.length === 0) {
-      toast.error("يرجى تحديد عناصر للطباعة");
+      toast.error("Please select items to print");
       return;
     }
 
-    toast.success(`جاري طباعة ${type} لـ ${selectedRows.length} عنصر`);
+    toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
   const handlePrintInvoice = (type: string) => {
     if (selectedRows.length === 0) {
-      toast.error("يرجى تحديد عناصر لطباعة الفاتورة");
+      toast.error("Please select items to print invoice");
       return;
     }
 
-    toast.success(`جاري طباعة ${type} لـ ${selectedRows.length} عنصر`);
+    toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
   const handlePrintPackingSlip = (type: string) => {
     if (selectedRows.length === 0) {
-      toast.error("يرجى تحديد عناصر لطباعة وصل التغليف");
+      toast.error("Please select items to print packing slip");
       return;
     }
 
-    toast.success(`جاري طباعة ${type} لـ ${selectedRows.length} عنصر`);
+    toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(currentData.map((req) => req.requisition_order_number));
+      setSelectedRows(currentData.map((_, index) => startIndex + index));
     } else {
       setSelectedRows([]);
     }
   };
 
-  const handleSelectRow = (reqNumber: string, checked: boolean) => {
+  const handleSelectRow = (index: number, checked: boolean) => {
+    const actualIndex = startIndex + index;
     if (checked) {
-      setSelectedRows([...selectedRows, reqNumber]);
+      setSelectedRows([...selectedRows, actualIndex]);
     } else {
-      setSelectedRows(selectedRows.filter((id) => id !== reqNumber));
+      setSelectedRows(selectedRows.filter((i) => i !== actualIndex));
     }
   };
 
   const isAllSelected = currentData.length > 0 && selectedRows.length === currentData.length;
   const isIndeterminate = selectedRows.length > 0 && selectedRows.length < currentData.length;
 
+  // Update checkbox indeterminate state
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
   return (
-    <div className="@container/main flex flex-col gap-4 p-4 md:gap-6">
-      {/* العنوان */}
+    <div className="space-y-6">
+      {/* Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-foreground text-2xl font-bold">View Requisition Order</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="text-3xl font-bold tracking-tight">View Requisition Order</h1>
+          <p className="text-muted-foreground">
             Pick Orders are orders that you create when inventory is requested by a customer and needs to be picked from
             your warehouse, store, storage facility, etc and shipped to the customer.
           </p>
         </div>
-        <Button variant="outline" size="sm">
-          <FileText className="h-4 w-4" />
+        <Button onClick={() => window.open("/dashboard/requisitions/all", "_blank")} variant="outline">
+          <Eye className="mr-2 h-4 w-4" />
+          View Full Table
         </Button>
       </div>
 
-      {/* شريط الأدوات العلوي */}
-      <div className="flex flex-col gap-4">
-        {/* الصف الأول - الأزرار والمفاتيح */}
+      {/* Top toolbar */}
+      <div className="space-y-4">
+        {/* First row - buttons and switches */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleNewRequisition}>
+            <Button onClick={handleNewRequisition} className="bg-orange-500 hover:bg-orange-600">
               <Plus className="mr-2 h-4 w-4" />
               New
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteSelected} disabled={selectedRows.length === 0}>
+            <Button variant="destructive" onClick={handleDeleteSelected} disabled={selectedRows.length === 0}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDuplicateSelected} disabled={selectedRows.length === 0}>
+            <Button variant="outline" onClick={handleDuplicateSelected} disabled={selectedRows.length === 0}>
               <Copy className="mr-2 h-4 w-4" />
               Duplicate
             </Button>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="only-mine" className="text-sm">
-                Only Mine
-              </Label>
+            <div className="flex items-center space-x-2">
               <Switch id="only-mine" checked={onlyMine} onCheckedChange={setOnlyMine} />
+              <Label htmlFor="only-mine">Only Mine</Label>
             </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="only-open" className="text-sm">
-                Only Open
-              </Label>
+            <div className="flex items-center space-x-2">
               <Switch id="only-open" checked={onlyOpen} onCheckedChange={setOnlyOpen} />
+              <Label htmlFor="only-open">Only Open</Label>
             </div>
-            {(onlyMine || onlyOpen) && (
-              <Badge variant="destructive" className="text-xs">
-                Filter/Sorting Applied
-              </Badge>
-            )}
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+              Filter/Sorting Applied
+            </Badge>
           </div>
         </div>
 
-        {/* الصف الثاني - أزرار الطباعة */}
+        {/* Second row - print buttons */}
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" disabled={selectedRows.length === 0}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print Report
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handlePrintReport("Print All")}>Print All</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePrintReport("Print Selected")}>Print Selected</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePrintReport("Export PDF")}>Export PDF</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <DropdownMenuItem onClick={() => handlePrintReport("Report")}>
                 <FileText className="mr-2 h-4 w-4" />
-                Print Invoice
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handlePrintInvoice("Invoice Summary")}>Invoice Summary</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePrintInvoice("Detailed Invoice")}>
-                Detailed Invoice
+                Print Report
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" disabled={selectedRows.length === 0}>
+                <FileText className="mr-2 h-4 w-4" />
+                Print Invoice
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handlePrintInvoice("Invoice")}>
+                <FileText className="mr-2 h-4 w-4" />
+                Print Invoice
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={selectedRows.length === 0}>
                 <Package className="mr-2 h-4 w-4" />
                 Print Packing Slip
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handlePrintPackingSlip("Standard Slip")}>Standard Slip</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlePrintPackingSlip("Detailed Slip")}>Detailed Slip</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePrintPackingSlip("Packing Slip")}>
+                <Package className="mr-2 h-4 w-4" />
+                Print Packing Slip
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* باقي الكود يبقى كما هو... */}
-      {/* الجدول */}
-      <div className="bg-card rounded-lg border">
-        {/* فلاتر الجدول */}
-        <div className="bg-muted/50 border-b p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Search className="text-muted-foreground h-4 w-4" />
+      {/* Table */}
+      <div className="rounded-md border">
+        {/* Table filters */}
+        <div className="flex items-center justify-between border-b p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
               <Input
                 placeholder="Search requisitions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
+                className="w-[300px] pl-8"
               />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by Status" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="All Statuses">All Statuses</SelectItem>
                 {uniqueStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
                     {status}
@@ -372,11 +400,11 @@ export default function AllRequisitionsPage() {
             </Select>
 
             <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by Warehouse" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Warehouses</SelectItem>
+                <SelectItem value="All Warehouses">All Warehouses</SelectItem>
                 {uniqueWarehouses.map((warehouse) => (
                   <SelectItem key={warehouse} value={warehouse}>
                     {warehouse}
@@ -384,194 +412,111 @@ export default function AllRequisitionsPage() {
                 ))}
               </SelectContent>
             </Select>
-
-            <Button variant="outline" size="sm">
-              <Filter className="mr-2 h-4 w-4" />
-              More Filters
-            </Button>
           </div>
+
+          <Button variant="outline">
+            <Filter className="mr-2 h-4 w-4" />
+            More Filters
+          </Button>
         </div>
 
-        {/* الجدول الفعلي */}
-        <div className="overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                    ref={(el) => {
-                      if (el) el.indeterminate = isIndeterminate;
-                    }}
-                  />
-                </TableHead>
-                <TableHead className="min-w-[200px]">
-                  <div className="flex items-center gap-2">
-                    Requisition Order
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-                <TableHead className="min-w-[150px]">
-                  <div className="flex items-center gap-2">
-                    Warehouse
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-                <TableHead className="min-w-[200px]">
-                  <div className="flex items-center gap-2">
-                    Status
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-                <TableHead className="min-w-[120px]">
-                  <div className="flex items-center gap-2">
-                    Order Date
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-                <TableHead className="min-w-[120px]">
-                  <div className="flex items-center gap-2">
-                    Due Date
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-                <TableHead className="min-w-[200px]">
-                  <div className="flex items-center gap-2">
-                    Reference Number
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentData.map((req) => (
-                <TableRow key={req.requisition_order_number} className="hover:bg-muted/50 cursor-pointer">
+        {/* Actual table */}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
+              </TableHead>
+              <TableHead className="min-w-[200px]">
+                <div className="flex items-center gap-2">
+                  Requisition Order Number
+                  <Calendar className="h-4 w-4" />
+                </div>
+              </TableHead>
+              <TableHead>Warehouse</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Order Date</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead>Reference Number</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {currentData.map((requisition, index) => {
+              const actualIndex = startIndex + index;
+              const isSelected = selectedRows.includes(actualIndex);
+
+              return (
+                <TableRow key={actualIndex} className={isSelected ? "bg-muted/50" : ""}>
                   <TableCell>
                     <Checkbox
-                      checked={selectedRows.includes(req.requisition_order_number)}
-                      onCheckedChange={(checked) => handleSelectRow(req.requisition_order_number, checked as boolean)}
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-blue-600 hover:underline">
-                    {req.requisition_order_number}
-                  </TableCell>
-                  <TableCell>{req.warehouse}</TableCell>
+                  <TableCell className="font-medium">{requisition.requisition_order_number}</TableCell>
+                  <TableCell>{requisition.warehouse}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(req.status)} className="text-xs">
-                      {req.status}
-                    </Badge>
+                    <Badge variant={getStatusBadgeVariant(requisition.status)}>{requisition.status}</Badge>
                   </TableCell>
-                  <TableCell>{req.order_date ? format(new Date(req.order_date), "dd/MM/yyyy") : "-"}</TableCell>
-                  <TableCell>{req.due_date ? format(new Date(req.due_date), "dd/MM/yyyy") : "-"}</TableCell>
-                  <TableCell className="font-medium">{req.reference_number}</TableCell>
+                  <TableCell>{format(new Date(requisition.order_date), "MMM dd, yyyy")}</TableCell>
+                  <TableCell>{format(new Date(requisition.due_date), "MMM dd, yyyy")}</TableCell>
+                  <TableCell>{requisition.reference_number}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              );
+            })}
+          </TableBody>
+        </Table>
 
-        {/* تذييل الجدول مع معلومات التقسيم */}
-        <div className="bg-muted/30 flex items-center justify-between border-t p-4">
+        {/* Table footer with pagination info */}
+        <div className="flex items-center justify-between border-t px-4 py-3">
+          <div className="text-muted-foreground flex items-center gap-4 text-sm">
+            <span>
+              {selectedRows.length} of {filteredData.length} row(s) selected
+            </span>
+          </div>
+
           <div className="flex items-center gap-4">
-            <div className="text-muted-foreground text-sm">
-              {selectedRows.length} of {currentData.length} row(s) selected
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="page-size" className="text-sm">
-                Rows per page
-              </Label>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Rows per page:</span>
               <Select
-                value={pageSize.toString()}
+                value={itemsPerPage.toString()}
                 onValueChange={(value) => {
-                  setPageSize(Number(value));
+                  setItemsPerPage(Number(value));
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-20" id="page-size">
+                <SelectTrigger className="w-16">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
                   <SelectItem value="50">50</SelectItem>
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-sm font-medium">
-              {startIndex + 1} - {Math.min(endIndex, filteredData.length)} of {filteredData.length} items
+            <div className="text-muted-foreground text-sm">
+              Page {currentPage} of {totalPages}
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                ««
-              </Button>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
               >
-                ‹
-              </Button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className="h-8 w-8 p-0"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                ›
+                Previous
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(totalPages)}
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
               >
-                »»
+                Next
               </Button>
             </div>
           </div>
