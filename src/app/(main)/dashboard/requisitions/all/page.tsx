@@ -129,9 +129,10 @@ const getStatusBadgeVariant = (status: string) => {
   return "default";
 };
 
+// Remove the custom checkbox and ref approach
 export default function AllRequisitionsPage() {
   const router = useRouter();
-  const checkboxRef = useRef<HTMLButtonElement>(null);
+  const checkboxRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
@@ -242,9 +243,12 @@ export default function AllRequisitionsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(currentData.map((_, index) => startIndex + index));
+      const currentPageIndices = currentData.map((_, index) => startIndex + index);
+      const newSelectedRows = [...new Set([...selectedRows, ...currentPageIndices])];
+      setSelectedRows(newSelectedRows);
     } else {
-      setSelectedRows([]);
+      const currentPageIndices = currentData.map((_, index) => startIndex + index);
+      setSelectedRows(selectedRows.filter((i) => !currentPageIndices.includes(i)));
     }
   };
 
@@ -257,15 +261,13 @@ export default function AllRequisitionsPage() {
     }
   };
 
-  const isAllSelected = currentData.length > 0 && selectedRows.length === currentData.length;
-  const isIndeterminate = selectedRows.length > 0 && selectedRows.length < currentData.length;
+  // Calculate checkbox states for current page
+  const selectedInCurrentPage = selectedRows.filter(
+    (index) => index >= startIndex && index < startIndex + currentData.length,
+  ).length;
 
-  // Update checkbox indeterminate state
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = isIndeterminate;
-    }
-  }, [isIndeterminate]);
+  const isAllSelected = currentData.length > 0 && selectedInCurrentPage === currentData.length;
+  const isIndeterminate = selectedInCurrentPage > 0 && selectedInCurrentPage < currentData.length;
 
   return (
     <div className="space-y-6">
@@ -425,7 +427,18 @@ export default function AllRequisitionsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
-                <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
+                <div className="relative">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    className={isIndeterminate ? "data-[state=unchecked]:bg-primary" : ""}
+                  />
+                  {isIndeterminate && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="h-0.5 w-2 rounded-full bg-white" />
+                    </div>
+                  )}
+                </div>
               </TableHead>
               <TableHead className="min-w-[200px]">
                 <div className="flex items-center gap-2">
