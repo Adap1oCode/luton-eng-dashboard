@@ -312,6 +312,14 @@ export default function AllRequisitionsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch id="only-mine" checked={onlyMine} onCheckedChange={setOnlyMine} />
+                <Label htmlFor="only-mine">Only Mine</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch id="only-open" checked={onlyOpen} onCheckedChange={setOnlyOpen} />
+                <Label htmlFor="only-open">Only Open</Label>
+              </div>
               <Badge
                 variant="secondary"
                 className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100"
@@ -467,12 +475,21 @@ export default function AllRequisitionsPage() {
             </div>
           </div>
 
-          {/* Actual table - removed overflow-x-auto and min-w-full */}
+          {/* Actual table with proper column widths */}
           <div className="w-full">
             <Table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-[22%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[16%]" />
+              </colgroup>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 flex-shrink-0">
+                  <TableHead className="px-2">
                     <div className="relative">
                       <Checkbox
                         checked={isAllSelected}
@@ -486,25 +503,25 @@ export default function AllRequisitionsPage() {
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="w-1/4">
-                    <div className="flex items-center gap-2">
+                  <TableHead className="px-2">
+                    <div className="flex items-center gap-1">
                       <span className="truncate">Requisition Order Number</span>
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                     </div>
                   </TableHead>
-                  <TableHead className="w-1/6">
+                  <TableHead className="px-2">
                     <span className="truncate">Warehouse</span>
                   </TableHead>
-                  <TableHead className="w-1/5">
+                  <TableHead className="px-2">
                     <span className="truncate">Status</span>
                   </TableHead>
-                  <TableHead className="w-1/8">
+                  <TableHead className="px-2">
                     <span className="truncate">Order Date</span>
                   </TableHead>
-                  <TableHead className="w-1/8">
+                  <TableHead className="px-2">
                     <span className="truncate">Due Date</span>
                   </TableHead>
-                  <TableHead className="w-1/6">
+                  <TableHead className="px-2">
                     <span className="truncate">Reference Number</span>
                   </TableHead>
                 </TableRow>
@@ -516,35 +533,43 @@ export default function AllRequisitionsPage() {
 
                   return (
                     <TableRow key={actualIndex} className={isSelected ? "bg-muted/50" : ""}>
-                      <TableCell className="w-12">
+                      <TableCell className="px-2">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell className="w-1/4 font-medium">
-                        <div className="truncate pr-2" title={requisition.requisition_order_number}>
+                      <TableCell className="px-2 font-medium">
+                        <div className="truncate" title={requisition.requisition_order_number}>
                           {requisition.requisition_order_number}
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/6">
-                        <div className="truncate pr-2" title={requisition.warehouse}>
+                      <TableCell className="px-2">
+                        <div className="truncate" title={requisition.warehouse}>
                           {requisition.warehouse}
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/5">
-                        <Badge variant={getStatusBadgeVariant(requisition.status)} className="truncate">
-                          {requisition.status}
-                        </Badge>
+                      <TableCell className="px-2">
+                        <div className="w-full">
+                          <Badge
+                            variant={getStatusBadgeVariant(requisition.status)}
+                            className="inline-block max-w-full truncate px-2 py-1 text-xs"
+                            title={requisition.status}
+                          >
+                            {requisition.status}
+                          </Badge>
+                        </div>
                       </TableCell>
-                      <TableCell className="w-1/8">
-                        <div className="truncate pr-2">{format(new Date(requisition.order_date), "MMM dd, yyyy")}</div>
+                      <TableCell className="px-2">
+                        <div className="truncate text-sm">
+                          {format(new Date(requisition.order_date), "MMM dd, yyyy")}
+                        </div>
                       </TableCell>
-                      <TableCell className="w-1/8">
-                        <div className="truncate pr-2">{format(new Date(requisition.due_date), "MMM dd, yyyy")}</div>
+                      <TableCell className="px-2">
+                        <div className="truncate text-sm">{format(new Date(requisition.due_date), "MMM dd, yyyy")}</div>
                       </TableCell>
-                      <TableCell className="w-1/6">
-                        <div className="truncate pr-2" title={requisition.reference_number}>
+                      <TableCell className="px-2">
+                        <div className="truncate" title={requisition.reference_number}>
                           {requisition.reference_number}
                         </div>
                       </TableCell>
