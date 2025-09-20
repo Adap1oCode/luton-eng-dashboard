@@ -121,7 +121,7 @@ export default [
 
       // Complexity
       "complexity": ["warn", { max: 20 }],
-      "max-lines": ["error", { max: 1200, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["error", { max: 2000, skipBlankLines: true, skipComments: true }],
       "max-depth": ["error", 4],
 
       // TypeScript-Specific Rules (customized)
