@@ -47,7 +47,7 @@ export function DataTable({ data: initialData }: { data: z.infer<typeof schema>[
   const table = useDataTableInstance({ data, columns, getRowId: (row) => row.id.toString() });
   const sortableId = React.useId();
   const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
-  const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) || [], [data]);
+  const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) ?? [], [data]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;

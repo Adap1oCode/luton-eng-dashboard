@@ -1,27 +1,27 @@
-import type { DashboardTile, DashboardWidget } from '@/components/dashboard/types'
-import type { Filter } from '@/components/dashboard/client/data-filters'
-import { isFastFilter } from '@/components/dashboard/client/fast-filter'
-import { normalizeFieldValue } from '@/components/dashboard/client/normalize' // ✅ import
+import type { Filter } from "@/components/dashboard/client/data-filters";
+import { isFastFilter } from "@/components/dashboard/client/fast-filter";
+import { normalizeFieldValue } from "@/components/dashboard/client/normalize"; // ✅ import
+import type { DashboardTile, DashboardWidget } from "@/components/dashboard/types";
 
-type FilterTree = { and: Filter[] } | { or: Filter[] }
+type FilterTree = { and: Filter[] } | { or: Filter[] };
 
 /**
  * Recursively clone a Filter or FilterTree and replace every "__KEY__" placeholder with the actual tile key.
  */
 function hydrateFilterTree<T extends object>(tree: T, key: string): T {
-  const clone: any = JSON.parse(JSON.stringify(tree))
+  const clone: any = JSON.parse(JSON.stringify(tree));
   function walk(obj: any) {
     for (const k of Object.keys(obj)) {
-      const v = obj[k]
-      if (v === '__KEY__') {
-        obj[k] = key
-      } else if (typeof v === 'object' && v !== null) {
-        walk(v)
+      const v = obj[k];
+      if (v === "__KEY__") {
+        obj[k] = key;
+      } else if (typeof v === "object" && v !== null) {
+        walk(v);
       }
     }
   }
-  walk(clone)
-  return clone
+  walk(clone);
+  return clone;
 }
 
 /**
@@ -34,19 +34,19 @@ export function attachTileActions(
   tiles: DashboardTile[],
   widget: DashboardWidget & { filter?: Filter | FilterTree },
   handleClickWidget: (tile: DashboardTile) => void,
-  handleClickFilter: (filter: Filter) => void
+  handleClickFilter: (filter: Filter) => void,
 ): DashboardTile[] {
   return tiles.map((tile) => {
     // inherit rpcName and preCalculated
-    const rpcName       = tile.rpcName       ?? (widget as any).rpcName
-    const preCalculated = tile.preCalculated ?? (widget as any).preCalculated
+    const rpcName = tile.rpcName ?? (widget as any).rpcName;
+    const preCalculated = tile.preCalculated ?? (widget as any).preCalculated;
 
     // clickable if tile flagged and we have either a rpcName or a template filter or a tile.filter
-    const hasTemplate   = preCalculated && widget.filter !== undefined
-    const hasTileFilter = tile.filter !== undefined
-    const canClick      = tile.clickable === true && (Boolean(rpcName) || hasTemplate || hasTileFilter)
+    const hasTemplate = preCalculated && widget.filter !== undefined;
+    const hasTileFilter = tile.filter !== undefined;
+    const canClick = tile.clickable === true && (Boolean(rpcName) ?? hasTemplate ?? hasTileFilter);
 
-    console.groupCollapsed(`[attachTileActions] Tile: ${tile.key}`)
+    console.groupCollapsed(`[attachTileActions] Tile: ${tile.key}`);
     console.debug({
       rpcName,
       preCalculated,
@@ -54,8 +54,8 @@ export function attachTileActions(
       hasTileFilter,
       isFastFilter: tile.filter ? isFastFilter(tile.filter as Filter) : false,
       assignedClick: canClick,
-    })
-    console.groupEnd()
+    });
+    console.groupEnd();
 
     return {
       ...tile,
@@ -64,44 +64,44 @@ export function attachTileActions(
 
       onClick: canClick
         ? () => {
-            console.debug(`[attachTileActions] onClick for tile=${tile.key}`)
-            handleClickWidget(tile)
+            console.debug(`[attachTileActions] onClick for tile=${tile.key}`);
+            handleClickWidget(tile);
           }
         : undefined,
 
       onClickFilter: canClick
         ? () => {
-            console.groupCollapsed(`[attachTileActions] onClickFilter for tile=${tile.key}`)
+            console.groupCollapsed(`[attachTileActions] onClickFilter for tile=${tile.key}`);
             // 1) Pre-calculated branch: use widget.filter as a TEMPLATE
             if (hasTemplate) {
-              console.debug('  using widget.filter template:', widget.filter)
-              const templ = widget.filter as Filter | FilterTree
-              const rawTree = hydrateFilterTree(templ, tile.key)
+              console.debug("  using widget.filter template:", widget.filter);
+              const templ = widget.filter as Filter | FilterTree;
+              const rawTree = hydrateFilterTree(templ, tile.key);
 
-              console.debug('  hydrated filter tree:', rawTree)
+              console.debug("  hydrated filter tree:", rawTree);
 
               // flatten into clauses
-              let clauses: Filter[]
-              if ('and' in rawTree) clauses = rawTree.and
-              else if ('or' in rawTree) clauses = rawTree.or
-              else clauses = [rawTree as unknown as Filter]
+              let clauses: Filter[];
+              if ("and" in rawTree) clauses = rawTree.and;
+              else if ("or" in rawTree) clauses = rawTree.or;
+              else clauses = [rawTree as unknown as Filter];
 
-              console.debug('  emitting clauses:', clauses)
-              clauses.forEach((f) => handleClickFilter(f))
-              console.groupEnd()
-              return
+              console.debug("  emitting clauses:", clauses);
+              clauses.forEach((f) => handleClickFilter(f));
+              console.groupEnd();
+              return;
             }
 
             // 2) Legacy tile.filter branch
             if (hasTileFilter) {
-              console.debug('  using tile.filter:', tile.filter)
-              handleClickFilter(tile.filter as Filter)
+              console.debug("  using tile.filter:", tile.filter);
+              handleClickFilter(tile.filter as Filter);
             } else {
-              console.debug('  no filter to apply')
+              console.debug("  no filter to apply");
             }
-            console.groupEnd()
+            console.groupEnd();
           }
         : undefined,
-    }
-  })
+    };
+  });
 }

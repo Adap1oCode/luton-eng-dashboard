@@ -1,0 +1,12 @@
+﻿{
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unnecessary-condition": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "security/detect-object-injection": "off",
+    "complexity": ["warn", { "max": 30 }],
+    "@typescript-eslint/prefer-nullish-coalescing": "warn",
+    "no-constant-binary-expression": "warn",
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 
 import { MoreHorizontal, Search } from "lucide-react";
 
-import { AccountSwitcher } from "@/app/(main)/dashboard/_components/sidebar/account-switcher";
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
 import { DataViewerButton } from "@/app/(main)/dashboard/_components/sidebar/data-viewer-button";
 import { LayoutControls } from "@/app/(main)/dashboard/_components/sidebar/layout-controls";
@@ -20,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +36,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
       <SidebarInset
         className={cn(
           contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
+          "min-w-0 flex-1",
           "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
         )}
       >

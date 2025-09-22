@@ -36,7 +36,7 @@ function generateColumnCounts(records: any[], column: string) {
   const counts: Record<string, number> = {};
   for (const row of records) {
     const key = row[column] ?? "Unknown";
-    counts[key] = (counts[key] || 0) + 1;
+    counts[key] = (counts[key] ?? 0) + 1;
   }
   return Object.entries(counts).map(([key, count]) => ({ key, label: key, count }));
 }
@@ -80,7 +80,7 @@ export default function ChartBarHorizontal({ config, data, tiles, onFilterChange
     // RAW-DATA branch
     chartData = data.map((row) => {
       const rawKey = row[column] ?? "Unknown";
-      const cnt = Number(row[valueField]) || 0;
+      const cnt = Number(row[valueField]) ?? 0;
       return { key: String(rawKey), label: String(rawKey), count: cnt };
     });
   } else {

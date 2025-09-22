@@ -394,7 +394,7 @@ const RequisitionOrderForm = () => {
       <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
-            <svg className="h-12 w-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="h-12 w-12 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
             </svg>
           </div>
@@ -743,7 +743,7 @@ const RequisitionOrderForm = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">ALT Number</label>
                   <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    {altNumber || "-"}
+                    {altNumber ?? "-"}
                   </div>
                 </div>
 
@@ -815,7 +815,7 @@ const RequisitionOrderForm = () => {
 
         {/* Desktop Table */}
         <div className="hidden overflow-x-auto lg:block">
-          <table className="w-full">
+          <table className="w-full min-w-[1000px]">
             <thead className="bg-muted/50">
               <tr>
                 <th className="w-12 p-3">
@@ -832,7 +832,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </Button>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Type</div>
                     {showFilter && (
@@ -907,7 +907,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Item No.</div>
                     {showFilter && (
@@ -982,7 +982,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Description</div>
                     {showFilter && (
@@ -1069,7 +1069,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Requested</div>
                     {showFilter && (
@@ -1130,7 +1130,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Unit</div>
                     {showFilter && (
@@ -1185,7 +1185,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Picked</div>
                     {showFilter && (
@@ -1240,7 +1240,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Outstanding</div>
                     {showFilter && (
@@ -1303,7 +1303,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Sales Price</div>
                     {showFilter && (
@@ -1366,7 +1366,7 @@ const RequisitionOrderForm = () => {
                     )}
                   </div>
                 </th>
-                <th className="text-muted-foreground p-3 text-left text-xs font-medium tracking-wider uppercase">
+                <th className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase">
                   <div className="space-y-2">
                     <div>Line Total</div>
                     {showFilter && (

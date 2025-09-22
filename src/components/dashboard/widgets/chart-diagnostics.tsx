@@ -38,7 +38,7 @@ function getBaseErrors(data: unknown, from?: string, to?: string): string[] {
 
 // 🔍 Check required keys based on widget type
 function getConfigErrors(widget: DashboardWidget): string[] {
-  const keys = CHART_REQUIREMENTS[widget.component] || [];
+  const keys = CHART_REQUIREMENTS[widget.component] ?? [];
   return keys
     .filter((k) => (widget as Record<string, unknown>)[k] === undefined)
     .map((k) => `Missing required config: \`${k}\` for ${widget.component}.`);

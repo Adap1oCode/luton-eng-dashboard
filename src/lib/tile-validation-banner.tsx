@@ -1,34 +1,36 @@
-import { useEffect, useState } from 'react'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from "react";
+
+import { AlertTriangle } from "lucide-react";
+
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface ValidationResult {
-  dashboard: string
-  key: string
-  label: string
-  value: string | number | null
-  expected?: number
-  status: 'pass' | 'fail'
-  filter?: any
-  sql?: string
+  dashboard: string;
+  key: string;
+  label: string;
+  value: string | number | null;
+  expected?: number;
+  status: "pass" | "fail";
+  filter?: any;
+  sql?: string;
 }
 
 export function TileValidationBanner({ dashboardId }: { dashboardId: string }) {
-  const [failures, setFailures] = useState<ValidationResult[] | null>(null)
+  const [failures, setFailures] = useState<ValidationResult[] | null>(null);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return
+    if (process.env.NODE_ENV !== "development") return;
 
-    fetch('/validation-results.json')
+    fetch("/validation-results.json")
       .then((res) => res.json())
       .then((results: ValidationResult[]) => {
-        const failed = results.filter(r => r.dashboard === dashboardId && r.status === 'fail')
-        setFailures(failed.length > 0 ? failed : null)
+        const failed = results.filter((r) => r.dashboard === dashboardId && r.status === "fail");
+        setFailures(failed.length > 0 ? failed : null);
       })
-      .catch(() => null)
-  }, [dashboardId])
+      .catch(() => null);
+  }, [dashboardId]);
 
-  if (!failures) return null
+  if (!failures) return null;
 
   return (
     <div className="mb-4 space-y-4">
@@ -41,18 +43,15 @@ export function TileValidationBanner({ dashboardId }: { dashboardId: string }) {
       </Alert>
 
       {failures.map((f, i) => (
-        <pre
-          key={i}
-          className="bg-red-50 border border-red-200 rounded p-3 text-sm overflow-x-auto text-red-800"
-        >
-{`❌ ${f.dashboard} > ${f.key}
+        <pre key={i} className="overflow-x-auto rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {`❌ ${f.dashboard} > ${f.key}
   → expected: ${f.expected}
   → actual:   ${f.value}
-  → sql:      ${f.sql || '[none]'}
+  → sql:      ${f.sql ?? "[none]"}
   → filter:   ${JSON.stringify(f.filter, null, 2)}
 `}
         </pre>
       ))}
     </div>
-  )
+  );
 }

@@ -24,5 +24,5 @@ export async function getSidebarCollapsible(): Promise<SidebarCollapsible> {
 export async function getContentLayout(): Promise<ContentLayout> {
   const cookieStore = await cookies();
   const value = cookieStore.get("content_layout")?.value;
-  return allowedContentLayouts.includes(value as ContentLayout) ? (value as ContentLayout) : "centered";
+  return allowedContentLayouts.includes(value as ContentLayout) ? (value as ContentLayout) : "full-width";
 }

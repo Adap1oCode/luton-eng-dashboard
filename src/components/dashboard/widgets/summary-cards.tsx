@@ -21,19 +21,19 @@ function getStatus(value: number, thresholds?: Thresholds): "ok" | "warning" | "
   if (!thresholds) return undefined;
   if (
     thresholds.ok &&
-    ((thresholds.ok.lt !== undefined && value < thresholds.ok.lt) ||
+    ((thresholds.ok.lt !== undefined && value < thresholds.ok.lt) ??
       (thresholds.ok.gt !== undefined && value > thresholds.ok.gt))
   )
     return "ok";
   if (
     thresholds.warning &&
-    ((thresholds.warning.lt !== undefined && value < thresholds.warning.lt) ||
+    ((thresholds.warning.lt !== undefined && value < thresholds.warning.lt) ??
       (thresholds.warning.gt !== undefined && value > thresholds.warning.gt))
   )
     return "warning";
   if (
     thresholds.danger &&
-    ((thresholds.danger.lt !== undefined && value < thresholds.danger.lt) ||
+    ((thresholds.danger.lt !== undefined && value < thresholds.danger.lt) ??
       (thresholds.danger.gt !== undefined && value > thresholds.danger.gt))
   )
     return "danger";

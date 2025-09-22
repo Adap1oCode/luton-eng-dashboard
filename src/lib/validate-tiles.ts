@@ -67,7 +67,6 @@ export type ValidationResult = {
   value: number | string | null;
 };
 
-// eslint-disable-next-line complexity
 export async function runValidation(config: DashboardConfig, configId: string): Promise<ValidationResult[]> {
   console.log(`▶️ Validating dashboard: ${configId}`);
   const results: ValidationResult[] = [];
@@ -86,7 +85,7 @@ export async function runValidation(config: DashboardConfig, configId: string): 
           .not(start, "is", null)
           .not(end, "is", null);
 
-        if (error || !data) {
+        if (error ?? !data) {
           console.error(`❌ Avg tile "${displayTitle}" failed`, error);
           results.push({ dashboard: configId, key: tile.key, label: displayTitle, value: "error", status: "fail" });
           continue;
