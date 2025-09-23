@@ -18,6 +18,13 @@ import {
   Settings,
   Square,
   CheckSquare,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  SortAsc,
+  SortDesc,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -128,38 +135,128 @@ const getStatusBadgeVariant = (status: string) => {
   return "default";
 };
 
-// Column configuration
+// Column configuration with sorting types and options
 const COLUMNS = [
   {
     id: "requisition_order_number",
     label: "Requisition Order Number",
     width: "22%",
-    required: true, // This column cannot be hidden
+    required: true,
+    sortType: "alphabetical" as const,
+    sortOptions: [
+      { label: "A to Z", value: "asc", icon: SortAsc },
+      { label: "Z to A", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
   },
   {
     id: "warehouse",
     label: "Warehouse",
     width: "12%",
+    sortType: "alphabetical" as const,
+    sortOptions: [
+      { label: "A to Z", value: "asc", icon: SortAsc },
+      { label: "Z to A", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
   },
   {
     id: "status",
     label: "Status",
     width: "22%",
+    sortType: "status" as const,
+    sortOptions: [
+      { label: "Open → In Progress → Closed", value: "asc", icon: SortAsc },
+      { label: "Closed → In Progress → Open", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
   },
   {
     id: "order_date",
     label: "Order Date",
     width: "13%",
+    sortType: "date" as const,
+    sortOptions: [
+      { label: "Oldest First", value: "asc", icon: SortAsc },
+      { label: "Newest First", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
   },
   {
     id: "due_date",
     label: "Due Date",
     width: "13%",
+    sortType: "date" as const,
+    sortOptions: [
+      { label: "Oldest First", value: "asc", icon: SortAsc },
+      { label: "Newest First", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
   },
   {
     id: "reference_number",
     label: "Reference Number",
     width: "16%",
+    sortType: "alphabetical" as const,
+    sortOptions: [
+      { label: "A to Z", value: "asc", icon: SortAsc },
+      { label: "Z to A", value: "desc", icon: SortDesc },
+      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
+    ],
+  },
+];
+
+// Sorting types
+type SortDirection = "asc" | "desc" | "none";
+type SortConfig = {
+  column: string | null;
+  direction: SortDirection;
+  type: "alphabetical" | "date" | "status";
+};
+
+// Status priority for sorting
+const STATUS_PRIORITY: Record<string, number> = {
+  "Open - Pick Order Issued": 1,
+  "In Progress - Pick Order Picked Short": 2,
+  "Closed - Pick Complete": 3,
+};
+
+// Mock items data for expanded rows
+const mockItems = [
+  {
+    itemNumber: "5061037378338",
+    type: "Inventory",
+    requestedQty: 121,
+    unit: "Ea",
+    pickedQty: 0,
+  },
+  {
+    itemNumber: "5061037378345",
+    type: "Inventory",
+    requestedQty: 148,
+    unit: "Ea",
+    pickedQty: 0,
+  },
+  {
+    itemNumber: "5061003010118",
+    type: "Inventory",
+    requestedQty: 41,
+    unit: "Ea",
+    pickedQty: 0,
+  },
+  {
+    itemNumber: "5061003010101",
+    type: "Inventory",
+    requestedQty: 1440,
+    unit: "gr",
+    pickedQty: 0,
+  },
+  {
+    itemNumber: "5061003011900",
+    type: "Inventory",
+    requestedQty: 27,
+    unit: "Ea",
+    pickedQty: 0,
   },
 ];
 
@@ -177,12 +274,100 @@ export default function AllRequisitionsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
-  // Column visibility state - all visible by default
+  // Column visibility and order state
+  const [columnOrder, setColumnOrder] = useState<string[]>(COLUMNS.map((col) => col.id));
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: true }), {}),
   );
 
-  // Filter data with Only Mine and Only Open filters
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    column: null,
+    direction: "none",
+    type: "alphabetical",
+  });
+
+  // Drag and drop state
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  // Expanded rows state
+  const [expandedRows, setExpandedRows] = useState<number[]>([]);
+
+  // Handle sorting from header button
+  const handleSort = (columnId: string) => {
+    const column = COLUMNS.find((col) => col.id === columnId);
+    if (!column) return;
+
+    let newDirection: SortDirection = "asc";
+
+    if (sortConfig.column === columnId) {
+      if (sortConfig.direction === "asc") {
+        newDirection = "desc";
+      } else if (sortConfig.direction === "desc") {
+        newDirection = "none";
+      } else {
+        newDirection = "asc";
+      }
+    }
+
+    setSortConfig({
+      column: newDirection === "none" ? null : columnId,
+      direction: newDirection,
+      type: column.sortType,
+    });
+
+    // Show toast notification
+    if (newDirection === "none") {
+      toast.success(`Sorting cleared for ${column.label}`);
+    } else {
+      const directionText = newDirection === "asc" ? "Ascending" : "Descending";
+      toast.success(`Sorted by ${column.label} (${directionText})`);
+    }
+  };
+
+  // Handle sorting from dropdown
+  const handleSortFromDropdown = (columnId: string, direction: SortDirection) => {
+    const column = COLUMNS.find((col) => col.id === columnId);
+    if (!column) return;
+
+    if (direction === "none") {
+      setSortConfig({
+        column: null,
+        direction: "none",
+        type: "alphabetical",
+      });
+      toast.success(`Sorting cleared for ${column.label}`);
+    } else {
+      setSortConfig({
+        column: columnId,
+        direction: direction,
+        type: column.sortType,
+      });
+
+      const option = column.sortOptions.find((opt) => opt.value === direction);
+      if (option) {
+        toast.success(`Sorted by ${column.label} (${option.label})`);
+      }
+    }
+  };
+
+  // Get sort icon based on current state
+  const getSortIcon = (columnId: string) => {
+    if (sortConfig.column !== columnId) {
+      return <ArrowUpDown className="h-3 w-3" />;
+    }
+
+    if (sortConfig.direction === "asc") {
+      return <ArrowUp className="h-3 w-3" />;
+    } else if (sortConfig.direction === "desc") {
+      return <ArrowDown className="h-3 w-3" />;
+    }
+
+    return <ArrowUpDown className="h-3 w-3" />;
+  };
+
+  // Filter and sort data
   const filteredData = useMemo(() => {
     let filtered = allRequisitions;
 
@@ -201,7 +386,6 @@ export default function AllRequisitionsPage() {
     }
 
     // Only Mine filter - in real app this would depend on current user
-    // Here we'll assume "Mine" means orders from specific warehouse
     if (onlyMine) {
       filtered = filtered.filter((item) => item.warehouse === "AM - WH 1");
     }
@@ -214,8 +398,35 @@ export default function AllRequisitionsPage() {
       filtered = filtered.filter((item) => item.warehouse === warehouseFilter);
     }
 
+    // Apply sorting
+    if (sortConfig.column && sortConfig.direction !== "none") {
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[sortConfig.column as keyof typeof a];
+        const bValue = b[sortConfig.column as keyof typeof b];
+
+        if (sortConfig.type === "date") {
+          const aDate = new Date(aValue);
+          const bDate = new Date(bValue);
+          return sortConfig.direction === "asc" ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
+        }
+
+        if (sortConfig.type === "status") {
+          const aPriority = STATUS_PRIORITY[aValue] || 999;
+          const bPriority = STATUS_PRIORITY[bValue] || 999;
+          return sortConfig.direction === "asc" ? aPriority - bPriority : bPriority - aPriority;
+        }
+
+        // Alphabetical sorting
+        if (sortConfig.direction === "asc") {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      });
+    }
+
     return filtered;
-  }, [searchTerm, statusFilter, warehouseFilter, onlyMine, onlyOpen]);
+  }, [searchTerm, statusFilter, warehouseFilter, onlyMine, onlyOpen, sortConfig]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -230,15 +441,19 @@ export default function AllRequisitionsPage() {
     return Array.from(new Set(allRequisitions.map((item) => item.warehouse)));
   }, []);
 
-  // Get visible columns
-  const displayColumns = COLUMNS.filter((col) => visibleColumns[col.id]);
+  // Get visible columns in the correct order
+  const displayColumns = useMemo(() => {
+    return columnOrder
+      .map((id) => COLUMNS.find((col) => col.id === id))
+      .filter((col): col is NonNullable<typeof col> => col !== undefined && visibleColumns[col.id]);
+  }, [columnOrder, visibleColumns]);
 
   // Calculate dynamic column widths
   const calculateColumnWidths = (): Record<string, string> => {
     const visibleCols = displayColumns.length;
     if (visibleCols === 0) return {};
 
-    const baseWidth = Math.floor(88 / visibleCols); // 88% to leave space for checkbox
+    const baseWidth = Math.floor(88 / visibleCols);
     const remainingWidth = 88 - baseWidth * visibleCols;
 
     return displayColumns.reduce(
@@ -262,7 +477,6 @@ export default function AllRequisitionsPage() {
       toast.error("Please select items to delete");
       return;
     }
-
     toast.success(`Successfully deleted ${selectedRows.length} items`);
     setSelectedRows([]);
   };
@@ -272,7 +486,6 @@ export default function AllRequisitionsPage() {
       toast.error("Please select items to duplicate");
       return;
     }
-
     toast.success(`Successfully duplicated ${selectedRows.length} items`);
     setSelectedRows([]);
   };
@@ -282,7 +495,6 @@ export default function AllRequisitionsPage() {
       toast.error("Please select items to print");
       return;
     }
-
     toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
@@ -291,7 +503,6 @@ export default function AllRequisitionsPage() {
       toast.error("Please select items to print invoice");
       return;
     }
-
     toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
@@ -300,7 +511,6 @@ export default function AllRequisitionsPage() {
       toast.error("Please select items to print packing slip");
       return;
     }
-
     toast.success(`Printing ${type} for ${selectedRows.length} items`);
   };
 
@@ -334,7 +544,6 @@ export default function AllRequisitionsPage() {
   };
 
   const handleHideAllColumns = () => {
-    // Keep required columns visible
     setVisibleColumns(
       COLUMNS.reduce(
         (acc, col) => ({
@@ -344,6 +553,71 @@ export default function AllRequisitionsPage() {
         {},
       ),
     );
+  };
+
+  // Drag and drop functions for column reordering
+  const handleDragStart = (e: React.DragEvent, columnId: string) => {
+    setDraggedColumn(columnId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== columnId) {
+      setDragOverColumn(columnId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== targetColumnId) {
+      const newColumnOrder = [...columnOrder];
+      const draggedIndex = newColumnOrder.indexOf(draggedColumn);
+      const targetIndex = newColumnOrder.indexOf(targetColumnId);
+
+      newColumnOrder.splice(draggedIndex, 1);
+      newColumnOrder.splice(targetIndex, 0, draggedColumn);
+
+      setColumnOrder(newColumnOrder);
+
+      const draggedColumnConfig = COLUMNS.find((col) => col.id === draggedColumn);
+      if (draggedColumnConfig) {
+        toast.success(`Column "${draggedColumnConfig.label}" moved`);
+      }
+    }
+
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  // Reset column order to default
+  const handleResetColumnOrder = () => {
+    setColumnOrder(COLUMNS.map((col) => col.id));
+    toast.success("Column order reset to default");
+  };
+
+  // Clear all sorting
+  const handleClearSorting = () => {
+    setSortConfig({
+      column: null,
+      direction: "none",
+      type: "alphabetical",
+    });
+    toast.success("Sorting cleared");
+  };
+
+  // Handle row expansion
+  const toggleRowDetails = (index: number) => {
+    setExpandedRows((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
   };
 
   // Calculate checkbox states for current page
@@ -393,6 +667,11 @@ export default function AllRequisitionsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
+              {sortConfig.column && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100">
+                  Sorting Applied
+                </Badge>
+              )}
               <Badge
                 variant="secondary"
                 className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100"
@@ -451,6 +730,12 @@ export default function AllRequisitionsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {sortConfig.column && (
+              <Button variant="outline" onClick={handleClearSorting}>
+                Clear Sorting
+              </Button>
+            )}
           </div>
         </div>
 
@@ -459,7 +744,6 @@ export default function AllRequisitionsPage() {
           {/* Table filters */}
           <div className="border-b border-gray-200 p-4 dark:border-gray-700">
             <div className="flex flex-col gap-4">
-              {/* Main filters row */}
               <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Column Toggle Dropdown */}
@@ -471,12 +755,12 @@ export default function AllRequisitionsPage() {
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-64">
-                      <DropdownMenuLabel>Show/Hide Columns</DropdownMenuLabel>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
+                        Show/Hide Columns
+                      </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-
-                      {/* Quick actions */}
-                      <div className="flex gap-2 p-2">
+                      <div className="flex gap-1 p-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -493,19 +777,35 @@ export default function AllRequisitionsPage() {
                         >
                           Hide All
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleResetColumnOrder}
+                          className="h-7 flex-1 text-xs"
+                        >
+                          Reset Order
+                        </Button>
                       </div>
-
                       <DropdownMenuSeparator />
-
-                      {/* Column checkboxes */}
-                      <div className="max-h-64 overflow-y-auto">
+                      <div className="max-h-64 space-y-1 overflow-y-auto p-1">
                         {COLUMNS.map((column) => (
-                          <div key={column.id} className="flex items-center space-x-2 px-2 py-1.5">
+                          <div
+                            key={column.id}
+                            className="flex items-center space-x-2 rounded-sm px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, column.id)}
+                            onDragOver={(e) => handleDragOver(e, column.id)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, column.id)}
+                            onDragEnd={handleDragEnd}
+                          >
+                            <GripVertical className="h-3.5 w-3.5 cursor-move text-gray-400" />
                             <Checkbox
                               id={`column-${column.id}`}
                               checked={visibleColumns[column.id]}
                               onCheckedChange={(checked) => handleColumnToggle(column.id, checked as boolean)}
                               disabled={column.required}
+                              className="h-4 w-4"
                             />
                             <label
                               htmlFor={`column-${column.id}`}
@@ -521,10 +821,63 @@ export default function AllRequisitionsPage() {
                           </div>
                         ))}
                       </div>
-
                       <DropdownMenuSeparator />
                       <div className="text-muted-foreground p-2 text-xs">
                         {displayColumns.length} of {COLUMNS.length} columns visible
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Sorting Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        Sort
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
+                        Sort by Column
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <div className="max-h-64 space-y-2 overflow-y-auto p-1">
+                        {COLUMNS.map((column) => (
+                          <div key={column.id} className="space-y-1">
+                            <div className="px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                              {column.label}
+                            </div>
+                            <div className="grid grid-cols-1 gap-0.5">
+                              {column.sortOptions.map((option) => (
+                                <DropdownMenuItem
+                                  key={`${column.id}-${option.value}`}
+                                  className={`flex items-center gap-2 p-2 text-xs ${
+                                    sortConfig.column === column.id && sortConfig.direction === option.value
+                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
+                                      : ""
+                                  }`}
+                                  onClick={() => handleSortFromDropdown(column.id, option.value as SortDirection)}
+                                >
+                                  <option.icon className="h-3.5 w-3.5" />
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <DropdownMenuSeparator />
+                      <div className="p-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearSorting}
+                          className="h-7 w-full text-xs"
+                          disabled={!sortConfig.column}
+                        >
+                          Clear All Sorting
+                        </Button>
                       </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -547,14 +900,14 @@ export default function AllRequisitionsPage() {
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[1000px]">
               <colgroup>
-                <col className="w-12" />
+                <col className="w-16" />
                 {displayColumns.map((col) => (
                   <col key={col.id} style={{ width: columnWidths[col.id] }} />
                 ))}
               </colgroup>
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="w-12 p-3">
+                  <th className="w-16 p-3">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -567,15 +920,57 @@ export default function AllRequisitionsPage() {
                   {displayColumns.map((col) => (
                     <th
                       key={col.id}
-                      className="text-muted-foreground min-w-[50px] p-3 text-left text-xs font-medium tracking-wider uppercase"
+                      className={`text-muted-foreground min-w-[50px] p-3 text-center text-xs font-medium tracking-wider uppercase ${
+                        dragOverColumn === col.id ? "bg-blue-100 dark:bg-blue-900" : ""
+                      } ${sortConfig.column === col.id ? "bg-muted/70" : ""}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, col.id)}
+                      onDragOver={(e) => handleDragOver(e, col.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, col.id)}
+                      onDragEnd={handleDragEnd}
                     >
                       <div className="space-y-2">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
+                          <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-7 px-1 text-xs">
+                                <div className="flex flex-col items-center">
+                                  <ArrowUpDown className="h-3 w-3" />
+                                </div>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="w-48">
+                              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold">
+                                Sort by {col.label}
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <div className="space-y-0.5 p-1">
+                                {col.sortOptions.map((option) => (
+                                  <DropdownMenuItem
+                                    key={`${col.id}-${option.value}`}
+                                    className={`flex items-center gap-2 p-2 text-xs ${
+                                      sortConfig.column === col.id && sortConfig.direction === option.value
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
+                                        : ""
+                                    }`}
+                                    onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
+                                  >
+                                    <option.icon className="h-3.5 w-3.5" />
+                                    {option.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </div>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
                           <span className="truncate">{col.label}</span>
-                          {col.id === "requisition_order_number" && <Calendar className="h-4 w-4 flex-shrink-0" />}
+                          {col.id === "requisition_order_number"}
                         </div>
                         {showMoreFilters && (
-                          <div className="flex gap-2">
+                          <div className="flex justify-center gap-2">
                             <Input
                               placeholder="Filter..."
                               value={searchTerm}
@@ -619,74 +1014,142 @@ export default function AllRequisitionsPage() {
                 {currentData.map((requisition, index) => {
                   const actualIndex = startIndex + index;
                   const isSelected = selectedRows.includes(actualIndex);
+                  const isExpanded = expandedRows.includes(actualIndex);
 
                   return (
-                    <tr
-                      key={actualIndex}
-                      className={`hover:bg-muted/50 transition-colors ${isSelected ? "bg-muted/50" : ""}`}
-                    >
-                      <td className="p-3">
-                        <button
-                          onClick={() => handleSelectRow(index, !isSelected)}
-                          className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="h-4 w-4 text-blue-600" />
-                          ) : (
-                            <Square className="h-4 w-4" />
-                          )}
-                        </button>
-                      </td>
-                      {displayColumns.map((col) => (
-                        <td key={col.id} className="p-3">
-                          {col.id === "requisition_order_number" && (
-                            <div
-                              className="truncate text-sm font-medium text-gray-900 dark:text-gray-100"
-                              title={requisition.requisition_order_number}
+                    <React.Fragment key={actualIndex}>
+                      <tr className={`hover:bg-muted/50 transition-colors ${isSelected ? "bg-muted/50" : ""}`}>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            {/* Expand/collapse triangle button */}
+                            <button
+                              onClick={() => toggleRowDetails(actualIndex)}
+                              className={`text-gray-400 transition-transform hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 ${
+                                isExpanded ? "rotate-90" : ""
+                              }`}
                             >
-                              {requisition.requisition_order_number}
-                            </div>
-                          )}
-                          {col.id === "warehouse" && (
-                            <div
-                              className="truncate text-sm text-gray-900 dark:text-gray-100"
-                              title={requisition.warehouse}
+                              <ChevronRight className="h-3 w-3" />
+                            </button>
+
+                            {/* Checkbox button */}
+                            <button
+                              onClick={() => handleSelectRow(index, !isSelected)}
+                              className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
                             >
-                              {requisition.warehouse}
-                            </div>
-                          )}
-                          {col.id === "status" && (
-                            <div className="w-full">
-                              <Badge
-                                variant={getStatusBadgeVariant(requisition.status)}
-                                className="inline-block max-w-full truncate px-2 py-1 text-xs"
-                                title={requisition.status}
-                              >
-                                {requisition.status}
-                              </Badge>
-                            </div>
-                          )}
-                          {col.id === "order_date" && (
-                            <div className="truncate text-sm text-gray-900 dark:text-gray-100">
-                              {format(new Date(requisition.order_date), "MMM dd, yyyy")}
-                            </div>
-                          )}
-                          {col.id === "due_date" && (
-                            <div className="truncate text-sm text-gray-900 dark:text-gray-100">
-                              {format(new Date(requisition.due_date), "MMM dd, yyyy")}
-                            </div>
-                          )}
-                          {col.id === "reference_number" && (
-                            <div
-                              className="truncate text-sm text-gray-900 dark:text-gray-100"
-                              title={requisition.reference_number}
-                            >
-                              {requisition.reference_number}
-                            </div>
-                          )}
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </td>
-                      ))}
-                    </tr>
+                        {displayColumns.map((col) => (
+                          <td key={col.id} className="p-3 text-center">
+                            {col.id === "requisition_order_number" && (
+                              <div
+                                className="truncate text-sm font-medium text-gray-900 dark:text-gray-100"
+                                title={requisition.requisition_order_number}
+                              >
+                                {requisition.requisition_order_number}
+                              </div>
+                            )}
+                            {col.id === "warehouse" && (
+                              <div
+                                className="truncate text-sm text-gray-900 dark:text-gray-100"
+                                title={requisition.warehouse}
+                              >
+                                {requisition.warehouse}
+                              </div>
+                            )}
+                            {col.id === "status" && (
+                              <div className="flex w-full justify-center">
+                                <Badge
+                                  variant={getStatusBadgeVariant(requisition.status)}
+                                  className="inline-block max-w-full truncate px-2 py-1 text-xs"
+                                  title={requisition.status}
+                                >
+                                  {requisition.status}
+                                </Badge>
+                              </div>
+                            )}
+                            {col.id === "order_date" && (
+                              <div className="truncate text-sm text-gray-900 dark:text-gray-100">
+                                {format(new Date(requisition.order_date), "MMM dd, yyyy")}
+                              </div>
+                            )}
+                            {col.id === "due_date" && (
+                              <div className="truncate text-sm text-gray-900 dark:text-gray-100">
+                                {format(new Date(requisition.due_date), "MMM dd, yyyy")}
+                              </div>
+                            )}
+                            {col.id === "reference_number" && (
+                              <div
+                                className="truncate text-sm text-gray-900 dark:text-gray-100"
+                                title={requisition.reference_number}
+                              >
+                                {requisition.reference_number}
+                              </div>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+
+                      {/* Expanded details row */}
+                      {isExpanded && (
+                        <tr className="bg-gray-100 dark:bg-gray-800">
+                          <td colSpan={displayColumns.length + 1} className="p-0">
+                            <div className="p-4">
+                              <h4 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">
+                                Requisition Details: {requisition.requisition_order_number}
+                              </h4>
+
+                              {/* Items table - full width */}
+                              <div className="w-full">
+                                <table className="w-fit border border-gray-200 text-sm dark:border-gray-500">
+                                  <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                      <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
+                                        Item Number
+                                      </th>
+                                      <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
+                                        Type
+                                      </th>
+                                      <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
+                                        Requested Qty
+                                      </th>
+                                      <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
+                                        Unit
+                                      </th>
+                                      <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
+                                        Picked Qty
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {mockItems.map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <td className="border border-gray-200 p-3 dark:border-gray-700">
+                                          {item.itemNumber}
+                                        </td>
+                                        <td className="border border-gray-200 p-3 dark:border-gray-700">{item.type}</td>
+                                        <td className="border border-gray-200 p-3 dark:border-gray-700">
+                                          {item.requestedQty}
+                                        </td>
+                                        <td className="border border-gray-200 p-3 dark:border-gray-700">{item.unit}</td>
+                                        <td className="border border-gray-200 p-3 dark:border-gray-700">
+                                          {item.pickedQty}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
