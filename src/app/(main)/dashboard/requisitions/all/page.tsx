@@ -589,16 +589,17 @@ export default function AllRequisitionsPage() {
     const visibleCols = displayColumns.length;
     if (visibleCols === 0) return {};
 
-    const baseWidth = Math.floor(88 / visibleCols);
-    const remainingWidth = 88 - baseWidth * visibleCols;
+    // Use fixed widths for better control
+    const widths: Record<string, string> = {
+      requisition_order_number: "22%",
+      warehouse: "12%",
+      status: "22%",
+      order_date: "13%",
+      due_date: "13%",
+      reference_number: "16%",
+    };
 
-    return displayColumns.reduce(
-      (acc, col, index) => {
-        const extraWidth = index < remainingWidth ? 1 : 0;
-        return { ...acc, [col.id]: `${baseWidth + extraWidth}%` };
-      },
-      {} as Record<string, string>,
-    );
+    return widths;
   };
 
   const columnWidths = calculateColumnWidths();
@@ -1250,7 +1251,7 @@ export default function AllRequisitionsPage() {
 
           {/* Actual table with dynamic column widths */}
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1000px]">
+            <table className="w-full min-w-[800px]">
               <colgroup>
                 <col className="w-16" />
                 {displayColumns.map((col) => (
@@ -1275,49 +1276,87 @@ export default function AllRequisitionsPage() {
                   {displayColumns.map((col) => (
                     <th
                       key={col.id}
-                      className="text-muted-foreground relative min-w-[120px] p-3 text-left text-xs font-medium tracking-wider uppercase"
+                      className={`text-muted-foreground min-w-[120px] p-3 text-center text-xs font-medium tracking-wider uppercase ${
+                        dragOverColumn === col.id ? "bg-blue-100 dark:bg-blue-900" : ""
+                      } ${sortConfig.column === col.id ? "bg-muted/70" : ""}`}
                       draggable
                       onDragStart={(e) => handleDragStart(e, col.id)}
                       onDragOver={(e) => handleDragOver(e, col.id)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, col.id)}
                       onDragEnd={handleDragEnd}
-                      style={{
-                        backgroundColor: dragOverColumn === col.id ? "rgba(59, 130, 246, 0.1)" : "",
-                        border: dragOverColumn === col.id ? "2px dashed #3b82f6" : "none",
-                      }}
                     >
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
-                        <span>{col.label.replace(/([A-Z])/g, " $1").toUpperCase()}</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                              <ArrowUpDown className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center" className="w-48">
-                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold">
-                              Sort by {col.label}
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {col.sortOptions.map((option) => (
-                              <DropdownMenuItem
-                                key={option.value}
-                                onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
-                              >
-                                <option.icon className="mr-2 h-3.5 w-3.5" />
-                                {option.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
+                          <span className="truncate">{col.label}</span>
 
-                      {/* Visual indicator for drag target */}
-                      {dragOverColumn === col.id && (
-                        <div className="pointer-events-none absolute inset-0 rounded border-2 border-dashed border-blue-500" />
-                      )}
+                          {/* Dropdown for sorting options */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="flex items-center">
+                                {getSortIcon(col.id)}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="w-48">
+                              <DropdownMenuLabel className="py-.5 text-xs font-semibold">
+                                Sort {col.label}
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {col.sortOptions.map((option) => (
+                                <DropdownMenuItem
+                                  key={option.value}
+                                  className={`flex items-center gap-2 p-2 text-xs ${
+                                    sortConfig.column === col.id && sortConfig.direction === option.value
+                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
+                                      : ""
+                                  }`}
+                                  onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
+                                >
+                                  <option.icon className="h-3.5 w-3.5" />
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {showMoreFilters && (
+                          <div className="flex justify-center gap-2">
+                            <Input
+                              placeholder="Filter..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="h-8 w-21 text-xs"
+                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 w-10 px-2 text-xs">
+                                  <Filter className="mr-1 h-3 w-3" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-36 p-1">
+                                <div className="space-y-1">
+                                  <Button variant="default" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Contains
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Equal to
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Starts with
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Ends with
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Not equal
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+                      </div>
                     </th>
                   ))}
 
@@ -1361,9 +1400,9 @@ export default function AllRequisitionsPage() {
 
                         {/* Dynamic Columns */}
                         {displayColumns.map((col) => (
-                          <td key={col.id} className="p-3">
+                          <td key={col.id} className="p-3 text-center">
                             {col.id === "status" ? (
-                              <div className="flex items-center justify-start gap-2">
+                              <div className="flex items-center justify-center gap-2">
                                 {isEditing ? (
                                   <div className="flex items-center gap-2">
                                     <Select value={editingStatus} onValueChange={setEditingStatus}>
@@ -1391,7 +1430,7 @@ export default function AllRequisitionsPage() {
                                     </Button>
                                   </div>
                                 ) : (
-                                  <div className="group flex items-center gap-2">
+                                  <div className="group flex items-center justify-center gap-2">
                                     <Badge
                                       variant={getStatusBadgeVariant(requisition.status)}
                                       className="px-2 py-1 text-xs"
