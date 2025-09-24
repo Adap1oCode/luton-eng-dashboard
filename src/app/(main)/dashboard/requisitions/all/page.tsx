@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -29,12 +29,25 @@ import {
   Star,
   Edit,
   Download,
+  Check,
+  X,
+  Save,
+  Eye,
+  Layout,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +57,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -131,6 +145,9 @@ const generateMockData = () => {
 };
 
 const allRequisitions = generateMockData();
+
+// Available status options for editing
+const STATUS_OPTIONS = ["Open - Pick Order Issued", "In Progress - Pick Order Picked Short", "Closed - Pick Complete"];
 
 const getStatusBadgeVariant = (status: string) => {
   if (status.includes("Open")) return "default";
@@ -225,6 +242,18 @@ const STATUS_PRIORITY: Record<string, number> = {
   "Closed - Pick Complete": 3,
 };
 
+// View configuration type
+type SavedView = {
+  id: string;
+  name: string;
+  description: string;
+  isDefault: boolean;
+  columnOrder: string[];
+  visibleColumns: Record<string, boolean>;
+  sortConfig: SortConfig;
+  createdAt: Date;
+};
+
 // Mock items data for expanded rows
 const mockItems = [
   {
@@ -264,9 +293,27 @@ const mockItems = [
   },
 ];
 
+// Helper function to format dates safely
+const formatDateSafely = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    return format(date, "MMM dd, yyyy");
+  } catch (error) {
+    return "Invalid Date";
+  }
+};
+
 export default function AllRequisitionsPage() {
   const router = useRouter();
   const checkboxRef = useRef<HTMLInputElement>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
@@ -297,6 +344,91 @@ export default function AllRequisitionsPage() {
 
   // Expanded rows state
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
+
+  // Inline editing state
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editingStatus, setEditingStatus] = useState<string>("");
+
+  // Save View Dialog state
+  const [saveViewDialogOpen, setSaveViewDialogOpen] = useState(false);
+  const [viewName, setViewName] = useState("");
+  const [viewDescription, setViewDescription] = useState("");
+
+  // Saved Views state
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    // Create default view
+    const defaultView: SavedView = {
+      id: "default",
+      name: "Default View",
+      description: "Default table layout with all columns visible",
+      isDefault: true,
+      columnOrder: COLUMNS.map((col) => col.id),
+      visibleColumns: COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: true }), {}),
+      sortConfig: { column: null, direction: "none", type: "alphabetical" },
+      createdAt: new Date(),
+    };
+    return [defaultView];
+  });
+
+  const [currentViewId, setCurrentViewId] = useState("default");
+
+  // Get current view
+  const currentView = useMemo(() => {
+    return savedViews.find((view) => view.id === currentViewId) || savedViews[0];
+  }, [savedViews, currentViewId]);
+
+  // Apply view configuration
+  const applyView = (view: SavedView) => {
+    setColumnOrder(view.columnOrder);
+    setVisibleColumns(view.visibleColumns);
+    setSortConfig(view.sortConfig);
+    setCurrentViewId(view.id);
+    toast.success(`Applied view: ${view.name}`);
+  };
+
+  // Handle saving a new view
+  const handleSaveView = () => {
+    if (!viewName.trim()) {
+      toast.error("Please enter a view name");
+      return;
+    }
+
+    const newView: SavedView = {
+      id: `view-${Date.now()}`,
+      name: viewName.trim(),
+      description: viewDescription.trim(),
+      isDefault: false,
+      columnOrder,
+      visibleColumns,
+      sortConfig,
+      createdAt: new Date(),
+    };
+
+    setSavedViews((prev) => [...prev, newView]);
+    setCurrentViewId(newView.id);
+    setSaveViewDialogOpen(false);
+    setViewName("");
+    setViewDescription("");
+
+    toast.success(`View "${viewName}" saved successfully`);
+  };
+
+  // Handle deleting a view
+  const handleDeleteView = (viewId: string) => {
+    if (viewId === "default") {
+      toast.error("Cannot delete the default view");
+      return;
+    }
+
+    setSavedViews((prev) => prev.filter((view) => view.id !== viewId));
+
+    if (currentViewId === viewId) {
+      setCurrentViewId("default");
+      applyView(savedViews.find((view) => view.id === "default")!);
+    }
+
+    toast.success("View deleted successfully");
+  };
 
   // Handle sorting from header button
   const handleSort = (columnId: string) => {
@@ -563,6 +695,7 @@ export default function AllRequisitionsPage() {
   const handleDragStart = (e: React.DragEvent, columnId: string) => {
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", columnId);
   };
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
@@ -583,7 +716,9 @@ export default function AllRequisitionsPage() {
       const draggedIndex = newColumnOrder.indexOf(draggedColumn);
       const targetIndex = newColumnOrder.indexOf(targetColumnId);
 
+      // Remove dragged column from current position
       newColumnOrder.splice(draggedIndex, 1);
+      // Insert dragged column before target column
       newColumnOrder.splice(targetIndex, 0, draggedColumn);
 
       setColumnOrder(newColumnOrder);
@@ -622,6 +757,30 @@ export default function AllRequisitionsPage() {
   // Handle row expansion
   const toggleRowDetails = (index: number) => {
     setExpandedRows((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+  };
+
+  // Inline editing functions for status column
+  const handleEditStatus = (index: number) => {
+    const actualIndex = startIndex + index;
+    const requisition = filteredData[actualIndex];
+    setEditingRow(actualIndex);
+    setEditingStatus(requisition.status);
+  };
+
+  const handleSaveStatus = (index: number) => {
+    const actualIndex = startIndex + index;
+
+    // In a real application, you would update the data via API here
+    // For now, we'll just show a success message
+    toast.success(`Status updated to: ${editingStatus}`);
+
+    setEditingRow(null);
+    setEditingStatus("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRow(null);
+    setEditingStatus("");
   };
 
   // CSV Export function
@@ -713,6 +872,35 @@ export default function AllRequisitionsPage() {
 
   const isAllSelected = currentData.length > 0 && selectedInCurrentPage === currentData.length;
   const isIndeterminate = selectedInCurrentPage > 0 && selectedInCurrentPage < currentData.length;
+
+  // Render nothing on server to avoid hydration mismatch
+  if (!isClient) {
+    return (
+      <div className="bg-background min-h-screen">
+        <div className="w-full space-y-6 p-4 sm:p-6">
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <svg className="h-12 w-12 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">
+                  View Requisition Order
+                </h1>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <div className="flex items-center justify-center py-8">
+              <div className="text-lg text-gray-500">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background min-h-screen">
@@ -824,6 +1012,16 @@ export default function AllRequisitionsPage() {
                 </Button>
               )}
             </div>
+
+            {/* Save View Button */}
+            <Button
+              variant="outline"
+              onClick={() => setSaveViewDialogOpen(true)}
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save View
+            </Button>
           </div>
         </div>
 
@@ -834,6 +1032,64 @@ export default function AllRequisitionsPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Views Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <Layout className="h-4 w-4" />
+                        Views
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <div className="max-h-64 space-y-1 overflow-y-auto p-1">
+                        {savedViews.map((view) => (
+                          <div
+                            key={view.id}
+                            className={`flex items-center justify-between rounded-sm px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${currentViewId === view.id ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Eye className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="truncate text-sm font-medium">{view.name}</span>
+                                {view.isDefault && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Default
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-muted-foreground mt-1 truncate text-xs">{view.description}</div>
+                              <div className="text-muted-foreground mt-1 text-xs">
+                                {format(view.createdAt, "MMM dd, yyyy")}
+                              </div>
+                            </div>
+                            <div className="ml-2 flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => applyView(view)} className="h-7 w-7 p-0">
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              {!view.isDefault && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteView(view.id)}
+                                  className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <DropdownMenuSeparator />
+                      <div className="text-muted-foreground p-2 text-xs">
+                        {savedViews.length} saved view{savedViews.length !== 1 ? "s" : ""}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   {/* Column Toggle Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1000,7 +1256,7 @@ export default function AllRequisitionsPage() {
                 {displayColumns.map((col) => (
                   <col key={col.id} style={{ width: columnWidths[col.id] }} />
                 ))}
-                <col className="w-16" /> {/* Action menu column */}
+                <col className="w-16" />
               </colgroup>
               <thead className="bg-muted/50">
                 <tr>
@@ -1014,111 +1270,74 @@ export default function AllRequisitionsPage() {
                       {isAllSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </Button>
                   </th>
+
+                  {/* Main columns with drag and drop support */}
                   {displayColumns.map((col) => (
                     <th
                       key={col.id}
-                      className={`text-muted-foreground min-w-[50px] p-3 text-center text-xs font-medium tracking-wider uppercase ${
-                        dragOverColumn === col.id ? "bg-blue-100 dark:bg-blue-900" : ""
-                      } ${sortConfig.column === col.id ? "bg-muted/70" : ""}`}
+                      className="text-muted-foreground relative min-w-[120px] p-3 text-left text-xs font-medium tracking-wider uppercase"
                       draggable
                       onDragStart={(e) => handleDragStart(e, col.id)}
                       onDragOver={(e) => handleDragOver(e, col.id)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, col.id)}
                       onDragEnd={handleDragEnd}
+                      style={{
+                        backgroundColor: dragOverColumn === col.id ? "rgba(59, 130, 246, 0.1)" : "",
+                        border: dragOverColumn === col.id ? "2px dashed #3b82f6" : "none",
+                      }}
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
-
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8 w-7 px-1 text-xs">
-                                <div className="flex flex-col items-center">
-                                  <ArrowUpDown className="h-3 w-3" />
-                                </div>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" className="w-48">
-                              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold">
-                                Sort by {col.label}
-                              </DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <div className="space-y-0.5 p-1">
-                                {col.sortOptions.map((option) => (
-                                  <DropdownMenuItem
-                                    key={`${col.id}-${option.value}`}
-                                    className={`flex items-center gap-2 p-2 text-xs ${
-                                      sortConfig.column === col.id && sortConfig.direction === option.value
-                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
-                                        : ""
-                                    }`}
-                                    onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
-                                  >
-                                    <option.icon className="h-3.5 w-3.5" />
-                                    {option.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </div>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-
-                          <span className="truncate">{col.label}</span>
-                          {col.id === "requisition_order_number"}
-                        </div>
-                        {showMoreFilters && (
-                          <div className="flex justify-center gap-2">
-                            <Input
-                              placeholder="Filter..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              className="h-8 w-21 text-xs"
-                            />
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-8 w-10 px-2 text-xs">
-                                  <Filter className="mr-1 h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-36 p-1">
-                                <div className="space-y-1">
-                                  <Button variant="default" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Contains
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Equal to
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Starts with
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Ends with
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Not equal
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
+                        <span>{col.label.replace(/([A-Z])/g, " $1").toUpperCase()}</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                              <ArrowUpDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-48">
+                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold">
+                              Sort by {col.label}
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {col.sortOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
+                              >
+                                <option.icon className="mr-2 h-3.5 w-3.5" />
+                                {option.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
+
+                      {/* Visual indicator for drag target */}
+                      {dragOverColumn === col.id && (
+                        <div className="pointer-events-none absolute inset-0 rounded border-2 border-dashed border-blue-500" />
+                      )}
                     </th>
                   ))}
+
+                  <th className="w-16 p-3 text-xs font-medium tracking-wider uppercase">ACTIONS</th>
                 </tr>
               </thead>
+
               <tbody className="divide-border divide-y">
                 {currentData.map((requisition, index) => {
                   const actualIndex = startIndex + index;
                   const isSelected = selectedRows.includes(actualIndex);
                   const isExpanded = expandedRows.includes(actualIndex);
+                  const isEditing = editingRow === actualIndex;
 
                   return (
                     <React.Fragment key={actualIndex}>
                       <tr className={`hover:bg-muted/50 transition-colors ${isSelected ? "bg-muted/50" : ""}`}>
+                        {/* Checkbox Column */}
                         <td className="p-3">
                           <div className="flex items-center gap-1">
-                            {/* Expand/collapse triangle button */}
                             <button
                               onClick={() => toggleRowDetails(actualIndex)}
                               className={`text-gray-400 transition-transform hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 ${
@@ -1127,8 +1346,6 @@ export default function AllRequisitionsPage() {
                             >
                               <ChevronRight className="h-3 w-3" />
                             </button>
-
-                            {/* Checkbox button */}
                             <button
                               onClick={() => handleSelectRow(index, !isSelected)}
                               className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
@@ -1141,57 +1358,71 @@ export default function AllRequisitionsPage() {
                             </button>
                           </div>
                         </td>
+
+                        {/* Dynamic Columns */}
                         {displayColumns.map((col) => (
-                          <td key={col.id} className="p-3 text-center">
-                            {col.id === "requisition_order_number" && (
-                              <div
-                                className="truncate text-sm font-medium text-gray-900 dark:text-gray-100"
-                                title={requisition.requisition_order_number}
-                              >
-                                {requisition.requisition_order_number}
+                          <td key={col.id} className="p-3">
+                            {col.id === "status" ? (
+                              <div className="flex items-center justify-start gap-2">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2">
+                                    <Select value={editingStatus} onValueChange={setEditingStatus}>
+                                      <SelectTrigger className="w-48">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {STATUS_OPTIONS.map((status) => (
+                                          <SelectItem key={status} value={status}>
+                                            {status}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button size="sm" onClick={() => handleSaveStatus(index)} className="h-8 w-8 p-0">
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={handleCancelEdit}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="group flex items-center gap-2">
+                                    <Badge
+                                      variant={getStatusBadgeVariant(requisition.status)}
+                                      className="px-2 py-1 text-xs"
+                                    >
+                                      {requisition.status}
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditStatus(index)}
+                                      className="h-6 w-6 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            {col.id === "warehouse" && (
-                              <div
-                                className="truncate text-sm text-gray-900 dark:text-gray-100"
-                                title={requisition.warehouse}
-                              >
-                                {requisition.warehouse}
+                            ) : col.id.includes("date") ? (
+                              <div className="text-sm text-gray-900 dark:text-gray-100">
+                                {formatDateSafely(requisition[col.id as keyof typeof requisition])}
                               </div>
-                            )}
-                            {col.id === "status" && (
-                              <div className="flex w-full justify-center">
-                                <Badge
-                                  variant={getStatusBadgeVariant(requisition.status)}
-                                  className="inline-block max-w-full truncate px-2 py-1 text-xs"
-                                  title={requisition.status}
-                                >
-                                  {requisition.status}
-                                </Badge>
-                              </div>
-                            )}
-                            {col.id === "order_date" && (
-                              <div className="truncate text-sm text-gray-900 dark:text-gray-100">
-                                {format(new Date(requisition.order_date), "MMM dd, yyyy")}
-                              </div>
-                            )}
-                            {col.id === "due_date" && (
-                              <div className="truncate text-sm text-gray-900 dark:text-gray-100">
-                                {format(new Date(requisition.due_date), "MMM dd, yyyy")}
-                              </div>
-                            )}
-                            {col.id === "reference_number" && (
-                              <div
-                                className="truncate text-sm text-gray-900 dark:text-gray-100"
-                                title={requisition.reference_number}
-                              >
-                                {requisition.reference_number}
+                            ) : (
+                              <div className="text-sm text-gray-900 dark:text-gray-100">
+                                {requisition[col.id as keyof typeof requisition]}
                               </div>
                             )}
                           </td>
                         ))}
-                        {/* Action Menu Cell */}
-                        <td className="p-3 text-center">
+
+                        {/* Actions Menu */}
+                        <td className="p-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1228,19 +1459,18 @@ export default function AllRequisitionsPage() {
                         </td>
                       </tr>
 
-                      {/* Expanded details row */}
+                      {/* Expanded Row Details */}
                       {isExpanded && (
-                        <tr className="bg-gray-100 dark:bg-gray-800">
-                          <td colSpan={displayColumns.length + 2} className="p-0">
-                            <div className="p-4">
-                              <h4 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">
+                        <tr className="bg-gray-50 dark:bg-gray-800">
+                          <td colSpan={displayColumns.length + 2} className="p-4">
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-gray-900 dark:text-gray-100">
                                 Requisition Details: {requisition.requisition_order_number}
                               </h4>
 
-                              {/* Items table - full width */}
-                              <div className="w-full">
-                                <table className="w-fit border border-gray-200 text-sm dark:border-gray-500">
-                                  <thead className="bg-gray-50 dark:bg-gray-700">
+                              <div className="overflow-x-auto">
+                                <table className="w-full border border-gray-200 text-sm dark:border-gray-500">
+                                  <thead className="bg-gray-100 dark:bg-gray-700">
                                     <tr>
                                       <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
                                         Item Number
@@ -1345,6 +1575,60 @@ export default function AllRequisitionsPage() {
           </div>
         </div>
       </div>
+
+      {/* Save View Dialog */}
+      <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Current View</DialogTitle>
+            <DialogDescription>
+              Save your current column layout, sorting, and visibility settings as a named view for quick access later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="view-name">View Name *</Label>
+              <Input
+                id="view-name"
+                placeholder="e.g., My Custom View, Status Overview, etc."
+                value={viewName}
+                onChange={(e) => setViewName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="view-description">Description</Label>
+              <Input
+                id="view-description"
+                placeholder="Brief description of this view..."
+                value={viewDescription}
+                onChange={(e) => setViewDescription(e.target.value)}
+              />
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+              <div className="font-medium">Current Settings:</div>
+              <div className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <div>• {displayColumns.length} columns visible</div>
+                <div>
+                  •{" "}
+                  {sortConfig.column
+                    ? `Sorted by: ${COLUMNS.find((c) => c.id === sortConfig.column)?.label}`
+                    : "No sorting applied"}
+                </div>
+                <div>• Column order: {columnOrder.filter((id) => visibleColumns[id]).length} columns</div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveViewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveView} disabled={!viewName.trim()}>
+              <Save className="mr-2 h-4 w-4" />
+              Save View
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
