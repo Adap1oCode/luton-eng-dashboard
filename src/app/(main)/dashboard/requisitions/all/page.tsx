@@ -25,6 +25,10 @@ import {
   SortAsc,
   SortDesc,
   ChevronRight,
+  MoreVertical,
+  Star,
+  Edit,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -620,6 +624,88 @@ export default function AllRequisitionsPage() {
     setExpandedRows((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
   };
 
+  // CSV Export function
+  const handleExportCSV = () => {
+    if (filteredData.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    try {
+      // Use only visible columns for export
+      const columnsToExport = displayColumns.map((col) => col.id);
+
+      // Create CSV headers
+      const headers = columnsToExport
+        .map((colId) => {
+          const column = COLUMNS.find((c) => c.id === colId);
+          return column ? `"${column.label}"` : `"${colId}"`;
+        })
+        .join(",");
+
+      // Create data rows
+      const csvRows = filteredData.map((item) => {
+        return columnsToExport
+          .map((colId) => {
+            // Clean data and add quotes
+            const value = item[colId as keyof typeof item] || "";
+            return `"${String(value).replace(/"/g, '""')}"`;
+          })
+          .join(",");
+      });
+
+      // Combine headers and data
+      const csvContent = [headers, ...csvRows].join("\n");
+
+      // Create file and download
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute("href", url);
+      link.setAttribute("download", `requisitions_${format(new Date(), "yyyy-MM-dd_HH-mm")}.csv`);
+      link.style.visibility = "hidden";
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Exported ${filteredData.length} records to CSV`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export data");
+    }
+  };
+
+  // Row action menu functions
+  const handleEditRow = (index: number) => {
+    const actualIndex = startIndex + index;
+    const requisition = filteredData[actualIndex];
+    toast.success(`Editing: ${requisition.requisition_order_number}`);
+    // Add edit logic here
+  };
+
+  const handleDeleteRow = (index: number) => {
+    const actualIndex = startIndex + index;
+    const requisition = filteredData[actualIndex];
+    toast.success(`Deleted: ${requisition.requisition_order_number}`);
+    // Add delete logic here
+  };
+
+  const handleFavoriteRow = (index: number) => {
+    const actualIndex = startIndex + index;
+    const requisition = filteredData[actualIndex];
+    toast.success(`Added to favorites: ${requisition.requisition_order_number}`);
+    // Add favorite logic here
+  };
+
+  const handleMakeCopyRow = (index: number) => {
+    const actualIndex = startIndex + index;
+    const requisition = filteredData[actualIndex];
+    toast.success(`Copied: ${requisition.requisition_order_number}`);
+    // Add copy logic here
+  };
+
   // Calculate checkbox states for current page
   const selectedInCurrentPage = selectedRows.filter(
     (index) => index >= startIndex && index < startIndex + currentData.length,
@@ -634,16 +720,12 @@ export default function AllRequisitionsPage() {
         {/* Title */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           <div className="flex items-center gap-4">
-            {" "}
-            {/* Changed to center alignment */}
             <div className="flex-shrink-0">
               <svg className="h-12 w-12 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
               </svg>
             </div>
             <div className="text-center">
-              {" "}
-              {/* Added text-center class */}
               <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">
                 View Requisition Order
               </h1>
@@ -685,61 +767,63 @@ export default function AllRequisitionsPage() {
             </div>
           </div>
 
-          {/* Second row - print buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={selectedRows.length === 0}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print Report
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handlePrintReport("Report")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Print Report
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Second row - print buttons and export */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={selectedRows.length === 0}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print Report
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handlePrintReport("Report")}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Print Report
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={selectedRows.length === 0}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Print Invoice
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handlePrintInvoice("Invoice")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Print Invoice
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={selectedRows.length === 0}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Print Invoice
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handlePrintInvoice("Invoice")}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Print Invoice
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={selectedRows.length === 0}>
-                  <Package className="mr-2 h-4 w-4" />
-                  Print Packing Slip
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handlePrintPackingSlip("Packing Slip")}>
-                  <Package className="mr-2 h-4 w-4" />
-                  Print Packing Slip
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={selectedRows.length === 0}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Print Packing Slip
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handlePrintPackingSlip("Packing Slip")}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Print Packing Slip
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {sortConfig.column && (
-              <Button variant="outline" onClick={handleClearSorting}>
-                Clear Sorting
-              </Button>
-            )}
+              {sortConfig.column && (
+                <Button variant="outline" onClick={handleClearSorting}>
+                  Clear Sorting
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -813,9 +897,7 @@ export default function AllRequisitionsPage() {
                             />
                             <label
                               htmlFor={`column-${column.id}`}
-                              className={`flex-1 cursor-pointer text-sm ${
-                                column.required ? "text-muted-foreground" : ""
-                              }`}
+                              className={`flex-1 cursor-pointer text-sm ${column.required ? "text-muted-foreground" : ""}`}
                             >
                               {column.label}
                               {column.required && (
@@ -896,6 +978,16 @@ export default function AllRequisitionsPage() {
                     <ChevronDown className={`h-4 w-4 transition-transform ${showMoreFilters ? "rotate-180" : ""}`} />
                   </Button>
                 </div>
+
+                {/* Export CSV button on the far right */}
+                <Button
+                  variant="outline"
+                  onClick={handleExportCSV}
+                  className="ml-auto bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
               </div>
             </div>
           </div>
@@ -908,6 +1000,7 @@ export default function AllRequisitionsPage() {
                 {displayColumns.map((col) => (
                   <col key={col.id} style={{ width: columnWidths[col.id] }} />
                 ))}
+                <col className="w-16" /> {/* Action menu column */}
               </colgroup>
               <thead className="bg-muted/50">
                 <tr>
@@ -1097,12 +1190,48 @@ export default function AllRequisitionsPage() {
                             )}
                           </td>
                         ))}
+                        {/* Action Menu Cell */}
+                        <td className="p-3 text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold">
+                                Actions
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEditRow(index)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleMakeCopyRow(index)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Make a Copy
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleFavoriteRow(index)}>
+                                <Star className="mr-2 h-4 w-4" />
+                                Favorite
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteRow(index)}
+                                className="text-red-600 focus:text-red-600 dark:text-red-400"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
 
                       {/* Expanded details row */}
                       {isExpanded && (
                         <tr className="bg-gray-100 dark:bg-gray-800">
-                          <td colSpan={displayColumns.length + 1} className="p-0">
+                          <td colSpan={displayColumns.length + 2} className="p-0">
                             <div className="p-4">
                               <h4 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">
                                 Requisition Details: {requisition.requisition_order_number}
