@@ -1508,7 +1508,7 @@ export default function AllRequisitionsPage() {
                               </h4>
 
                               <div className="overflow-x-auto">
-                                <table className="w-full border border-gray-200 text-sm dark:border-gray-500">
+                                <table className="w-2xl border border-gray-200 text-sm dark:border-gray-500">
                                   <thead className="bg-gray-100 dark:bg-gray-700">
                                     <tr>
                                       <th className="border border-gray-200 p-3 text-left font-medium dark:border-gray-700">
