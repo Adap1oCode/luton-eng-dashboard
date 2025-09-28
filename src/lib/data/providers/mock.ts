@@ -1,5 +1,15 @@
 // src/lib/data/providers/mock.ts
 
+// ---- Import raw JSON produced from your Excel/CSV ----
+import rawCategories from "@/data/mock/categories.json";
+import rawCustomers from "@/data/mock/customers.json";
+import rawItems from "@/data/mock/items.json";
+import rawLocations from "@/data/mock/locations.json";
+import rawRequisitionItems from "@/data/mock/requisition-items.json";
+import rawRequisitions from "@/data/mock/requisitions.json";
+import rawSites from "@/data/mock/sites.json";
+import rawVendors from "@/data/mock/vendors.json";
+
 import type { DataProvider } from "../provider";
 import type {
   Warehouse,
@@ -12,16 +22,6 @@ import type {
   Site,
   RequisitionItem, // ✅ new
 } from "../types";
-
-// ---- Import raw JSON produced from your Excel/CSV ----
-import rawRequisitions from "@/data/mock/requisitions.json";
-import rawItems from "@/data/mock/items.json";
-import rawCustomers from "@/data/mock/customers.json";
-import rawVendors from "@/data/mock/vendors.json";
-import rawCategories from "@/data/mock/categories.json";
-import rawLocations from "@/data/mock/locations.json";
-import rawSites from "@/data/mock/sites.json";
-import rawRequisitionItems from "@/data/mock/requisition-items.json";
 
 // ----------------- Helpers -----------------
 
@@ -88,8 +88,8 @@ function mapSites(rows: any[]): Site[] {
     const warehouse = s(r["Warehouse"]); // e.g. "AM - WH 1", "CC - WH 1"
     return {
       id: makeId(warehouse),
-      code: warehouse,              // keep code = Warehouse (handy short label)
-      description: warehouse,       // drive dropdown display via 'description'
+      code: warehouse, // keep code = Warehouse (handy short label)
+      description: warehouse, // drive dropdown display via 'description'
     };
   });
 }
@@ -183,12 +183,8 @@ function mapItems(rows: any[]): Item[] {
     const description = s(r["Description"]) || s(r["Item Description"]) || s(r["Name"]);
     const unit = s(r["Unit"]) || s(r["UOM"]) || "Ea";
     // price might be "Sales Price" / "Unit Price" / "Price"
-    const priceStr =
-      s(r["Sales Price"]) ||
-      s(r["Unit Price"]) ||
-      s(r["Price"]) ||
-      s(r["salesPrice"]);
-    const price = Number(priceStr.replace?.(/[^0-9.\-]/g, "") ?? priceStr) || 0;
+    const priceStr = s(r["Sales Price"]) || s(r["Unit Price"]) || s(r["Price"]) || s(r["salesPrice"]);
+    const price = Number(priceStr.replace(/[^0-9.-]/g, "")) || 0;
 
     // Optional stock fields if present
     const available = Number(s(r["Available"])) || 0;
@@ -222,17 +218,17 @@ function mapRequisitionItems(rows: any[]): RequisitionItem[] {
 
     const priceRaw =
       r.salesPrice ?? r["Item Sale Price"] ?? r["Sales Price"] ?? r["Unit Price"] ?? r.Price ?? r["Item Cost"] ?? 0;
-    const salesPrice = typeof priceRaw === "string" ? n(priceRaw.replace(/[^0-9.\-]/g, "")) : n(priceRaw);
+    const salesPrice = typeof priceRaw === "string" ? n(priceRaw.replace(/[^0-9.-]/g, "")) : n(priceRaw);
 
     const requested = n(r.requested ?? 0);
     const picked = n(r.picked ?? 0);
-    const outstanding = n(r.outstanding ?? (requested - picked));
-    const lineTotal = n(r.lineTotal ?? (requested * salesPrice));
+    const outstanding = n(r.outstanding ?? requested - picked);
+    const lineTotal = n(r.lineTotal ?? requested * salesPrice);
 
-    const available = n(r._available ?? r["Total Available"] ?? r["Available"]);
+    const available = n(r["_available"] ?? r["Total Available"] ?? r["Available"]);
     const onOrder = n(r["On Order"]);
     const onPick = n(r["On Pick"]);
-    const forecasted = n(r["Forecasted"] ?? (available + onOrder - onPick));
+    const forecasted = n(r["Forecasted"] ?? available + onOrder - onPick);
 
     return {
       lineId: String(r.id ?? `${itemNo}:${description}:${Math.random().toString(36).slice(2, 8)}`),
@@ -278,11 +274,7 @@ export const mockProvider: DataProvider = {
     let data = ITEMS;
     if (q) {
       const ql = q.toLowerCase();
-      data = data.filter(
-        (i) =>
-          i.itemNo.toLowerCase().includes(ql) ||
-          i.description.toLowerCase().includes(ql)
-      );
+      data = data.filter((i) => i.itemNo.toLowerCase().includes(ql) || i.description.toLowerCase().includes(ql));
     }
     return paginate(data, page, pageSize);
   },
@@ -301,17 +293,13 @@ export const mockProvider: DataProvider = {
   async listWarehouses() {
     // if you're returning Warehouse[], keep sorting by its .name or fallback
     // but since we build Warehouse[] from Sites, ensure that name is derived from description/code:
-    const arr = WAREHOUSES.slice().sort((a, b) =>
-      (a.name ?? "").localeCompare(b.name ?? "")
-    );
+    const arr = WAREHOUSES.slice().sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     return arr;
   },
 
   // Sites (if you also expose listSites anywhere) — alpha asc by description/code
   async listSites() {
-    return SITES.slice().sort((a, b) =>
-      (a.description ?? a.code ?? "").localeCompare(b.description ?? b.code ?? "")
-    );
+    return SITES.slice().sort((a, b) => (a.description ?? a.code ?? "").localeCompare(b.description ?? b.code ?? ""));
   },
 
   // Customers (Projects) — dedupe by 'name' (Site) and sort alpha asc
