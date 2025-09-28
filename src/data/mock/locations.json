@@ -1,0 +1,4712 @@
+[
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "D7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "E7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "F9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "F7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "G7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "I7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "J7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "B9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "D7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "A16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "C25",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D25",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D26",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D27",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D28",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D29",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D30",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D31",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D32",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D33",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D34",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D35",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D36",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D37",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D38",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D39",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D40",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D41",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D42",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D43",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "R7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "P10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B25",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B26",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D44",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D55",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D45",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D46",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D47",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "B24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B27",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B28",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B29",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B30",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B31",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "D46",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "D0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "E10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H27",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "H0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "OBS 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "OBS 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "OBS 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "OBS 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "OBS 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "QUAR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "QUAR 2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "QUAR 3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "QUAR 4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "QUAR 5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "vTFR 1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A25",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A26",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A27",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A28",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A29",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A30",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A31",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A32",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A33",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A34",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A35",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A36",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A37",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A38",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A39",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A40",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A41",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A42",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A43",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A44",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A45",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A46",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A47",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A48",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A49",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A50",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A51",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A52",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A53",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A54",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A55",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A56",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A57",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A58",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A59",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A60",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A61",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A62",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A63",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A64",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A65",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A66",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A67",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A68",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A69",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A70",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A71",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A72",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A73",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A74",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A75",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A76",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A77",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A78",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A79",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A80",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A81",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A82",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A83",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A84",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A85",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A86",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A87",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A88",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A89",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A90",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A91",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A92",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A93",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A94",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A95",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A96",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A97",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A98",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A99",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A100",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A101",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A102",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A103",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A104",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A105",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A106",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A107",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A108",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A109",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A110",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A111",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A112",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A113",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A114",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A115",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A116",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A117",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A118",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A119",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A120",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A121",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A122",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A123",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A124",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A125",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A126",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A127",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A128",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A129",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A130",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A131",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A132",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A133",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A134",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A135",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A136",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A137",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A138",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A139",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A140",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "A Quar",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "AA1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "AA2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "AA3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "AA4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "B OBS",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "E13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "F2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "F3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "G2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "G3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "G4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "G5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "H1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "H2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "I",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "J1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "J2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "J3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "J4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "J5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "K14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "K1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "L1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "M1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "N1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "O1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "P1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "P2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "P3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "H1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "I1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "J1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "A1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "B1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "C1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E24",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E25",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E26",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E27",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E28",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "E29",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "NIL",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "A17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "OFFICE",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Location": "D6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "A0",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "E7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F8",
+    "Location Description": "F",
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "F13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G2",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G13",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G14",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G15",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G16",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G17",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G18",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G19",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G20",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G21",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G22",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "G23",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "H1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "I1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "J1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "K1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "L1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "M1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "P1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "Q1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "R1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "S1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "T1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "U1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "V1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "H",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "I",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "W1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D49",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Location": "N1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "B36",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Location": "G8",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D48",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C3",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C4",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C5",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C7",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C6",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C9",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C10",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C11",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Location": "C12",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BP - WH 1",
+    "Location": "D50",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Location": "D1",
+    "Location Description": null,
+    "Parent Location": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Location": "P4",
+    "Location Description": null,
+    "Parent Location": null
+  }
+]

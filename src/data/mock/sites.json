@@ -1,0 +1,42 @@
+[
+  {
+    "Warehouse": "BP - WH 1",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "BP - WH 2",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "RTZ - WH 1",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "AM - WH 1",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "AMC - WH 2",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "BDI - WH 1",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "BC - WH 1",
+    "Warehouse Description": null,
+    "Has Category Restrictions": null
+  },
+  {
+    "Warehouse": "CC - WH 1",
+    "Warehouse Description": "Cape Coast - Warehouse 1",
+    "Has Category Restrictions": null
+  }
+]
