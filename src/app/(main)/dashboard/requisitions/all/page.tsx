@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -309,7 +309,9 @@ const formatDateSafely = (dateString: string): string => {
 export default function AllRequisitionsPage() {
   const router = useRouter();
   const checkboxRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -331,6 +333,11 @@ export default function AllRequisitionsPage() {
     COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: true }), {}),
   );
 
+  // Column resizing state
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: parseFloat(col.width) }), {}),
+  );
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     column: null,
@@ -341,6 +348,12 @@ export default function AllRequisitionsPage() {
   // Drag and drop state
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  // Column resizing refs
+  const isResizingRef = useRef(false);
+  const resizingColumnRef = useRef<string | null>(null);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
 
   // Expanded rows state
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
@@ -584,25 +597,58 @@ export default function AllRequisitionsPage() {
       .filter((col): col is NonNullable<typeof col> => col !== undefined && visibleColumns[col.id]);
   }, [columnOrder, visibleColumns]);
 
-  // Calculate dynamic column widths
-  const calculateColumnWidths = (): Record<string, string> => {
-    const visibleCols = displayColumns.length;
-    if (visibleCols === 0) return {};
+  // Column resizing handlers - استخدام useCallback بشكل صحيح
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, columnId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    // Use fixed widths for better control
-    const widths: Record<string, string> = {
-      requisition_order_number: "22%",
-      warehouse: "12%",
-      status: "22%",
-      order_date: "13%",
-      due_date: "13%",
-      reference_number: "16%",
-    };
+      setIsResizing(true);
 
-    return widths;
-  };
+      isResizingRef.current = true;
+      resizingColumnRef.current = columnId;
+      startXRef.current = e.clientX;
+      startWidthRef.current = columnWidths[columnId];
 
-  const columnWidths = calculateColumnWidths();
+      // Add global event listeners
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!isResizingRef.current || !resizingColumnRef.current) return;
+
+        const deltaX = moveEvent.clientX - startXRef.current;
+        const tableWidth = tableRef.current?.getBoundingClientRect().width || window.innerWidth;
+        const deltaPercent = (deltaX / tableWidth) * 100;
+
+        const newWidth = Math.max(5, Math.min(80, startWidthRef.current + deltaPercent));
+
+        setColumnWidths((prev) => ({
+          ...prev,
+          [resizingColumnRef.current!]: newWidth,
+        }));
+      };
+
+      const handleMouseUp = () => {
+        isResizingRef.current = false;
+        resizingColumnRef.current = null;
+        setIsResizing(false);
+
+        // Remove event listeners
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        // Restore cursor
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+
+      // Change cursor
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [columnWidths],
+  );
 
   // Button functions
   const handleNewRequisition = () => {
@@ -1100,17 +1146,17 @@ export default function AllRequisitionsPage() {
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent align="end" className="min-w-[320px]">
                       <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
                         Show/Hide Columns
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <div className="flex gap-1 p-2">
+                      <div className="grid grid-cols-3 gap-1 p-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={handleShowAllColumns}
-                          className="h-7 flex-1 text-xs"
+                          className="h-7 w-full text-xs"
                         >
                           Show All
                         </Button>
@@ -1118,7 +1164,7 @@ export default function AllRequisitionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={handleHideAllColumns}
-                          className="h-7 flex-1 text-xs"
+                          className="h-7 w-full text-xs"
                         >
                           Hide All
                         </Button>
@@ -1126,7 +1172,7 @@ export default function AllRequisitionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={handleResetColumnOrder}
-                          className="h-7 flex-1 text-xs"
+                          className="h-7 w-full text-xs"
                         >
                           Reset Order
                         </Button>
@@ -1137,11 +1183,20 @@ export default function AllRequisitionsPage() {
                           <div
                             key={column.id}
                             className="flex items-center space-x-2 rounded-sm px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, column.id)}
-                            onDragOver={(e) => handleDragOver(e, column.id)}
+                            draggable={!isResizing}
+                            onDragStart={(e) => {
+                              if (isResizing) return;
+                              handleDragStart(e, column.id);
+                            }}
+                            onDragOver={(e) => {
+                              if (isResizing) return;
+                              handleDragOver(e, column.id);
+                            }}
                             onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, column.id)}
+                            onDrop={(e) => {
+                              if (isResizing) return;
+                              handleDrop(e, column.id);
+                            }}
                             onDragEnd={handleDragEnd}
                           >
                             <GripVertical className="h-3.5 w-3.5 cursor-move text-gray-400" />
@@ -1251,15 +1306,15 @@ export default function AllRequisitionsPage() {
 
           {/* Actual table with dynamic column widths */}
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table ref={tableRef} className="w-full min-w-[1400px] table-fixed">
               <colgroup>
                 <col className="w-16" />
                 {displayColumns.map((col) => (
-                  <col key={col.id} style={{ width: columnWidths[col.id] }} />
+                  <col key={col.id} style={{ width: `${columnWidths[col.id]}%` }} />
                 ))}
                 <col className="w-16" />
               </colgroup>
-              <thead className="bg-muted/50">
+              <thead className="bg-muted/50 border border-gray-200 text-sm dark:border-gray-500">
                 <tr>
                   <th className="w-16 p-3">
                     <Button
@@ -1273,13 +1328,13 @@ export default function AllRequisitionsPage() {
                   </th>
 
                   {/* Main columns with drag and drop support */}
-                  {displayColumns.map((col) => (
+                  {displayColumns.map((col, index) => (
                     <th
                       key={col.id}
-                      className={`text-muted-foreground min-w-[120px] p-3 text-center text-xs font-medium tracking-wider uppercase ${
+                      className={`text-muted-foreground relative min-w-[120px] overflow-hidden p-3 pr-4 text-left text-xs font-medium tracking-wider whitespace-nowrap uppercase ${
                         dragOverColumn === col.id ? "bg-blue-100 dark:bg-blue-900" : ""
-                      } ${sortConfig.column === col.id ? "bg-muted/70" : ""}`}
-                      draggable
+                      } ${sortConfig.column === col.id ? "bg-muted/70" : ""} border border-gray-200 dark:border-gray-700`}
+                      draggable={!isResizing}
                       onDragStart={(e) => handleDragStart(e, col.id)}
                       onDragOver={(e) => handleDragOver(e, col.id)}
                       onDragLeave={handleDragLeave}
@@ -1287,46 +1342,50 @@ export default function AllRequisitionsPage() {
                       onDragEnd={handleDragEnd}
                     >
                       <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
-                          <span className="truncate">{col.label}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex min-w-0 items-center gap-1">
+                            <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
+                            <span className="mr-2 truncate">{col.label}</span>
+                          </div>
 
-                          {/* Dropdown for sorting options */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="flex items-center">
-                                {getSortIcon(col.id)}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" className="w-48">
-                              <DropdownMenuLabel className="py-.5 text-xs font-semibold">
-                                Sort {col.label}
-                              </DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {col.sortOptions.map((option) => (
-                                <DropdownMenuItem
-                                  key={option.value}
-                                  className={`flex items-center gap-2 p-2 text-xs ${
-                                    sortConfig.column === col.id && sortConfig.direction === option.value
-                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
-                                      : ""
-                                  }`}
-                                  onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
-                                >
-                                  <option.icon className="h-3.5 w-3.5" />
-                                  {option.label}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {/* Dropdown for sorting options */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="flex items-center">
+                                  {getSortIcon(col.id)}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="center" className="w-48">
+                                <DropdownMenuLabel className="py-.5 text-xs font-semibold">
+                                  Sort {col.label}
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {col.sortOptions.map((option) => (
+                                  <DropdownMenuItem
+                                    key={option.value}
+                                    className={`flex items-center gap-2 p-2 text-xs ${
+                                      sortConfig.column === col.id && sortConfig.direction === option.value
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100"
+                                        : ""
+                                    }`}
+                                    onClick={() => handleSortFromDropdown(col.id, option.value as SortDirection)}
+                                  >
+                                    <option.icon className="h-2 w-2" />
+                                    {option.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                         {showMoreFilters && (
-                          <div className="flex justify-center gap-2">
+                          <div className="justify-left flex gap-2">
                             <Input
                               placeholder="Filter..."
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
-                              className="h-8 w-21 text-xs"
+                              className="h-8 w-full text-xs"
                             />
                             <Popover>
                               <PopoverTrigger asChild>
@@ -1340,13 +1399,13 @@ export default function AllRequisitionsPage() {
                                     Contains
                                   </Button>
                                   <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
-                                    Equal to
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
                                     Starts with
                                   </Button>
                                   <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
                                     Ends with
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
+                                    Equal to
                                   </Button>
                                   <Button variant="ghost" size="sm" className="h-7 w-full justify-start text-xs">
                                     Not equal
@@ -1357,10 +1416,17 @@ export default function AllRequisitionsPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Column Resize Handle */}
+                      {index < displayColumns.length - 1 && (
+                        <div
+                          className="absolute top-0 right-0 z-20 h-full w-3 cursor-col-resize bg-transparent transition-colors hover:bg-blue-300"
+                          onMouseDown={(e) => handleResizeStart(e, col.id)}
+                        />
+                      )}
                     </th>
                   ))}
-
-                  <th className="w-16 p-3 text-xs font-medium tracking-wider uppercase">ACTIONS</th>
+                  <th className="sticky right-0 w-16 border-l border-gray-200 bg-white p-3 text-xs font-medium tracking-wider uppercase dark:border-gray-700 dark:bg-gray-900"></th>
                 </tr>
               </thead>
 
@@ -1400,9 +1466,13 @@ export default function AllRequisitionsPage() {
 
                         {/* Dynamic Columns */}
                         {displayColumns.map((col) => (
-                          <td key={col.id} className="p-3 text-center">
+                          <td
+                            key={col.id}
+                            className="overflow-hidden p-3 text-left whitespace-nowrap"
+                            style={{ width: `${columnWidths[col.id]}%`, minWidth: "80px" }}
+                          >
                             {col.id === "status" ? (
-                              <div className="flex items-center justify-center gap-2">
+                              <div className="flex items-center justify-start gap-2">
                                 {isEditing ? (
                                   <div className="flex items-center gap-2">
                                     <Select value={editingStatus} onValueChange={setEditingStatus}>
@@ -1430,7 +1500,7 @@ export default function AllRequisitionsPage() {
                                     </Button>
                                   </div>
                                 ) : (
-                                  <div className="group flex items-center justify-center gap-2">
+                                  <div className="group flex items-center justify-start gap-2">
                                     <Badge
                                       variant={getStatusBadgeVariant(requisition.status)}
                                       className="px-2 py-1 text-xs"
@@ -1461,7 +1531,7 @@ export default function AllRequisitionsPage() {
                         ))}
 
                         {/* Actions Menu */}
-                        <td className="p-3">
+                        <td className="sticky right-0 w-16 border-l border-gray-200 bg-white p-3 text-xs font-medium tracking-wider uppercase dark:border-gray-700 dark:bg-gray-900">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
