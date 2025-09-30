@@ -1,20 +1,16 @@
-"use server";
-
+// Supabase helper usable in Server Actions / Route Handlers
 import { cookies } from "next/headers";
 
-export async function getValueFromCookie(key: string): Promise<string | undefined> {
-  const cookieStore = await cookies();
-  return cookieStore.get(key)?.value;
-}
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function setValueToCookie(
-  key: string,
-  value: string,
-  options: { path?: string; maxAge?: number } = {},
-): Promise<void> {
+export async function supabaseServerAction(): Promise<SupabaseClient> {
   const cookieStore = await cookies();
-  cookieStore.set(key, value, {
-    path: options.path ?? "/",
-    maxAge: options.maxAge ?? 60 * 60 * 24 * 7, // default: 7 days
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      get: (name: string) => cookieStore.get(name)?.value,
+      set: (name: string, value: string, options: CookieOptions) => cookieStore.set({ name, value, ...options }),
+      remove: (name: string, options: CookieOptions) => cookieStore.set({ name, value: "", ...options }),
+    },
   });
 }

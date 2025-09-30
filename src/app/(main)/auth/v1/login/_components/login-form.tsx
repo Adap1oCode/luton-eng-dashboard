@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Github, Eye, EyeOff } from "lucide-react";
@@ -11,34 +12,100 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { supabaseBrowser } from "@/lib/supabase";
 
+import { sendMagicLink } from "../../actions"; // server action
+
+// -----------------------------
+// Schema
+// -----------------------------
 const FormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  // Optional password: allow empty string "" to trigger the magic-link flow
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }).optional().or(z.literal("")),
   remember: z.boolean().optional(),
 });
 
+// -----------------------------
+// Helpers
+// -----------------------------
+function getNextFromLocation(): string {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const n = sp.get("next");
+    // Guard against external redirects
+    return n && n.startsWith("/") ? n : "/dashboard";
+  } catch {
+    return "/dashboard";
+  }
+}
+
+function getErrorMessage(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object" && "message" in err) {
+    const m = (err as { message?: unknown }).message;
+    if (typeof m === "string") return m;
+  }
+  return "Please try again.";
+}
+
+// -----------------------------
+// Component
+// -----------------------------
 export function LoginFormV1() {
   const [showPassword, setShowPassword] = useState(false);
+  const [pending, start] = useTransition();
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      remember: false,
-    },
+    defaultValues: { email: "", password: "", remember: false },
+    mode: "onSubmit",
   });
 
-  // Remove 'data' parameter if not used
-  const onSubmit = async () => {
-    toast.success("Login successful!", {
-      description: "Welcome back! You've been logged in successfully.",
-    });
-  };
+  const togglePasswordVisibility = () => setShowPassword((s) => !s);
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const onSubmit = (values: z.infer<typeof FormSchema>) => {
+    start(async () => {
+      const email = values.email.trim();
+      const password = (values.password ?? "").trim();
+      const next = getNextFromLocation();
+
+      // With password → regular sign-in
+      if (password.length >= 6) {
+        const s = supabaseBrowser();
+        const { error } = await s.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          toast.error("Login failed", { description: error.message });
+          return;
+        }
+
+        // Optional "remember me" UI hint only (no security impact)
+        try {
+          if (values.remember) localStorage.setItem("remember_login", "1");
+          else localStorage.removeItem("remember_login");
+        } catch (e) {
+          // best-effort; ignore storage errors
+          console.warn("localStorage unavailable:", e);
+        }
+
+        toast.success("Logged in", { description: "Welcome back!" });
+        window.location.href = next; // redirect to ?next or /dashboard
+        return;
+      }
+
+      // Without password → magic link
+      try {
+        await sendMagicLink(email, window.location.origin, next);
+        toast.success("Magic link sent", {
+          description: "Check your inbox to complete sign-in.",
+        });
+      } catch (err: unknown) {
+        toast.error("Could not send magic link", {
+          description: getErrorMessage(err),
+        });
+      }
+    });
   };
 
   return (
@@ -52,6 +119,7 @@ export function LoginFormV1() {
         {/* Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Email */}
             <FormField
               control={form.control}
               name="email"
@@ -64,6 +132,7 @@ export function LoginFormV1() {
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
+                      inputMode="email"
                       className="h-12 rounded-lg border-gray-300 text-base focus:border-orange-500 focus:ring-orange-500"
                       {...field}
                     />
@@ -73,12 +142,16 @@ export function LoginFormV1() {
               )}
             />
 
+            {/* Password (optional) */}
             <FormField
               control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
+                    <span className="text-xs text-gray-500">Leave empty for a magic link</span>
+                  </div>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -95,6 +168,8 @@ export function LoginFormV1() {
                         size="sm"
                         className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={togglePasswordVisibility}
+                        tabIndex={-1}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -109,6 +184,7 @@ export function LoginFormV1() {
               )}
             />
 
+            {/* Remember me */}
             <FormField
               control={form.control}
               name="remember"
@@ -117,25 +193,32 @@ export function LoginFormV1() {
                   <FormControl>
                     <Checkbox
                       id="login-remember"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
+                      checked={!!field.value}
+                      onCheckedChange={(v) => field.onChange(Boolean(v))}
                       className="mt-1 border-gray-300 focus:ring-orange-500 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500"
+                      aria-describedby="remember-desc"
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel htmlFor="login-remember" className="cursor-pointer text-base font-medium text-gray-600">
                       Remember me for 30 days
                     </FormLabel>
+                    <p id="remember-desc" className="text-xs text-gray-500">
+                      Don’t use on a shared device.
+                    </p>
                   </div>
                 </FormItem>
               )}
             />
 
+            {/* Submit */}
             <Button
               className="mt-8 h-12 w-full rounded-lg bg-orange-500 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-orange-600 hover:shadow-lg"
               type="submit"
+              disabled={pending}
+              aria-busy={pending}
             >
-              Login
+              {pending ? "Please wait..." : "Login"}
             </Button>
           </form>
         </Form>
@@ -143,29 +226,35 @@ export function LoginFormV1() {
         {/* Divider */}
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-sm uppercase">
             <span className="bg-white px-4 font-medium tracking-wider text-gray-500">OR CONTINUE WITH</span>
           </div>
         </div>
 
-        {/* Social Login Buttons */}
+        {/* Social Buttons (wire providers later) */}
         <div className="mb-8 grid grid-cols-2 gap-4">
           <Button
+            type="button"
             variant="outline"
             size="lg"
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            onClick={() => toast.info("GitHub OAuth not configured yet")}
+            aria-label="Continue with GitHub"
           >
             <Github className="mr-3 h-5 w-5" />
             GitHub
           </Button>
           <Button
+            type="button"
             variant="outline"
             size="lg"
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            onClick={() => toast.info("Google OAuth not configured yet")}
+            aria-label="Continue with Google"
           >
-            <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+            <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

@@ -1,6 +1,8 @@
+// src/app/(main)/dashboard/layout.tsx
 import { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { MoreHorizontal, Search } from "lucide-react";
 
@@ -20,9 +22,24 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
+import { supabaseServer } from "@/lib/supabase-server";
 import { cn } from "@/lib/utils";
 
+// ensure this auth check runs on every request (no static cache)
+export const dynamic = "force-dynamic";
+
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  // 🔐 Auth guard (server-side)
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    // Note: browser URL is /dashboard (group "(main)" is not in the URL)
+    redirect("/(main)/auth/v1/login");
+  }
+
+  // 🧁 Your existing cookie-driven UI prefs
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
