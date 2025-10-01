@@ -1,11 +1,12 @@
 "use client";
 
-import { useRolesForm } from "./hooks/use-roles-form";
-import { RoleDetailsSection } from "./sections/role-details-section";
-import { AddWarehouseSection } from "./sections/add-warehouse-section";
-import { WarehousesTable } from "./sections/warehouses-table";
-import FooterActions from "./sections/footer-actions"; // keep as-is if this path exists
 import { Card } from "@/components/ui/card";
+
+import { useRolesForm } from "../hooks/use-roles-form";
+import { AddWarehouseSection } from "../sections/add-warehouse-section";
+import FooterActions from "../sections/footer-actions"; // keep as-is if this path exists
+import { RoleDetailsSection } from "../sections/role-details-section";
+import { WarehousesTable } from "../sections/warehouses-table";
 
 export default function RolesForm({ initialRoleId = null }: { initialRoleId?: string | null }) {
   const form = useRolesForm({ initialRoleId });

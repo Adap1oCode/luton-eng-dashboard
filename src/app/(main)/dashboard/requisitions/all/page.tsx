@@ -11,7 +11,6 @@ import {
   FileText,
   Package,
   ChevronDown,
-  Calendar,
   Plus,
   Trash2,
   Copy,
@@ -1203,7 +1202,7 @@ export default function AllRequisitionsPage() {
                             <Checkbox
                               id={`column-${column.id}`}
                               checked={visibleColumns[column.id]}
-                              onCheckedChange={(checked) => handleColumnToggle(column.id, checked as boolean)}
+                              onCheckedChange={(checked: boolean) => handleColumnToggle(column.id, checked)}
                               disabled={column.required}
                               className="h-4 w-4"
                             />
@@ -1641,7 +1640,7 @@ export default function AllRequisitionsPage() {
                 <span>Rows per page:</span>
                 <Select
                   value={itemsPerPage.toString()}
-                  onValueChange={(value) => {
+                  onValueChange={(value: string) => {
                     setItemsPerPage(Number(value));
                     setCurrentPage(1);
                   }}

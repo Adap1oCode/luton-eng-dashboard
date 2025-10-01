@@ -1,231 +1,234 @@
 "use client";
 
-import { DndContext, closestCenter, type UniqueIdentifier, type SensorDescriptor } from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { flexRender, type Table as TanStackTable } from "@tanstack/react-table";
+import { useState, useMemo, useRef } from "react";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
+
+import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+import { DataTableColumnHeader } from "./data-table-column-header";
 import { DraggableRow } from "./draggable-row";
+import { useColumnResize } from "./use-column-resize";
 
-interface DataTableProps<TData> {
-  table: TanStackTable<TData>;
-  dataIds?: UniqueIdentifier[];
-  dndEnabled?: boolean;
-  handleDragEnd?: (event: any) => void;
-  sensors?: SensorDescriptor<any>[];
-  sortableId?: string;
-
-  // existing filter state (parent-driven)
-  filters?: Record<string, { mode: string; value: string }>;
-  setFilters?: React.Dispatch<React.SetStateAction<Record<string, { mode: string; value: string }>>>;
-
-  // NEW: optional controls for the filter row (all default to current behaviour)
-  filterRowEnabled?: boolean;
-  filterSkip?: { first?: number; last?: number; indices?: number[] };
-  filterOnlyIds?: string[];
-  renderFilterControls?: (args: {
-    columnKey: string;
-    current: { mode: string; value: string };
-    setFilters: React.Dispatch<React.SetStateAction<Record<string, { mode: string; value: string }>>>;
-  }) => React.ReactNode;
+interface ColumnDef {
+  id: string;
+  label: string;
+  sortOptions: { label: string; value: "asc" | "desc"; icon: React.ComponentType<{ className?: string }> }[];
+  type: "text" | "date" | "status" | "number";
 }
 
-export function DataTable<TData>({
-  table,
-  dndEnabled = false,
-  dataIds = [],
-  handleDragEnd,
-  sensors,
-  sortableId,
+interface DataTableProps<T extends Record<string, unknown>> {
+  data: T[];
+  columns: ColumnDef[];
+  sortConfig: { column: string | null; direction: "asc" | "desc" };
+  onSortFromDropdown: (columnId: string, direction: "asc" | "desc") => void;
+  showMoreFilters: boolean;
+  globalSearch: string;
+  columnFilters: Record<string, string>;
+  onColumnFilterChange: (columnId: string, value: string) => void;
+  visibleColumns: string[];
+  columnOrder: string[];
+  onColumnOrderChange: (newOrder: string[]) => void;
+  columnWidths: Record<string, number>;
+  onColumnWidthsChange: (widths: Record<string, number>) => void;
+  expandedRows: Set<number>;
+  onExpandRow: (index: number) => void;
+  renderCell: (item: T, columnId: string) => React.ReactNode;
+  renderExpandedContent: (item: T) => React.ReactNode;
+  onRowSelect: (selected: number[]) => void;
+  selectedRows?: number[]; // Make optional to handle undefined cases
+}
 
-  filters,
-  setFilters,
+export function DataTable<T extends Record<string, unknown>>({
+  data,
+  columns,
+  sortConfig,
+  onSortFromDropdown,
+  showMoreFilters,
+  globalSearch,
+  columnFilters,
+  onColumnFilterChange,
+  visibleColumns,
+  columnOrder,
+  onColumnOrderChange,
+  columnWidths,
+  onColumnWidthsChange,
+  expandedRows,
+  onExpandRow,
+  renderCell,
+  renderExpandedContent,
+  onRowSelect,
+  selectedRows = [], // Default to empty array
+}: DataTableProps<T>) {
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const { isResizing, onMouseDownResize } = useColumnResize(columnWidths, tableRef);
 
-  filterRowEnabled,
-  filterSkip,
-  filterOnlyIds,
-  renderFilterControls,
-}: DataTableProps<TData>) {
-  // Leaf headers (last group)
-  const headerGroups = table.getHeaderGroups?.() ?? [];
-  const leafHeaders = headerGroups[headerGroups.length - 1]?.headers ?? [];
-  const visibleColumnCount = leafHeaders.length || 1;
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
-  // Show filter row? (auto if prop not set)
-  const showFilterRow =
-    typeof filterRowEnabled === "boolean" ? filterRowEnabled : Boolean(filters && setFilters);
+  const handleDragStart = (e: React.DragEvent<HTMLTableCellElement>, columnId: string) => {
+    e.dataTransfer.setData("columnId", columnId);
+  };
 
-  // Defaults that match your previous behaviour
-  const defaultSkip = { first: 2, last: 1, indices: [] as number[] };
-  const skip = { ...defaultSkip, ...(filterSkip ?? {}) };
+  const handleDragOver = (e: React.DragEvent<HTMLTableCellElement>, columnId: string) => {
+    e.preventDefault();
+    setDragOverColumn(columnId);
+  };
 
-  const shouldRenderFilter = (idx: number, key: string | undefined) => {
-    if (!key) return false;
+  const handleDragLeave = (e: React.DragEvent<HTMLTableCellElement>) => {
+    setDragOverColumn(null);
+  };
 
-    if (Array.isArray(filterOnlyIds) && filterOnlyIds.length > 0) {
-      return filterOnlyIds.includes(key);
+  const handleDrop = (e: React.DragEvent<HTMLTableCellElement>, targetColumnId: string) => {
+    const draggedColumnId = e.dataTransfer.getData("columnId");
+    if (draggedColumnId !== targetColumnId) {
+      const newOrder = arrayMove(
+        columnOrder,
+        columnOrder.indexOf(draggedColumnId),
+        columnOrder.indexOf(targetColumnId),
+      );
+      onColumnOrderChange(newOrder);
     }
-
-    const total = leafHeaders.length;
-    if (skip.first && idx < skip.first) return false;
-    if (skip.last && idx >= total - skip.last) return false;
-    if (skip.indices && skip.indices.includes(idx)) return false;
-
-    return true;
+    setDragOverColumn(null);
   };
 
-  const DefaultFilterControls = ({
-    columnKey,
-    current,
-    setFilters: set,
-  }: {
-    columnKey: string;
-    current: { mode: string; value: string };
-    setFilters: React.Dispatch<
-      React.SetStateAction<Record<string, { mode: string; value: string }>>
-    >;
-  }) => (
-    <div className="flex min-w-0 items-start gap-2">
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <select
-          value={current.mode}
-          onChange={(e) =>
-            set((s) => ({
-              ...s,
-              [columnKey]: { ...(s[columnKey] ?? { mode: "contains", value: "" }), mode: e.target.value },
-            }))
-          }
-          className="box-border h-8 w-full min-w-0 rounded border border-gray-200 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-        >
-          <option value="is">Is</option>
-          <option value="isNot">Is not</option>
-          <option value="contains">Contains</option>
-          <option value="notContains">Does not contain</option>
-          <option value="startsWith">Starts with</option>
-          <option value="endsWith">Ends with</option>
-        </select>
-        <input
-          value={current.value}
-          onChange={(e) =>
-            set((s) => ({
-              ...s,
-              [columnKey]: { ...(s[columnKey] ?? { mode: "contains", value: "" }), value: e.target.value },
-            }))
-          }
-          placeholder="Filter"
-          className="box-border h-8 w-full min-w-0 rounded border border-gray-200 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-        />
-      </div>
-      <button
-        type="button"
-        onClick={() =>
-          set((s) => {
-            const copy = { ...s };
-            delete copy[columnKey];
-            return copy;
-          })
+  const handleDragEnd = () => {
+    setDragOverColumn(null);
+  };
+
+  const filteredData = useMemo(() => {
+    let filtered = data || [];
+    if (globalSearch) {
+      filtered = filtered.filter((item) =>
+        Object.values(item || {}).some((val) =>
+          val != null ? val.toString().toLowerCase().includes(globalSearch.toLowerCase()) : false,
+        ),
+      );
+    }
+    if (columnFilters && typeof columnFilters === "object") {
+      Object.entries(columnFilters).forEach(([columnId, value]) => {
+        if (value) {
+          filtered = filtered.filter((item) => {
+            const cellValue = item[columnId];
+            return cellValue != null ? cellValue.toString().toLowerCase().includes(value.toLowerCase()) : false;
+          });
         }
-        className="flex h-8 w-8 flex-none items-center justify-center self-center rounded border border-gray-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-        aria-label="Clear column filter"
-        title="Clear"
-      >
-        ×
-      </button>
-    </div>
-  );
+      });
+    }
+    return filtered;
+  }, [data, globalSearch, columnFilters]);
 
-  const renderFilterHeaderRow = () => {
-    if (!showFilterRow || !filters || !setFilters) return null;
+  const sortedData = useMemo(() => {
+    if (!sortConfig?.column) return filteredData;
+    return [...filteredData].sort((a, b) => {
+      const key = sortConfig.column as keyof T;
+      const aValue = a[key];
+      const bValue = b[key];
 
-    return (
-      <tr>
-        {leafHeaders.map((header: any, idx: number) => {
-          const col = header.column ?? header;
-          const keyMaybe: string | undefined =
-            col?.columnDef?.accessorKey ?? col?.id ?? header.id;
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return sortConfig.direction === "asc" ? -1 : 1;
+      if (bValue == null) return sortConfig.direction === "asc" ? 1 : -1;
 
-          // If no key or not eligible, render empty header cell
-          if (!shouldRenderFilter(idx, keyMaybe)) {
-            return <th key={header.id} className="min-w-0 px-3 py-2" />;
-          }
+      // Compare values
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredData, sortConfig]);
 
-          // From here, we assert a definite string key for TS
-          const columnKey = keyMaybe as string;
-          const current = filters[columnKey] ?? { mode: "contains", value: "" };
+  const allSelected = (selectedRows?.length ?? 0) === (sortedData?.length ?? 0);
 
-          return (
-            <th key={columnKey} className="min-w-0 px-3 py-2 align-top">
-              {renderFilterControls ? (
-                renderFilterControls({ columnKey, current, setFilters })
-              ) : (
-                <DefaultFilterControls columnKey={columnKey} current={current} setFilters={setFilters} />
-              )}
-            </th>
-          );
-        })}
-      </tr>
-    );
+  const toggleAllRows = () => {
+    if (!sortedData) return; // تجنب الخطأ إذا كانت البيانات غير معرفة
+    onRowSelect(allSelected ? [] : sortedData.map((_, index) => index));
   };
 
-  const tableContent = (
-    <Table>
-      <TableHeader className="bg-muted sticky top-0 z-10">
-        {/* Filter row above column titles */}
-        {renderFilterHeaderRow()}
-
-        {headerGroups.map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead key={header.id} colSpan={header.colSpan}>
-                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-
-      <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {table.getRowModel().rows.length ? (
-          dndEnabled ? (
-            <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-              {table.getRowModel().rows.map((row) => (
-                <DraggableRow key={row.id} row={row} />
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <SortableContext items={columnOrder}>
+        <div className="overflow-x-auto">
+          <Table ref={tableRef} className="min-w-full table-fixed">
+            <colgroup>
+              <col style={{ width: "40px" }} /> {/* Checkbox */}
+              <col style={{ width: "40px" }} /> {/* Expansion */}
+              {columnOrder.map((colId) => (
+                <col key={colId} style={{ width: `${columnWidths[colId]}%` }} />
               ))}
-            </SortableContext>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                ))}
+              <col style={{ width: "100px" }} /> {/* Actions */}
+            </colgroup>
+            <TableHeader>
+              <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="w-10 p-3">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAllRows} />
+                </TableHead>
+                <TableHead className="w-10 p-3" />
+                {columnOrder.map((colId) => {
+                  const column = columns.find((c) => c.id === colId);
+                  if (!column || !visibleColumns.includes(colId)) return null;
+                  return (
+                    <DataTableColumnHeader
+                      key={colId}
+                      columnId={colId}
+                      label={column.label}
+                      sortOptions={column.sortOptions}
+                      sortConfig={sortConfig}
+                      onSortFromDropdown={onSortFromDropdown}
+                      showMoreFilters={showMoreFilters}
+                      searchTerm={columnFilters[colId] || ""}
+                      onSearchChange={(value: string) => onColumnFilterChange(colId, value)}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                      dragOverColumn={dragOverColumn}
+                      onResizeStart={onMouseDownResize}
+                      columnWidth={columnWidths[colId]}
+                      isResizing={isResizing}
+                    />
+                  );
+                })}
+                <TableHead className="w-[100px] p-3 text-center">Actions</TableHead>
               </TableRow>
-            ))
-          )
-        ) : (
-          <TableRow>
-            <TableCell colSpan={visibleColumnCount} className="h-24 text-center">
-              No results.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+            </TableHeader>
+            <TableBody>
+              {sortedData?.map((item, index) => (
+                <DraggableRow
+                  key={index}
+                  id={index.toString()}
+                  item={item}
+                  index={index}
+                  isSelected={(selectedRows ?? []).includes(index)}
+                  onSelect={() => {
+                    const currentSelected = selectedRows ?? [];
+                    const newSelected = currentSelected.includes(index)
+                      ? currentSelected.filter((i) => i !== index)
+                      : [...currentSelected, index];
+                    onRowSelect(newSelected);
+                  }}
+                  isExpanded={expandedRows?.has(index) ?? false}
+                  onExpand={() => onExpandRow(index)}
+                  columns={columnOrder ?? []}
+                  visibleColumns={visibleColumns ?? []}
+                  renderCell={(columnId: string) => renderCell(item, columnId)}
+                  renderExpandedContent={() => renderExpandedContent(item)}
+                  renderActions={() => (
+                    <div className="flex justify-center gap-2">{/* Add generic action buttons here */}</div>
+                  )}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
-
-  if (dndEnabled) {
-    return (
-      <DndContext
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        onDragEnd={handleDragEnd}
-        sensors={sensors}
-        id={sortableId}
-      >
-        {tableContent}
-      </DndContext>
-    );
-  }
-
-  return <div className="w-full overflow-hidden">{tableContent}</div>;
 }

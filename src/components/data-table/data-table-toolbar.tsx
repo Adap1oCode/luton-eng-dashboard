@@ -1,46 +1,59 @@
-// src/components/data-table/data-table-toolbar.tsx
 "use client";
 
 import { ReactNode } from "react";
+
+import { Plus, Trash2, Copy, Printer, FileText, Package, ChevronDown, Save, Download } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Filter, Save, SortAsc } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-type Props = {
+export interface DataTableToolbarProps {
   onNew?: () => void;
   onDeleteSelected?: () => void;
   onDuplicateSelected?: () => void;
+  onPrintReport?: () => void;
+  onPrintInvoice?: () => void;
+  onPrintPackingSlip?: () => void;
   onClearSorting?: () => void;
   onExportCSV?: () => void;
+  onSaveView?: () => void;
 
-  disableBulk?: boolean;
+  selectedCount?: number;
   hasSorting?: boolean;
-  hasFiltersApplied?: boolean;
+  hasFilters?: boolean;
 
-  /** Right aligned custom content (e.g., Save View button, Views dropdown) */
-  rightSlot?: ReactNode;
-  /** Middle slot (e.g., badges & indicators) */
-  middleSlot?: ReactNode;
-  /** Left slot (override entire left controls if provided) */
   leftSlot?: ReactNode;
-};
+  middleSlot?: ReactNode;
+  rightSlot?: ReactNode;
+}
 
 export function DataTableToolbar({
   onNew,
   onDeleteSelected,
   onDuplicateSelected,
+  onPrintReport,
+  onPrintInvoice,
+  onPrintPackingSlip,
   onClearSorting,
   onExportCSV,
-  disableBulk,
-  hasSorting,
-  hasFiltersApplied,
-  rightSlot,
-  middleSlot,
+  onSaveView,
+  selectedCount = 0,
+  hasSorting = false,
+  hasFilters = false,
   leftSlot,
-}: Props) {
+  middleSlot,
+  rightSlot,
+}: DataTableToolbarProps) {
   return (
-    <div className="space-y-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
-      <div className="flex flex-col items-start justify-between gap-3 lg:flex-row lg:items-center">
+    <div className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+      {/* First row - main actions and badges */}
+      <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
         <div className="flex flex-wrap items-center gap-2">
           {leftSlot ? (
             leftSlot
@@ -48,40 +61,99 @@ export function DataTableToolbar({
             <>
               {onNew && (
                 <Button onClick={onNew} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  + New
+                  <Plus className="mr-2 h-4 w-4" /> New
                 </Button>
               )}
               {onDeleteSelected && (
-                <Button variant="destructive" onClick={onDeleteSelected} disabled={disableBulk}>
-                  Delete
+                <Button variant="destructive" onClick={onDeleteSelected} disabled={selectedCount === 0}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </Button>
               )}
               {onDuplicateSelected && (
-                <Button variant="outline" onClick={onDuplicateSelected} disabled={disableBulk}>
-                  Duplicate
+                <Button variant="outline" onClick={onDuplicateSelected} disabled={selectedCount === 0}>
+                  <Copy className="mr-2 h-4 w-4" /> Duplicate
                 </Button>
               )}
             </>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4">
           {middleSlot}
           {hasSorting && (
             <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100">
-              <SortAsc className="mr-1 h-3 w-3" />
               Sorting Applied
             </Badge>
           )}
-          {hasFiltersApplied && (
-            <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100">
-              <Filter className="mr-1 h-3 w-3" />
+          {hasFilters && (
+            <Badge
+              variant="secondary"
+              className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100"
+            >
               Filter/Sorting Applied
             </Badge>
           )}
         </div>
+      </div>
 
-        <div className="ml-auto flex items-center gap-2">
+      {/* Second row - print options and save view */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {(onPrintReport || onPrintInvoice || onPrintPackingSlip) && (
+            <>
+              {onPrintReport && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={selectedCount === 0}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      Print Report
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={onPrintReport}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Print Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {onPrintInvoice && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={selectedCount === 0}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Print Invoice
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={onPrintInvoice}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Print Invoice
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {onPrintPackingSlip && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={selectedCount === 0}>
+                      <Package className="mr-2 h-4 w-4" />
+                      Print Packing Slip
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={onPrintPackingSlip}>
+                      <Package className="mr-2 h-4 w-4" />
+                      Print Packing Slip
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </>
+          )}
           {onClearSorting && (
             <Button variant="outline" onClick={onClearSorting}>
               Clear Sorting
@@ -97,8 +169,19 @@ export function DataTableToolbar({
               Export CSV
             </Button>
           )}
-          {rightSlot}
         </div>
+
+        {onSaveView && (
+          <Button
+            variant="outline"
+            onClick={onSaveView}
+            className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save View
+          </Button>
+        )}
+        {rightSlot}
       </div>
     </div>
   );

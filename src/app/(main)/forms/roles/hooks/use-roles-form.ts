@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { supabaseBrowser } from "@/lib/supabase";
+
 import { toast } from "sonner";
+
+import { supabaseBrowser } from "@/lib/supabase";
+
 import type { Id, RoleInput } from "../_data/types";
-import { createRole, updateRole, deleteRole, addRoleWarehouse, removeRoleWarehouses } from "../actions";
+import { createRole, updateRole, deleteRole, addRoleWarehouse, removeRoleWarehouses } from "../new/actions";
 
 type Assigned = {
   warehouse: string;
@@ -42,8 +45,8 @@ export function useRolesForm(opts?: { initialRoleId?: string | null }) {
   const assignedCount = assigned.length;
 
   const selectedWarehouseInfo = useMemo(
-    () => allWarehouses.find(w => w.code === selectedWarehouse) ?? null,
-    [allWarehouses, selectedWarehouse]
+    () => allWarehouses.find((w) => w.code === selectedWarehouse) ?? null,
+    [allWarehouses, selectedWarehouse],
   );
 
   // Load source lists
@@ -92,7 +95,7 @@ export function useRolesForm(opts?: { initialRoleId?: string | null }) {
 
   // selection helpers
   function toggleAssigned(warehouse: string) {
-    setSelectedAssigned(prev => {
+    setSelectedAssigned((prev) => {
       const next = new Set(prev);
       if (next.has(warehouse)) next.delete(warehouse);
       else next.add(warehouse);
@@ -109,11 +112,11 @@ export function useRolesForm(opts?: { initialRoleId?: string | null }) {
       try {
         const payload: RoleInput = { name, description, is_active: isActive };
         if (!roleId) {
-          const id = await createRole(payload as RoleInput);
+          const id = await createRole(payload);
           setRoleId(id as any);
           toast.success("Role created");
         } else {
-          await updateRole(roleId, payload as RoleInput);
+          await updateRole(roleId, payload);
           toast.success("Role updated");
         }
         await loadAssigned();
@@ -164,26 +167,44 @@ export function useRolesForm(opts?: { initialRoleId?: string | null }) {
 
   return {
     // role fields
-    roleId, name, description, isActive, createdAt, updatedAt,
-    setName, setDescription, setIsActive,
+    roleId,
+    name,
+    description,
+    isActive,
+    createdAt,
+    updatedAt,
+    setName,
+    setDescription,
+    setIsActive,
 
     // computed
-    statusLabel, assignedCount,
+    statusLabel,
+    assignedCount,
 
     // add warehouse
-    allWarehouses, selectedWarehouse, setSelectedWarehouse, addNote, setAddNote,
+    allWarehouses,
+    selectedWarehouse,
+    setSelectedWarehouse,
+    addNote,
+    setAddNote,
     selectedWarehouseInfo,
     addWarehouse,
 
     // assigned list
-    assigned, assignedQuery, setAssignedQuery,
-    selectedAssigned, toggleAssigned, clearSelection,
+    assigned,
+    assignedQuery,
+    setAssignedQuery,
+    selectedAssigned,
+    toggleAssigned,
+    clearSelection,
     removeSelected,
 
     // ui
-    isLoading, isMutating,
+    isLoading,
+    isMutating,
 
     // global actions
-    onSave, onCancel,
+    onSave,
+    onCancel,
   };
 }
