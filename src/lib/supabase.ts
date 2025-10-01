@@ -1,35 +1,32 @@
 // src/lib/supabase.ts
-import { cookies } from "next/headers";
+// CLIENT-ONLY helpers. Do not import this file from server code.
+"use client";
 
-import { createBrowserClient, createServerClient } from "@supabase/ssr";
+import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Client-side Supabase (use inside `"use client"` components) */
-export function supabaseBrowser(): SupabaseClient {
-  return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+// ✅ Use STATIC env access so Next can inline values in the client bundle.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+
+// Fail fast during dev if vars are missing (remember to restart dev server after editing .env.local)
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+      "Ensure they exist in .env.local and restart the dev server."
+  );
 }
 
-/** Server-side Supabase (Server Components / Route Handlers / Server Actions) */
-export async function supabaseServer(): Promise<SupabaseClient> {
-  const cookieStore = await cookies();
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      // Required by @supabase/ssr
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-      },
-    },
-  });
+/** Use inside `"use client"` components only */
+export function supabaseBrowser(): SupabaseClient {
+  return createBrowserClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 }
 
 /**
- * Compatibility shim so existing code like
+ * Optional convenience: a client-only shim so existing code like
  *   `import { supabase } from "@/lib/supabase"`
- * continues to work **in client components**.
- * For server files, import and use `supabaseServer()` instead.
+ * keeps working **in client components**.
+ * Do NOT use this in server files—use `supabaseServer()` from "@/lib/supabase-server".
  */
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
