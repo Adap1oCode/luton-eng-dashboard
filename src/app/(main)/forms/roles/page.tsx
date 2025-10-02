@@ -246,7 +246,13 @@ export default function RolesManagementPage() {
     COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: true }), {}),
   );
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
-    COLUMNS.reduce((acc, col) => ({ ...acc, [col.id]: parseFloat(col.width) }), {}),
+    COLUMNS.reduce(
+      (acc, col) => ({
+        ...acc,
+        [col.id]: parseFloat(col.width.replace("%", "")),
+      }),
+      {},
+    ),
   );
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({

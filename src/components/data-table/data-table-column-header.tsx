@@ -1,5 +1,6 @@
 "use client";
 
+import { Column } from "@tanstack/react-table";
 import { GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
+// Original interface for custom data table
 interface DataTableColumnHeaderProps {
   columnId: string;
   label: string;
@@ -32,7 +35,62 @@ interface DataTableColumnHeaderProps {
   isResizing: boolean;
 }
 
-export function DataTableColumnHeader({
+// New interface for TanStack React Table
+interface TanStackDataTableColumnHeaderProps<TData, TValue> {
+  column: Column<TData, TValue>;
+  title: string;
+  className?: string;
+}
+
+// Type guard to check which props we're dealing with
+function isTanStackProps<TData, TValue>(
+  props: DataTableColumnHeaderProps | TanStackDataTableColumnHeaderProps<TData, TValue>,
+): props is TanStackDataTableColumnHeaderProps<TData, TValue> {
+  return "column" in props && "title" in props;
+}
+
+// TanStack React Table component
+function TanStackDataTableColumnHeader<TData, TValue>({
+  column,
+  title,
+  className,
+}: TanStackDataTableColumnHeaderProps<TData, TValue>) {
+  if (!column.getCanSort()) {
+    return <div className={cn(className)}>{title}</div>;
+  }
+
+  return (
+    <div className={cn("flex items-center space-x-2", className)}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="data-[state=open]:bg-accent -ml-3 h-8">
+            <span>{title}</span>
+            {column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+            <ArrowUp className="text-muted-foreground/70 mr-2 h-3.5 w-3.5" />
+            Asc
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+            <ArrowDown className="text-muted-foreground/70 mr-2 h-3.5 w-3.5" />
+            Desc
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// Original custom data table component
+function CustomDataTableColumnHeader({
   columnId,
   label,
   sortOptions,
@@ -144,4 +202,15 @@ export function DataTableColumnHeader({
       />
     </th>
   );
+}
+
+// Main export function that handles both cases
+export function DataTableColumnHeader<TData = any, TValue = any>(
+  props: DataTableColumnHeaderProps | TanStackDataTableColumnHeaderProps<TData, TValue>,
+) {
+  if (isTanStackProps(props)) {
+    return <TanStackDataTableColumnHeader {...props} />;
+  }
+
+  return <CustomDataTableColumnHeader {...props} />;
 }

@@ -159,7 +159,7 @@ export function DataTable<T extends Record<string, unknown>>({
             <colgroup>
               <col style={{ width: "40px" }} /> {/* Checkbox */}
               <col style={{ width: "40px" }} /> {/* Expansion */}
-              {columnOrder.map((colId) => (
+              {(columnOrder || []).map((colId) => (
                 <col key={colId} style={{ width: `${columnWidths[colId]}%` }} />
               ))}
               <col style={{ width: "100px" }} /> {/* Actions */}
