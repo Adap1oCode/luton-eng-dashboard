@@ -21,8 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 
 import { DataTableColumnHeader } from "./data-table-column-header";
-import { DraggableRow } from "./draggable-row";
-import { useColumnResize } from "./use-column-resize";
+import { cn } from "@/lib/utils";
 
 // Legacy interface for custom data table
 interface ColumnDef {
@@ -247,29 +246,14 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                   const column = columns.find((c) => c.id === colId);
                   if (!column || !visibleColumns.includes(colId)) return null;
                   return (
-                    <DataTableColumnHeader
-                      key={colId}
-                      columnId={colId}
-                      label={column.label}
-                      sortOptions={column.sortOptions}
-                      sortConfig={sortConfig}
-                      onSortFromDropdown={onSortFromDropdown}
-                      showMoreFilters={showMoreFilters}
-                      searchTerm={columnFilters[colId] || ""}
-                      onSearchChange={(value: string) => onColumnFilterChange(colId, value)}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
-                      dragOverColumn={dragOverColumn}
-                      onResizeStart={onMouseDownResize}
-                      columnWidth={columnWidths[colId]}
-                      isResizing={isResizing}
-                    />
+                    <TableCell
+                      key={cell.id}
+                      className={cn(isActions && "sticky right-0 bg-white dark:bg-gray-900")}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   );
                 })}
-                <TableHead className="w-[100px] p-3 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

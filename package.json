@@ -1,3 +1,4 @@
+
 {
   "name": "studio-admin",
   "version": "1.0.0",
@@ -9,7 +10,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "validate:tiles": "tsc --project tsconfig.validate.json && node dist/lib/validate-tiles.js"
+    "validate:tiles": "tsc --project tsconfig.validate.json && node dist/lib/validate-tiles.js",
+    "verify": "ts-node -r tsconfig-paths/register -r dotenv/config -P tsconfig.scripts.json scripts/verify.ts"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
