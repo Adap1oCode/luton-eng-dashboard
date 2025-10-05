@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 
+import Link from "next/link";
+
 import { format } from "date-fns";
 import {
   Filter,
@@ -269,6 +271,14 @@ export default function RolesManagementPage() {
   const [saveViewDialogOpen, setSaveViewDialogOpen] = useState(false);
   const [viewName, setViewName] = useState("");
   const [viewDescription, setViewDescription] = useState("");
+
+  // Create New Role dialog state
+  const [createRoleDialogOpen, setCreateRoleDialogOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleCode, setNewRoleCode] = useState("");
+  const [newRoleActive, setNewRoleActive] = useState(true);
+  const [newRoleWarehousesText, setNewRoleWarehousesText] = useState("");
+
   const [savedViews, setSavedViews] = useState<SavedView[]>([
     {
       id: "default",
@@ -357,6 +367,32 @@ export default function RolesManagementPage() {
     showToast("View deleted successfully");
   };
 
+  const handleCreateRole = () => {
+    const warehouses = newRoleWarehousesText
+      .split(",")
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+    const id = String(Date.now());
+
+    const newRow: RoleRow = {
+      id,
+      role_name: newRoleName.trim(),
+      role_code: newRoleCode.trim(),
+      is_active: newRoleActive,
+      status: newRoleActive ? "Active" : "Inactive",
+      warehouses,
+    };
+
+    setAllRoles((prev) => [newRow, ...prev]);
+    setCreateRoleDialogOpen(false);
+    setNewRoleName("");
+    setNewRoleCode("");
+    setNewRoleActive(true);
+    setNewRoleWarehousesText("");
+    showToast(`Role "${newRow.role_name}" created`);
+  };
+
   const filteredData = useMemo(() => {
     let filtered = allRoles;
 
@@ -395,7 +431,7 @@ export default function RolesManagementPage() {
     return filtered;
   }, [allRoles, searchTerm, statusFilter, sortConfig]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
@@ -592,7 +628,7 @@ export default function RolesManagementPage() {
 
   const handleEditStatus = (index: number) => {
     const actualIndex = startIndex + index;
-    const role = filteredData[actualIndex];
+    const role = currentData[index];
     setEditingRow(actualIndex);
     setEditingStatus(role.status);
     setShowActionMenu(null);
@@ -600,17 +636,20 @@ export default function RolesManagementPage() {
 
   const handleSaveStatus = useCallback(
     (index: number) => {
+      const roleId = currentData[index]?.id;
+      if (!roleId) {
+        setEditingStatus("");
+        setEditingRow(null);
+        return;
+      }
       if (editingStatus.trim()) {
-        const updatedData = [...allRoles];
-        const actualIndex = startIndex + index;
-        updatedData[actualIndex] = { ...updatedData[actualIndex], status: editingStatus };
-        setAllRoles(updatedData);
+        setAllRoles((prev) => prev.map((r) => (r.id === roleId ? { ...r, status: editingStatus } : r)));
         showToast(`Status updated to: ${editingStatus}`);
       }
       setEditingStatus("");
       setEditingRow(null);
     },
-    [editingStatus, allRoles, startIndex],
+    [editingStatus, currentData],
   );
 
   const handleCancelEdit = () => {
@@ -659,6 +698,123 @@ export default function RolesManagementPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {toastMessage && <Toast message={toastMessage} />}
 
+      {/* Save View dialog */}
+      <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Current View</DialogTitle>
+            <DialogDescription>
+              Save your current column layout, sorting, and visibility settings as a named view for quick access later.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="view-name">View Name *</Label>
+              <Input
+                id="view-name"
+                placeholder="e.g., My Custom View, Status Overview, etc."
+                value={viewName}
+                onChange={(e) => setViewName(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="view-description">Description</Label>
+              <Input
+                id="view-description"
+                placeholder="Brief description of this view..."
+                value={viewDescription}
+                onChange={(e) => setViewDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+              <div className="font-medium">Current Settings:</div>
+              <div className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <div>• {displayColumns.length} columns visible</div>
+                <div>
+                  •{" "}
+                  {sortConfig.column
+                    ? `Sorted by: ${COLUMNS.find((c) => c.id === sortConfig.column)?.label}`
+                    : "No sorting applied"}
+                </div>
+                <div>• Column order: {columnOrder.filter((id) => visibleColumns[id]).length} columns</div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveViewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveView} disabled={!viewName.trim()}>
+              <Save className="mr-2 h-4 w-4" />
+              Save View
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create New Role dialog */}
+      <Dialog open={createRoleDialogOpen} onOpenChange={setCreateRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Role</DialogTitle>
+            <DialogDescription>Enter role details and it will be added to the table.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="new-role-name">Role Name *</Label>
+              <Input
+                id="new-role-name"
+                placeholder="e.g., Store Officer"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="new-role-code">Role Code *</Label>
+              <Input
+                id="new-role-code"
+                placeholder="e.g., SO_RTZ"
+                value={newRoleCode}
+                onChange={(e) => setNewRoleCode(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="new-role-warehouses">Warehouses (comma-separated)</Label>
+              <Input
+                id="new-role-warehouses"
+                placeholder="RTZ, BDI, CCW"
+                value={newRoleWarehousesText}
+                onChange={(e) => setNewRoleWarehousesText(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox id="new-role-active" checked={newRoleActive} onCheckedChange={(v) => setNewRoleActive(!!v)} />
+              <Label htmlFor="new-role-active">Active</Label>
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setCreateRoleDialogOpen(false)}>
+              Cancel
+            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleCreateRole} disabled={!newRoleName.trim() || !newRoleCode.trim()}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="w-full space-y-6 p-4 sm:p-6">
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           <div className="flex items-center gap-4">
@@ -677,10 +833,23 @@ export default function RolesManagementPage() {
           {/* First row - buttons and switches */}
           <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
             <div className="flex flex-wrap items-center gap-2">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                New
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setCreateRoleDialogOpen(true)}>
+                    Basic Data (Quick Add)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/forms/roles/new">Detailed Data</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="destructive" disabled={selectedRows.length === 0}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -1265,10 +1434,7 @@ export default function RolesManagementPage() {
                                 Favorite
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => showToast(`Deleted: ${role.role_name}`)}
-                                className="text-red-600 focus:text-red-600 dark:text-red-400"
-                              >
+                              <DropdownMenuItem onClick={() => showToast(`Deleted: ${role.role_name}`)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -1319,7 +1485,7 @@ export default function RolesManagementPage() {
                                         {role.warehouses.length}
                                       </td>
                                       <td className="border border-gray-200 p-3 dark:border-gray-700">
-                                        {role.warehouses.length > 0 ? role.warehouses.join(", ") : "No warehouses"}
+                                        {role.warehouses.join(", ")}
                                       </td>
                                     </tr>
                                   </tbody>
@@ -1335,115 +1501,49 @@ export default function RolesManagementPage() {
               </tbody>
             </table>
           </div>
+        </div>
 
-          <div className="flex flex-col items-start justify-between gap-4 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center dark:border-gray-700">
-            <div className="text-muted-foreground text-sm">
-              <span>
-                {selectedRows.length} of {filteredData.length} row(s) selected
-              </span>
-            </div>
+        {/* Pagination */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
+            <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2 text-sm">
-                <span>Rows per page:</span>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value: string) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="text-muted-foreground text-sm">
-                Page {currentPage} of {totalPages}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              Prev
+            </Button>
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>
-
-      <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Save Current View</DialogTitle>
-            <DialogDescription>
-              Save your current column layout, sorting, and visibility settings as a named view for quick access later.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="view-name">View Name *</Label>
-              <Input
-                id="view-name"
-                placeholder="e.g., My Custom View, Status Overview, etc."
-                value={viewName}
-                onChange={(e) => setViewName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="view-description">Description</Label>
-              <Input
-                id="view-description"
-                placeholder="Brief description of this view..."
-                value={viewDescription}
-                onChange={(e) => setViewDescription(e.target.value)}
-              />
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
-              <div className="font-medium">Current Settings:</div>
-              <div className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                <div>• {displayColumns.length} columns visible</div>
-                <div>
-                  •{" "}
-                  {sortConfig.column
-                    ? `Sorted by: ${COLUMNS.find((c) => c.id === sortConfig.column)?.label}`
-                    : "No sorting applied"}
-                </div>
-                <div>• Column order: {columnOrder.filter((id) => visibleColumns[id]).length} columns</div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveViewDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveView} disabled={!viewName.trim()}>
-              <Save className="mr-2 h-4 w-4" />
-              Save View
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
