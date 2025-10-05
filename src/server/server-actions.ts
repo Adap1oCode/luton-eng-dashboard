@@ -1,16 +1,9 @@
 // Supabase helper usable in Server Actions / Route Handlers
-import { cookies } from "next/headers";
-
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { supabaseServer } from "@/lib/supabase-server";
+
 export async function supabaseServerAction(): Promise<SupabaseClient> {
-  const cookieStore = await cookies();
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: (name: string) => cookieStore.get(name)?.value,
-      set: (name: string, value: string, options: CookieOptions) => cookieStore.set({ name, value, ...options }),
-      remove: (name: string, options: CookieOptions) => cookieStore.set({ name, value: "", ...options }),
-    },
-  });
+  // Reuse the canonical server-side client which already handles cookie wiring safely
+  return supabaseServer();
 }

@@ -1,27 +1,35 @@
+import type { Table as TanStackTable } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DataTablePaginationProps {
-  currentPage: number;
-  totalPages: number;
-  itemsPerPage: number;
-  onPageChange: (page: number) => void;
-  onItemsPerPageChange: (size: number) => void;
-  totalItems: number;
-  selectedCount: number;
+  // Replace the manual props with a TanStack table
+  table: TanStackTable<Record<string, unknown>>;
 }
 
-export function DataTablePagination({
-  currentPage,
-  totalPages,
-  itemsPerPage,
-  onPageChange,
-  onItemsPerPageChange,
-  totalItems,
-  selectedCount,
-}: DataTablePaginationProps) {
+export function DataTablePagination({ table }: DataTablePaginationProps) {
+  const pagination = table.getState().pagination;
+  const itemsPerPage = pagination.pageSize;
+  const currentPage = pagination.pageIndex + 1;
+  const totalItems = table.getFilteredRowModel().rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+
+  const onPageChange = (page: number) => {
+    const clamped = Math.min(Math.max(page, 1), totalPages);
+    table.setPageIndex(clamped - 1);
+  };
+
+  const onItemsPerPageChange = (size: number) => {
+    table.setPageSize(size);
+    const newTotalPages = Math.max(1, Math.ceil(totalItems / size));
+    if (currentPage > newTotalPages) {
+      table.setPageIndex(newTotalPages - 1);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between px-4 py-2">
       <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">

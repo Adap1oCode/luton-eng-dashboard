@@ -1,7 +1,8 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase-server";
-import type { RoleInput } from "./_data/types";
+
+import type { RoleInput } from "../_data/types";
 
 // ---- Roles ----
 export async function createRole(input: RoleInput) {
@@ -16,7 +17,7 @@ export async function createRole(input: RoleInput) {
     .select("id")
     .single();
   if (error) throw error;
-  return data!.id as string;
+  return data.id as string;
 }
 
 export async function updateRole(id: string, patch: RoleInput) {
@@ -38,23 +39,17 @@ export async function deleteRole(id: string) {
 // ---- Role ↔ Warehouse assignments ----
 export async function addRoleWarehouse(roleId: string, warehouse: string, note: string | null) {
   const sb = await supabaseServer();
-  const { error } = await sb
-    .from("role_warehouse_rules")
-    .insert({
-      role_id: roleId,
-      warehouse,
-      note: note ?? null,
-    });
+  const { error } = await sb.from("role_warehouse_rules").insert({
+    role_id: roleId,
+    warehouse,
+    note: note ?? null,
+  });
   if (error) throw error;
 }
 
 export async function removeRoleWarehouses(roleId: string, warehouses: string[]) {
   const sb = await supabaseServer();
   // PK is (role_id, warehouse)
-  const { error } = await sb
-    .from("role_warehouse_rules")
-    .delete()
-    .eq("role_id", roleId)
-    .in("warehouse", warehouses);
+  const { error } = await sb.from("role_warehouse_rules").delete().eq("role_id", roleId).in("warehouse", warehouses);
   if (error) throw error;
 }
