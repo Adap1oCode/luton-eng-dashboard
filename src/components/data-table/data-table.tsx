@@ -1,3 +1,4 @@
+// src/components/data-table/data-table.tsx
 "use client";
 
 import { useState, useMemo, useRef } from "react";
@@ -21,7 +22,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 
 import { DataTableColumnHeader } from "./data-table-column-header";
+import { ExpanderHeader, ExpanderCell } from "./data-table-expander-cell";
 import { cn } from "@/lib/utils";
+import { GripVertical } from "lucide-react";
+
+// --- DnD for header reordering ---
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
+import { SortableContext, useSortable, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Legacy interface for custom data table
 interface ColumnDef {
