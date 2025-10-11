@@ -1,194 +1,248 @@
 Tally Card Manager — Context & Goals
 
-Business context: Operations keep physical Tally Cards to record inbound/outbound quantities. Accuracy is mixed: sometimes the cards are right, sometimes the IMS (inventory management system) is.
+Business context
+Operations keep physical Tally Cards to record inbound/outbound quantities. Accuracy varies: sometimes the cards are right, sometimes the IMS is.
 
-Purpose of the app: Provide a fast, reliable way to view, validate, and reconcile Tally Card data against IMS data. The app is an additional control—not a replacement.
+Purpose
+Provide a fast, reliable way to view, validate, and reconcile Tally Card data against IMS data. The app is an additional control — not a replacement.
 
-Strategic goals:
+Strategic goals
 
 Ship screens quickly (config-first, reuse everywhere).
 
 Keep data access provider-agnostic (Supabase today, swappable tomorrow).
 
-Prefer server fetching (SSR/API) with a small client shell for interactivity.
+Prefer SSR/API for reads with small client islands for interactivity.
 
-Lean on shadcn/ui and TanStack Table for consistent UX and zero bespoke table logic.
+Lean on shadcn/ui and TanStack Table for consistent UX with no bespoke table logic.
 
-Architecture — Principles (the rails we won’t break)
+Architecture — Principles (Rails we won’t break)
 
-API-first pages: every screen reads via a Next.js API route (server) or SSR loader; browser calls the API—not the DB.
+API-first pages: every screen reads via a Next.js API route (server) or SSR loader. Browser does not talk to the DB.
 
-Stable response shape: { rows: [...] } (add { total } later). Same across all resources.
+Stable response shape: { rows, total } across resources. We also accept { data, count } in SSR to be compatible with Supabase defaults.
 
-Single shared table system: one generic DataTable renderer (TanStack), fed by per-screen config files (no forks).
+Single shared table system: generic DataTable (TanStack) fed by per-screen config.tsx. No forks.
 
-Provider abstraction: API route uses a data provider (Supabase REST/Server client today). We can swap providers behind the API without touching screens.
+Provider abstraction: API route uses a data provider (Supabase server client today). We can swap providers behind the API with zero page changes.
 
-No-store by default: avoid hydration drift and stale HTML.
+No-store by default on read endpoints to avoid hydration drift/stale HTML.
 
-Config over code: columns, features, and toolbar are defined in each screen’s config.tsx.
+Config over code: columns, features, toolbar defined in each screen’s config.tsx.
 
-UX conventions: left sticky expander column for row details; optional checkbox selection; pagination & resize persisted per view.
+UX conventions: left sticky expander column; optional checkbox selection; pagination & resize persisted per view.
 
-“View Tally Cards” — Current Working Pattern
-Files that matter (and what they do)
+SSR fetch correctness: server fetch uses an absolute URL and forwards cookies so RLS/session works server-side.
 
-Forms / Tally Cards
+Current Implementation Status (View Tally Cards)
+What’s now in place
 
-src/app/(main)/forms/tally_cards/page.tsx — Client screen. Fetches via API (falls back to browser Supabase if API fails), builds TanStack table, persists column state, renders the generic table.
+SSR page: src/app/(main)/forms/tally_cards/page.tsx
 
-src/app/(main)/forms/tally_cards/config.tsx — Declares columns + features (no logic).
+Fetches from /api/tally_cards with no-store.
 
-src/app/(main)/forms/tally_cards/sections/shell-client.tsx — Page shell (title, toolbar, slots).
+Builds an absolute URL from request headers.
 
-Data Table (shared)
+Forwards cookies so the API runs under the same user session (RLS works).
 
-src/components/data-table/data-table.tsx — Generic TanStack renderer (headers, sticky, resize, expansion row).
+Parses both { rows, total } (our standard) and { data, count } (Supabase).
 
-src/components/data-table/data-table-column-header.tsx — Sort/filter header UI.
+Shared Server Shell: src/components/forms/shell/page-shell.tsx (+ render-button-client.tsx helper)
 
-src/components/data-table/data-table-pagination.tsx — Pagination bar.
+Provides page chrome (title, toolbar rows, chips, footer slot).
 
-src/components/data-table/data-table-expander-cell.tsx — Chevron (expand) and optional checkbox cell.
+Server-compatible by default.
 
-API & Data
+Generic Client Island: src/components/forms/resource-view/resource-table-client.tsx
 
-src/app/api/tally_cards/route.ts — GET /api/tally_cards?page&pagesize → returns { rows } via Supabase (REST or server client), Cache-Control: no-store.
+No fetching. Receives { config, initialRows, initialTotal, page, pageSize }.
 
-src/lib/supabase.ts — Browser client (used only as fallback).
+Uses shared DataTable primitives.
 
-src/lib/supabase-server.ts — Server client for API/SSR.
+SSR-driven pagination via URL changes.
 
-Legacy in forms/tally_cards/_data/** (projection/binding), sections/shell.tsx, projection.ts — not referenced by the View All screen; safe to archive unless another route uses them.
+Defensive getRowId.
 
-Data-flow (today)
+Config-driven columns: src/app/(main)/forms/tally_cards/config.tsx
 
-Page fetch → fetch('/api/tally_cards?...', { cache: 'no-store' }).
+Remains the single source for columns/features/defaults.
 
-If API returns non-200/invalid → fallback to supabaseBrowser() select.
+Integrates with view-defaults from the data-table package (override where needed).
 
-Rows flow into the shared DataTable.
+API route: src/app/api/tally_cards/route.ts
 
-Column order/visibility/sizing persist to localStorage (per-view key).
+Returns { rows, total } with Cache-Control: no-store.
 
-The Pattern to Reuse (for every new “View All” screen)
+Uses Supabase server client.
+
+Range pagination consistent with page and pageSize.
+
+What we deliberately did not change
+
+DataTable primitives (kept intact):
+src/components/data-table/data-table.tsx
+src/components/data-table/data-table-column-header.tsx
+src/components/data-table/data-table-pagination.tsx
+src/components/data-table/data-table-expander-cell.tsx
+
+view-defaults remains the base for quick screen setup; forms can override in their config.tsx.
+
+Legacy shells under forms/tally_cards/sections/ are retained for now; we’re standardising on the shared shell in components/forms/shell/.
+
+Folder Structure (agreed)
+src/
+├─ app/
+│  └─ (main)/
+│     └─ forms/
+│        └─ <resource>/
+│           ├─ page.tsx                # Server page: fetches data, forwards cookies, renders Shell + client island
+│           └─ config.tsx              # Resource-specific columns/features/defaults (overrides view-defaults)
+│
+└─ components/
+   └─ forms/
+      ├─ shell/
+      │  ├─ page-shell.tsx             # Shared server shell (kebab-case)
+      │  └─ render-button-client.tsx   # Client helper for toolbar buttons
+      └─ resource-view/
+         └─ resource-table-client.tsx  # Generic client island (uses DataTable primitives)
+
+
+Naming: new shared components use kebab-case filenames.
+
+Data Flow (now)
+
+SSR Page builds absolute URL and forwards cookies → calls /api/<resource>?page=&pageSize= with { cache: 'no-store' }.
+
+API Route queries provider (Supabase server client) with range and count: "exact" → returns { rows, total }.
+
+SSR Page parses { rows, total } (or { data, count }), then renders:
+PageShell (server) → ResourceTableClient (client island) → DataTable (primitives).
+
+Pattern to Reuse (for every new “View All” screen)
 1) API Route (server, no-store)
 
 Create src/app/api/<resource>/route.ts:
 
-Accept page, pageSize, later q / filters.
+Accept page, pageSize (later: q, filters).
 
-Use Supabase server client (or compose a PostgREST URL).
-
-Return { rows } (and { total } when needed).
+Use server client (or PostgREST URL) and return { rows, total }.
 
 Set no-store.
 
-Minimal template
+Contract
 
-import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase-server";
+Select only columns required by the table (keep payload tight).
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const page = Number(url.searchParams.get("page") ?? 1);
-  const pageSize = Number(url.searchParams.get("pageSize") ?? 200);
-  const from = (page - 1) * pageSize, to = from + pageSize - 1;
+Deterministic sort (default ASC on a stable column).
 
-  const sb = createServerClient();
-  const { data, error } = await sb
-    .from("<table>")
-    .select("id,col1,col2,...")
-    .order("<defaultSort>", { ascending: true })
-    .range(from, to);
+Pagination: from = (page-1)*pageSize, to = from + pageSize - 1.
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ rows: data ?? [] }, { headers: { "Cache-Control": "no-store" }});
-}
+2) Page (SSR)
 
-2) Page (two variants)
+Create/modify src/app/(main)/forms/<resource>/page.tsx:
 
-A) Current (Client) — fastest to replicate now
+Build absolute URL from headers.
 
-In page.tsx, call the API; fallback to browser Supabase.
+Forward cookies so RLS works.
 
-Build table from config.tsx and render DataTable.
+Fetch with no-store.
 
-B) Recommended (SSR) — the pattern we’ll standardize on
+Parse { rows, total } (also accept { data, count }).
 
-Make page.tsx a Server Component: fetch rows from the API (or server client) and pass them to a thin client wrapper.
+Render PageShell → ResourceTableClient with { config, initialRows, initialTotal, page, pageSize }.
 
-Client wrapper renders the exact same DataTable UI.
-
-SSR template
-
-// page.tsx (SERVER)
-import Client from "./client";
-export default async function Page() {
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const res = await fetch(`${base}/api/<resource>?page=1&pageSize=200`, { cache: "no-store" });
-  const { rows = [] } = await res.json();
-  return <Client initialRows={rows} />;
-}
-
-// client.tsx (CLIENT)
-"use client";
-import * as React from "react";
-import type { RowType } from "./config";
-import { DataTable as BaseDataTable } from "@/components/data-table/data-table";
-// … build columns from config, hydrate TanStack, render BaseDataTable
-export default function Client({ initialRows }: { initialRows: RowType[] }) {
-  const [rows] = React.useState(initialRows);
-  // render existing table UI (no fetch effect needed)
-  return <BaseDataTable /* table={...} */ />;
-}
-
-3) Config
+3) Config (per resource)
 
 Create src/app/(main)/forms/<resource>/config.tsx:
 
 Column defs (accessor, header via DataTableColumnHeader, cell).
 
-Optional features/toolbar overrides.
+Optional toolbar/features overrides.
 
 No data fetching in config.
 
-4) Shell
+4) Shell (shared)
 
-Reuse sections/shell-client.tsx for consistent chrome (title, toolbar, chips).
+Use components/forms/shell/page-shell.tsx for consistent chrome (title, toolbar rows, chips, footer).
+Use render-button-client.tsx for button rendering where needed.
 
-Why this scales (and swaps providers easily)
+Guardrails / Do & Don’t
 
-API shield: Screens depend on API responses, not on a specific DB client. We can replace Supabase with another provider (or a microservice) behind the same route with zero page changes.
+Do
 
-Shared table engine: TanStack + shadcn/ui give a consistent, accessible table with expanders, resize, pinning—no per-screen table code.
+Fetch on server (API/SSR) with no-store.
 
-SSR-ready: Server data by default means less hydration drift, better performance, and easier auth.
+Keep API output stable: { rows, total }.
 
-Config-driven columns: Adding a screen is mainly a matter of writing config.tsx and one API route.
+Keep UI generic and under components/forms/**.
 
-Do / Don’t (guardrails)
+Forward cookies from SSR to API to preserve session/RLS.
 
-Do fetch on server (API/SSR) with no-store.
+Use kebab-case for shared component filenames.
 
-Do keep API output shape stable ({ rows }).
+Don’t
 
-Do share table components; don’t fork them.
+Don’t couple pages to the vendor SDK in the browser.
 
-Don’t couple pages to a vendor SDK in the browser—use it only as a fallback (or not at all once SSR is the norm).
+Don’t put business logic in components — keep it in API/data.
 
-Don’t put business logic in components—keep it in API/data layer.
+Don’t fork the DataTable primitives.
 
-What’s next (to make View Tally Cards the gold standard)
+Don’t ship relative URLs in SSR fetches (must be absolute).
 
-Flip to SSR using the template above (no UI change).
+Operational Checklists
+New Screen Checklist (5 minutes)
 
-Delete legacy _data/**, projection.ts, sections/shell.tsx after confirming no other routes import them.
+Create src/app/api/<resource>/route.ts → { rows, total }, no-store.
 
-Optional: move fallback browser Supabase out (once SSR is in place) to enforce “API-only” reads.
+Create src/app/(main)/forms/<resource>/config.tsx → columns/features.
 
-Add { total } to API responses when we need server-side pagination.
+Create src/app/(main)/forms/<resource>/page.tsx → SSR fetch (absolute URL + cookies), render Shell + ResourceTableClient.
 
-Introduce a tiny data-provider interface in the API route folder (so swapping Supabase → other provider is one file change).
+Verify /api/<resource>?page=1&pageSize=50 returns data.
 
-Keep this as the quick reference. When we start the next screen, we’ll copy this pattern verbatim: API route → (SSR) Page → Client wrapper → Config → Shared DataTable.
+Load the page and confirm count/rows/pagination.
+
+Troubleshooting (fast)
+
+API returns data in browser, but page shows 0: missing cookie forwarding in SSR.
+
+Type errors on toolbar arrays: import ToolbarButton from components/forms/shell/types.
+
+Rows render but selection/expansion unstable: set/get a stable getRowId in the client island (already included).
+
+Slow list: trim selected columns; ensure DB indexes on sort/filter fields.
+
+Decisions (recorded)
+
+Render strategy: SSR + small client islands (table interactivity only).
+
+Data path: Page → API → Provider. No browser DB calls.
+
+Auth: SSR fetches forward cookies to API so RLS/session applies.
+
+API shape: { rows, total } (also accepting { data, count } at the page).
+
+Structure: Shared UI under components/forms/** (shell/, resource-view/), per-screen config under app/(main)/forms/<resource>/.
+
+What’s Next
+
+Extend API pagination with q/filters (server-side).
+
+Add total everywhere and wire server-side pagination fully (already supported).
+
+Promote any remaining per-screen shells to components/forms/shell/ (retire legacy shells once unused).
+
+Introduce a tiny DataProvider interface in API routes to swap Supabase later with one file change.
+
+Optional: add a small scaffolder to generate route.ts, config.tsx, and page.tsx for a new resource.
+
+Summary of recent changes
+
+Replaced Tally Cards page with SSR wrapper that builds an absolute URL and forwards cookies.
+
+Added a shared Server Shell and a generic Resource Table Client under components/forms/**.
+
+Kept DataTable primitives and view-defaults unchanged.
+
+Locked the API contract to { rows, total }.
