@@ -4,12 +4,12 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface DataTablePaginationProps {
+interface DataTablePaginationProps<T = Record<string, unknown>> {
   // Replace the manual props with a TanStack table
-  table: TanStackTable<Record<string, unknown>>;
+  table: TanStackTable<T>;
 }
 
-export function DataTablePagination({ table }: DataTablePaginationProps) {
+export function DataTablePagination<T = Record<string, unknown>>({ table }: DataTablePaginationProps<T>) {
   const pagination = table.getState().pagination;
   const itemsPerPage = pagination.pageSize;
   const currentPage = pagination.pageIndex + 1;
