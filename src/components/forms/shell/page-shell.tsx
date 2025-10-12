@@ -6,34 +6,48 @@
 //  • No data fetching here. Pure chrome + slots.
 //  • Right-side toolbar buttons rendered via a small client helper (RenderButtonClient).
 //  • Accepts children (the table island) and an optional footerSlot.
+//  • NEW (non-breaking): accepts toolbarConfig/chipConfig which take priority.
 // -----------------------------------------------------------------------------
 
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Layout, Settings, ArrowUpDown, Filter } from "lucide-react";
-import RenderButton from "./render-button-client";
+import { RenderButtonCluster } from "./render-button-cluster";
 
-// Keep props minimal and generic. Avoid data fetching.
-// Keep props minimal and generic. Avoid data fetching.
 import type { ToolbarButton } from "./types";
 export type { ToolbarButton } from "./types";
+
+type ToolbarConfig = {
+  primary?: ToolbarButton[];
+  left?: ToolbarButton[];
+  right?: ToolbarButton[];
+};
+
+type ChipConfig = {
+  filter?: boolean;
+  sorting?: boolean;
+};
 
 type PageShellProps = {
   // Header
   title: string;          // e.g. "View Tally Cards"
   count?: number;         // optional count badge to the right of title
 
-  // Row 1 action buttons (left cluster)
+  // Row 1 action buttons (left cluster) — legacy props (kept for backwards compat)
   primaryButtons?: ToolbarButton[];
 
-  // Row 2 action bars (left/right clusters)
+  // Row 2 action bars (left/right clusters) — legacy props (kept for backwards compat)
   leftButtons?: ToolbarButton[];
   rightButtons?: ToolbarButton[];
 
-  // Chips (Row 1 right)
+  // Chips (Row 1 right) — legacy props (kept for backwards compat)
   showFilterChip?: boolean;
   showSortingChip?: boolean;
+
+  // NEW: Preferred config-driven inputs (take priority over legacy props)
+  toolbarConfig?: ToolbarConfig;
+  chipConfig?: ChipConfig;
 
   // Toolbar area immediately above the table (left/right or a complete custom slot)
   toolbarLeft?: React.ReactNode;
@@ -53,11 +67,18 @@ type PageShellProps = {
 export default function PageShell({
   title,
   count,
+
+  // legacy props
   primaryButtons,
   leftButtons,
   rightButtons,
   showFilterChip,
   showSortingChip,
+
+  // new config-first props
+  toolbarConfig,
+  chipConfig,
+
   toolbarLeft,
   toolbarRight,
   toolbarSlot,
@@ -65,6 +86,14 @@ export default function PageShell({
   children,
   footerSlot,
 }: PageShellProps) {
+  // ---- Effective buttons & chips (config takes precedence; legacy as fallback) ----
+  const effectivePrimary = (toolbarConfig?.primary ?? primaryButtons) ?? [];
+  const effectiveLeft    = (toolbarConfig?.left    ?? leftButtons)    ?? [];
+  const effectiveRight   = (toolbarConfig?.right   ?? rightButtons)   ?? [];
+
+  const effectiveShowFilter  = (typeof chipConfig?.filter  === "boolean" ? chipConfig!.filter  : showFilterChip)   ?? false;
+  const effectiveShowSorting = (typeof chipConfig?.sorting === "boolean" ? chipConfig!.sorting : showSortingChip)  ?? false;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Outer padding/spacing wrapper */}
@@ -92,18 +121,14 @@ export default function PageShell({
         <div className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           {/* Row 1: primary buttons + chips */}
           <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-            <div className="flex flex-wrap items-center gap-2">
-              {primaryButtons?.map((btn) => (
-                <RenderButton key={btn.id} btn={btn} />
-              ))}
-            </div>
+<RenderButtonCluster buttons={effectivePrimary} />
             <div className="flex flex-wrap items-center gap-4">
-              {showSortingChip ? (
+              {effectiveShowSorting ? (
                 <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100" variant="secondary">
                   Sorting Applied
                 </Badge>
               ) : null}
-              {showFilterChip ? (
+              {effectiveShowFilter ? (
                 <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100" variant="secondary">
                   Filter/Sorting Applied
                 </Badge>
@@ -113,16 +138,8 @@ export default function PageShell({
 
           {/* Row 2: left buttons (dropdowns) + right buttons */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {leftButtons?.map((btn) => (
-                <RenderButton key={btn.id} btn={btn} />
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {rightButtons?.map((btn) => (
-                <RenderButton key={btn.id} btn={btn} />
-              ))}
-            </div>
+<RenderButtonCluster buttons={effectiveLeft} />
+<RenderButtonCluster buttons={effectiveRight} />
           </div>
         </div>
 

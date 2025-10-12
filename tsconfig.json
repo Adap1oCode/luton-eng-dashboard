@@ -2,13 +2,11 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "moduleDetection": "force",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "noEmit": false,
+    "noEmit": true,
     "jsx": "preserve", // ✅ REQUIRED
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -17,6 +15,7 @@
     "paths": {
     "@/*": ["src/*"]
     },
+    "types": ["vitest/globals", "node"], // <-- makes describe/it/expect available
     "plugins": [
       {
         "name": "next"
@@ -32,10 +31,12 @@
     "isolatedModules": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".next/types/**/*.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts"
   ],
   "exclude": [
     "node_modules",

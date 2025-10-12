@@ -1,0 +1,50 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useSelectionStore } from "../selection/selection-store";
+import type { ActionConfig } from "./types";
+
+/**
+ * Provides generic handlers for built-in OR configured actions.
+ * - Injects selectedIds from the selection store where applicable.
+ * - For GET with target _blank -> opens new tab/window.
+ * - For POST/DELETE -> sends JSON { ids: string[] } when selection exists.
+ */
+export function useToolbarActions(actionConfig?: ActionConfig) {
+  const router = useRouter();
+  const selectedIds = useSelectionStore((s) => s.selectedIds);
+
+  async function callEndpoint(key: string) {
+    if (!actionConfig || !actionConfig[key]) return;
+    const def = actionConfig[key];
+    const ids = selectedIds ?? [];
+
+    // Interpolate :id for single-selected
+    const oneId = ids.length === 1 ? ids[0] : undefined;
+    const url = oneId ? def.endpoint.replace(/:id\b/g, oneId) : def.endpoint;
+
+    if (def.method === "GET" && def.target === "_blank") {
+      window.open(url, "_blank");
+      return;
+    }
+
+    const init: RequestInit = { method: def.method, headers: {} };
+    if (def.method !== "GET") {
+      init.headers = { "content-type": "application/json" };
+      (init as any).body = JSON.stringify({ ids });
+    }
+
+    const res = await fetch(url, init);
+    if (res.ok) router.refresh();
+  }
+
+  // Built-in shorthands using conventional keys
+  return {
+    bulkDelete: () => callEndpoint("bulkDelete"),
+    duplicateSelected: () => callEndpoint("duplicateSelected"),
+    exportCsv: () => callEndpoint("exportCsv"),
+    printReport: () => callEndpoint("printReport"),
+    // generic
+    run: callEndpoint,
+  };
+}
