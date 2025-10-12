@@ -13,6 +13,20 @@
 "use client";
 
 import * as React from "react";
+
+import { useRouter, useSearchParams } from "next/navigation";
+
+import {
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -21,7 +35,6 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useRouter, useSearchParams } from "next/navigation";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
@@ -54,6 +67,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Local TanStack table state (sorting only for now; filters saved per-view can be added later)
   const [sorting, setSorting] = React.useState<any>([]);
   const [rowSelection, setRowSelection] = React.useState({});
+
+  // DnD setup for TanStack DataTable
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+
+  const dataIds = React.useMemo<UniqueIdentifier[]>(() => initialRows.map((row) => row.id), [initialRows]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    // For now, we'll just log the drag event
+    // You can implement column reordering logic here if needed
+    console.log("Drag ended:", event);
+  };
 
   const table = useReactTable<TRow>({
     data: initialRows,
@@ -97,22 +121,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     router.push(`?${params.toString()}`);
   };
 
-  const footer = (
-    <DataTablePagination
-      currentPage={page}
-      totalPages={totalPages}
-      itemsPerPage={pageSize}
-      onPageChange={onPageChange}
-      onItemsPerPageChange={onItemsPerPageChange}
-      totalItems={initialTotal}
-      selectedCount={selectedCount}
-    />
-  );
+  const footer = <DataTablePagination table={table} />;
 
   return (
     <>
       <DataTable
-        table={table}
+        dndEnabled={false}
+        table={table as any} // Type assertion to work around the generic constraint
+        dataIds={dataIds}
+        handleDragEnd={handleDragEnd}
+        sensors={sensors}
+        sortableId="resource-table"
         // If you provide an expanded-row renderer, pipe it through
         renderExpanded={
           renderExpanded
