@@ -1,8 +1,10 @@
 // src/lib/api/resolve-resource.ts
-// Dynamically resolve a resource's config and optional projection by naming convention.
+// Generic resource resolver — registry-based (flat or foldered configs)
 
+import resources from "@/lib/data/resources";
 import type { ResourceConfig } from "@/lib/data/types";
 
+/** Unified shape returned to API handlers */
 export type ResolvedResource<T = any> = {
   key: string;
   config: ResourceConfig<T, any>;
@@ -11,53 +13,45 @@ export type ResolvedResource<T = any> = {
 };
 
 /**
- * By convention we expect these modules under:
- *   - src/lib/data/resources/<resource>/config.ts
- *   - src/lib/data/resources/<resource>/projection.ts (optional)
- *
- * IMPORTANT: Include ".ts" in the static part of the import path for Vite.
+ * Resolve a resource key into its config.
+ * Works with both flat `.config.ts` files and foldered orchestrations,
+ * as long as the resource is registered in `src/lib/data/resources/index.ts`.
  */
 export async function resolveResource(key: string): Promise<ResolvedResource> {
   if (!key || typeof key !== "string") {
     throw new Error("Invalid resource key.");
   }
 
-  // ---- Load config (required)
-  let cfgMod: any;
-  try {
-    cfgMod = await import(
-      /* @vite-ignore */ `@/lib/data/resources/${key}/config.ts`
-    );
-  } catch {
-    throw new Error(
-      `Unknown resource "${key}". No config found at lib/data/resources/${key}/config.ts`
-    );
+  // --- Direct lookup from registry
+  const config = (resources as any)[key];
+  if (!config) {
+    const known = Object.keys(resources).sort().join(", ") || "(none)";
+    throw new Error(`Unknown resource "${key}". Known resources: ${known}`);
   }
 
-  const config: ResourceConfig<any, any> =
-    (cfgMod?.default as ResourceConfig<any, any>) ??
-    (cfgMod?.config as ResourceConfig<any, any>);
+  // --- Handle both plain ResourceConfig and { config, toRow, allowRaw }
+  let resolvedConfig: ResourceConfig<any, any>;
+  let toRow: ((domain: any) => any) | undefined;
+  let allowRaw = true;
 
-  if (!config || !config.table || !config.select) {
+  if ("config" in config) {
+    // ResourceEntry-style object (for orchestrations or complex resources)
+    resolvedConfig = (config as any).config;
+    toRow = (config as any).toRow;
+    allowRaw =
+      typeof (config as any).allowRaw === "boolean"
+        ? (config as any).allowRaw
+        : true;
+  } else {
+    // Plain ResourceConfig (flat resource)
+    resolvedConfig = config as ResourceConfig<any, any>;
+  }
+
+  if (!resolvedConfig?.table || !resolvedConfig?.select) {
     throw new Error(
       `Resource "${key}" has an invalid config. "table" and "select" are required.`
     );
   }
 
-  const allowRaw: boolean =
-    typeof cfgMod?.allowRaw === "boolean" ? cfgMod.allowRaw : true;
-
-  // ---- Load projection (optional)
-  let toRow: ((d: any) => any) | undefined;
-  try {
-    const proj = await import(
-      /* @vite-ignore */ `@/lib/data/resources/${key}/projection.ts`
-    );
-    if (typeof proj?.toRow === "function") toRow = proj.toRow;
-    else if (typeof proj?.default === "function") toRow = proj.default;
-  } catch {
-    // no projection is fine
-  }
-
-  return { key, config, toRow, allowRaw };
+  return { key, config: resolvedConfig, toRow, allowRaw };
 }

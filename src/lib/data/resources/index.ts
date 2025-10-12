@@ -17,3 +17,4 @@ export const resources = {
 } as const;
 
 export type ResourceKey = keyof typeof resources;
+export default resources; // ✅ add this line

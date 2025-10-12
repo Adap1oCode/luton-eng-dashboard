@@ -1,7 +1,7 @@
 import type { ResourceConfig } from "@/lib/data/types";
 
 const warehousesConfig = {
-  table: "public.warehouses",
+  table: "warehouses",
   pk: "id",
 
   select: "id, code, name, is_active, created_at, updated_at",

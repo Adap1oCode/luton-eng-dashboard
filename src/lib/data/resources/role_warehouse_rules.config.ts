@@ -1,7 +1,7 @@
 import type { ResourceConfig } from "@/lib/data/types";
 
 const roleWarehouseRulesConfig: ResourceConfig<any, any> = {
-  table: "public.role_warehouse_rules",
+  table: "role_warehouse_rules",
   pk: "id", // not real DB PK, but required for typing; we’ll override in toDomain
 
   select: "role_id, warehouse_id",

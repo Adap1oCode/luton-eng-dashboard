@@ -1,7 +1,7 @@
 import type { ResourceConfig } from "@/lib/data/types";
 
 const usersConfig = {
-  table: "public.users",
+  table: "users",
   pk: "id",
 
   select: "id, full_name, email, role_id, role_code, is_active, is_roles_admin, created_at, updated_at",

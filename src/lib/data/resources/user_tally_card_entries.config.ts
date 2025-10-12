@@ -1,7 +1,7 @@
 import type { ResourceConfig } from "@/lib/data/types";
 
 const tcmUserTallyCardEntriesConfig: ResourceConfig<any, any> = {
-  table: "public.tcm_user_tally_card_entries",
+  table: "tcm_user_tally_card_entries",
   pk: "id", // synthetic; we’ll derive a virtual ID below
 
   select: "user_id, card_uid, qty, location, note, updated_at",

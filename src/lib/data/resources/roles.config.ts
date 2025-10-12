@@ -1,7 +1,7 @@
 import type { ResourceConfig } from "@/lib/data/types";
 
 const rolesConfig = {
-  table: "public.roles",
+  table: "roles",
   pk: "id",
 
   select:

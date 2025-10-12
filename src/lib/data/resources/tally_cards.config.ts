@@ -8,7 +8,7 @@ import type { TallyCard, TallyCardInput } from "./tally_cards/types";
  * The view v_tcm_tally_cards_current is used for reads.
  */
 const tcmTallyCardsConfig = {
-  table: "public.tcm_tally_cards",
+  table: "tcm_tally_cards",
   pk: "id",
 
   // All persisted columns in the master table
