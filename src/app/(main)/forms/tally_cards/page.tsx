@@ -80,55 +80,37 @@ function buildColumns(): ColumnDef<TallyCardRow, any>[] {
       enableHiding: false,
     },
     {
-      id: "expander",
-      header: () => null,
-      cell: ({ row }) => (
-        <button onClick={() => row.toggleExpanded()} aria-label="Expand row" className="rounded p-1 hover:bg-gray-100">
-          <ChevronRight className={`h-4 w-4 transition-transform ${row.getIsExpanded() ? "rotate-90" : ""}`} />
-        </button>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      id: "tally_card_number",
+      id: "role_name",
       accessorKey: "tally_card_number",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card Number" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Role Name" />,
       enableSorting: true,
       cell: ({ row }) => <div className="font-medium">{row.original.tally_card_number}</div>,
     },
     {
-      id: "warehouse",
-      accessorKey: "warehouse",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Warehouse" />,
-      enableSorting: true,
-      cell: ({ row }) => row.original.warehouse || "—",
-    },
-    {
-      id: "item_number",
+      id: "code",
       accessorKey: "item_number",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Item Number" />,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Code" />,
       enableSorting: true,
       cell: ({ row }) => row.original.item_number || "—",
     },
     {
-      id: "is_active",
+      id: "status",
       accessorKey: "is_active",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       enableSorting: true,
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-500 px-2 py-0.5 text-xs text-white">Active</Badge>
+          <Badge className="bg-red-500 px-2 py-0.5 text-xs text-white">Active</Badge>
         ) : (
-          <Badge className="bg-red-500 px-2 py-0.5 text-xs text-white">Inactive</Badge>
+          <Badge className="bg-gray-500 px-2 py-0.5 text-xs text-white">Inactive</Badge>
         ),
     },
     {
-      id: "updated_at",
-      accessorKey: "updated_at",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Updated At" />,
+      id: "warehouses_assigned",
+      accessorKey: "warehouse",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Warehouses Assigned" />,
       enableSorting: true,
-      cell: ({ row }) => <div className="text-sm text-gray-600">{fmt(row.original.updated_at ?? null)}</div>,
+      cell: ({ row }) => row.original.warehouse || "No warehouse",
     },
   ];
   return cols;
@@ -153,12 +135,48 @@ export default function Page({ searchParams }: PageProps) {
   const page = Math.max(1, Number(resolvedParams?.page ?? 1));
   const pageSize = Math.min(500, Math.max(1, Number(resolvedParams?.pageSize ?? 10)));
 
-  const [rows, setRows] = React.useState<TallyCardRow[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [loading, setLoading] = React.useState(true);
+  const [rows, setRows] = React.useState<TallyCardRow[]>([
+    {
+      id: "1",
+      tally_card_number: "Auditor RTZ Warehouse",
+      item_number: "AUDITOR_RTZ",
+      warehouse: "RTZ",
+      note: "",
+      is_active: true,
+      created_at: "2023-01-01",
+    },
+    {
+      id: "2",
+      tally_card_number: "Inventory Manager - Warehouse",
+      item_number: "INV_MANAGER_RTZ",
+      warehouse: "",
+      note: "",
+      is_active: true,
+      created_at: "2023-01-02",
+    },
+    {
+      id: "3",
+      tally_card_number: "Store Officer at RTZ",
+      item_number: "STORE_OFFICER_RTZ",
+      warehouse: "RTZ",
+      note: "",
+      is_active: true,
+      created_at: "2023-01-03",
+    },
+    {
+      id: "4",
+      tally_card_number: "Tally Card Manager RTZ",
+      item_number: "TC_MANAGER_RTZ",
+      warehouse: "RTZ",
+      note: "",
+      is_active: true,
+      created_at: "2023-01-04",
+    },
+  ]);
+  const [total, setTotal] = React.useState(4);
+  const [loading, setLoading] = React.useState(false);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   React.useEffect(() => {
     setLoading(true);
@@ -196,19 +214,16 @@ export default function Page({ searchParams }: PageProps) {
     state: {
       sorting,
       rowSelection,
-      expanded,
       pagination: { pageIndex: page - 1, pageSize },
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onExpandedChange: setExpanded,
     manualPagination: true,
     pageCount: Math.max(1, Math.ceil(total / pageSize)),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
   });
 
   const sensors = useSensors(
@@ -239,7 +254,7 @@ export default function Page({ searchParams }: PageProps) {
 
   if (loading) {
     return (
-      <PageShell title="View Tally Cards" count={0} toolbarConfig={tallyCardsToolbar} chipConfig={tallyCardsChips}>
+      <PageShell title="View Roles" count={0} toolbarConfig={tallyCardsToolbar} chipConfig={tallyCardsChips}>
         <div className="flex items-center justify-center py-12">
           <div className="text-gray-500">Loading...</div>
         </div>
@@ -277,25 +292,12 @@ export default function Page({ searchParams }: PageProps) {
       }
     >
       <DataTable
-        dndEnabled={true}
+        dndEnabled={false}
         table={table}
         dataIds={dataIds}
         handleDragEnd={handleDragEnd}
         sensors={sensors}
         sortableId="tally-cards"
-        renderExpanded={(row) => (
-          <div className="border-t bg-gray-50 p-4">
-            <h4 className="mb-2 font-semibold">Details for {row.original.tally_card_number}</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Warehouse:</span> {row.original.warehouse || "—"}
-              </div>
-              <div>
-                <span className="font-medium">Item Number:</span> {row.original.item_number || "—"}
-              </div>
-            </div>
-          </div>
-        )}
       />
       <DataTablePagination table={table} />
     </PageShell>

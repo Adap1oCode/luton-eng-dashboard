@@ -15,7 +15,7 @@
     "paths": {
     "@/*": ["src/*"]
     },
-    "types": ["vitest/globals", "node"], // <-- makes describe/it/expect available
+    "types": ["node"],
     "plugins": [
       {
         "name": "next"
