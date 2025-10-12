@@ -1,4 +1,5 @@
 import type { ResourceConfig } from "@/lib/data/types";
+
 import type { TallyCard, TallyCardInput } from "./types";
 
 /**
@@ -11,8 +12,7 @@ export const tcmTallyCardsConfig = {
   pk: "id",
 
   // Supabase select string (kept as a single string for PostgREST/SDK parity)
-  select:
-    "id, tally_card_number, warehouse, item_number, note, is_active, created_at, updated_at",
+  select: "id, tally_card_number, warehouse, item_number, note, is_active, created_at",
 
   // Useful global search fields
   search: ["tally_card_number", "warehouse", "note"] as const,
@@ -29,7 +29,6 @@ export const tcmTallyCardsConfig = {
     note: r.note ?? null,
     is_active: !!r.is_active,
     created_at: r.created_at ?? null,
-    updated_at: r.updated_at ?? null,
   }),
 
   // domain input → DB payload (app should set updated_at explicitly on writes)
