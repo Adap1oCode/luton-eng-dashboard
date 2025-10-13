@@ -34,11 +34,24 @@ export type ColumnType =
   | "timestamp";
 
 export type FieldSpec = {
-  type: ColumnType;
+  type: "uuid" | "text" | "bool" | "int" | "bigint" | "number" | "timestamp";
   nullable?: boolean;
-  readonly?: boolean; // exclude from create/patch bodies
-  write?: boolean;    // include in create/patch bodies
+  write?: boolean;
+  readonly?: boolean;
+
+  // NEW (all optional, used by generators when present)
+  required?: boolean;          // if false, treat as optional in Create/Patch
+  defaulted?: boolean;         // field has a DB/server default (makes it optional on create)
+  enum?: Array<string | number>;
+  min?: number;                // numbers: minimum (>=). strings: min length (map as min length if string)
+  max?: number;                // numbers: maximum (<=). strings: max length
+  length?: number;             // exact length for strings (e.g., codes)
+  pattern?: string;            // regex pattern for strings
+  format?: "email" | "url" | "hostname" | "ipv4" | "ipv6" | "date" | "date-time";
+  description?: string;
+  example?: unknown;
 };
+
 
 export type ResourceSchemaSpec = {
   fields: Record<string, FieldSpec>;

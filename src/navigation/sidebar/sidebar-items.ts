@@ -87,7 +87,7 @@ export const sidebarItems: NavGroup[] = [
         icon: Grid2X2,
         subItems: [
           { title: "Tally Cards", url: "/forms/tally-cards", icon: Grid2X2 },
-          { title: "Stock & Location Updates", url: "/forms/tally-cards", icon: Grid2X2 },
+          { title: "Stock Adjustments", url: "/forms/stock-adjustments", icon: Grid2X2 },
         ],
       },
     ],

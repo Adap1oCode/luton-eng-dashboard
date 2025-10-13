@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Github, Eye, EyeOff } from "lucide-react";
@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { supabaseBrowser } from "@/lib/supabase";
 
 const FormSchema = z
   .object({
@@ -25,6 +26,7 @@ const FormSchema = z
 
 export function RegisterFormV1() {
   const [showPassword, setShowPassword] = useState(false);
+  const [pending, start] = useTransition();
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -35,10 +37,56 @@ export function RegisterFormV1() {
     },
   });
 
-  // Remove 'data' parameter if not used
-  const onSubmit = async () => {
-    toast.success("Account created successfully!", {
-      description: "Welcome! You can now start using your account.",
+  // mirror login's ?next behavior
+  function getNextFromLocation(): string {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const n = sp.get("next");
+      return n && n.startsWith("/") ? n : "/dashboard";
+    } catch {
+      return "/dashboard";
+    }
+  }
+
+  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+    start(async () => {
+      if (pending) return;
+      const email = values.email.toLowerCase().trim();
+      const password = values.password.trim();
+      const next = getNextFromLocation();
+
+      try {
+        const s = supabaseBrowser();
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+        const { data, error } = await s.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo },
+        });
+
+        if (error) {
+          toast.error("Registration failed", { description: error.message });
+          return;
+        }
+
+        if (!data.session) {
+          // Email confirmation required
+          toast.success("Check your email", {
+            description: "We sent a confirmation link to finish setting up your account.",
+          });
+          return;
+        }
+
+        // Auto-confirmed (session created)
+        toast.success("Account created", { description: "Welcome!" });
+        window.location.href = next;
+      } catch (e: any) {
+        toast.error("Registration failed", {
+          description: e?.message ?? "Please try again.",
+        });
+      }
     });
   };
 
@@ -60,6 +108,7 @@ export function RegisterFormV1() {
             variant="outline"
             size="lg"
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            disabled={pending}
           >
             <Github className="mr-3 h-5 w-5" />
             GitHub
@@ -68,6 +117,7 @@ export function RegisterFormV1() {
             variant="outline"
             size="lg"
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            disabled={pending}
           >
             <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -117,6 +167,7 @@ export function RegisterFormV1() {
                       placeholder="m@example.com"
                       autoComplete="email"
                       className="h-12 rounded-lg border-gray-300 text-base focus:border-orange-500 focus:ring-orange-500"
+                      disabled={pending}
                       {...field}
                     />
                   </FormControl>
@@ -138,6 +189,7 @@ export function RegisterFormV1() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="h-12 rounded-lg border-gray-300 pr-12 text-base focus:border-orange-500 focus:ring-orange-500"
+                        disabled={pending}
                         {...field}
                       />
                       <Button
@@ -145,7 +197,8 @@ export function RegisterFormV1() {
                         variant="ghost"
                         size="sm"
                         className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={togglePasswordVisibility}
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={pending}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -168,11 +221,12 @@ export function RegisterFormV1() {
                   <FormControl>
                     <div className="relative">
                       <Input
-                        id="password"
+                        id="confirmPassword"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="h-12 rounded-lg border-gray-300 pr-12 text-base focus:border-orange-500 focus:ring-orange-500"
+                        disabled={pending}
                         {...field}
                       />
                       <Button
@@ -180,7 +234,8 @@ export function RegisterFormV1() {
                         variant="ghost"
                         size="sm"
                         className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={togglePasswordVisibility}
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={pending}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -197,8 +252,10 @@ export function RegisterFormV1() {
             <Button
               className="mt-8 h-12 w-full rounded-lg bg-orange-500 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-orange-600 hover:shadow-lg"
               type="submit"
+              disabled={pending}
+              aria-busy={pending}
             >
-              Create account
+              {pending ? "Please wait..." : "Create account"}
             </Button>
           </form>
         </Form>
