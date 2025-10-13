@@ -77,6 +77,21 @@ export const sidebarItems: NavGroup[] = [
       },
     ],
   },
+    {
+    id: 1.7,
+    label: "Tally Card Manager",
+    items: [
+      {
+        title: "Tally Card Manager",
+        url: "/forms/tally_cards",
+        icon: Grid2X2,
+        subItems: [
+          { title: "Tally Cards", url: "/forms/tally-cards", icon: Grid2X2 },
+          { title: "Stock & Location Updates", url: "/forms/tally-cards", icon: Grid2X2 },
+        ],
+      },
+    ],
+  },
   {
     id: 2,
     label: "Pages",

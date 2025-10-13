@@ -1,31 +1,37 @@
-import type { ResourceConfig } from "@/lib/data/types";
+import type { ResourceConfig, Warehouse } from "../types";
 
-const warehousesConfig = {
+export type WarehouseInput = {
+  code: string;
+  name: string;
+  is_active?: boolean;
+};
+
+const warehouses: ResourceConfig<Warehouse, WarehouseInput> = {
   table: "warehouses",
   pk: "id",
-
   select: "id, code, name, is_active, created_at, updated_at",
-
-  search: ["code", "name"] as const,
-  defaultSort: { column: "code", desc: false } as const,
+  search: ["code", "name"],
   activeFlag: "is_active",
+  defaultSort: { column: "code" },
 
-  toDomain: (r: any) => ({
-    id: r.id,
-    code: r.code,
-    name: r.name,
-    is_active: !!r.is_active,
-    created_at: r.created_at ?? null,
-    updated_at: r.updated_at ?? null,
+  fromInput: (input: WarehouseInput) => ({
+    code: String(input.code).trim(),
+    name: String(input.name).trim(),
+    is_active: input.is_active ?? true,
   }),
 
-  fromInput: (i: any) => ({
-    code: i.code,
-    name: i.name,
-    is_active: i.is_active ?? true,
-  }),
+  toDomain: (row: unknown) => row as Warehouse,
 
-  postProcess: (rows: any[]) => rows,
-} satisfies ResourceConfig<any, any>;
+  schema: {
+    fields: {
+      id: { type: "uuid", readonly: true },
+      code: { type: "text", write: true },
+      name: { type: "text", write: true },
+      is_active: { type: "bool", write: true },
+      created_at: { type: "timestamp", nullable: true, readonly: true },
+      updated_at: { type: "timestamp", nullable: true, readonly: true },
+    },
+  },
+};
 
-export default warehousesConfig;
+export default warehouses;

@@ -1,51 +1,56 @@
-import type { ResourceConfig } from "@/lib/data/types";
+import type { ResourceConfig, TcmTallyCard, UUID } from "../types";
 
-import type { TallyCard, TallyCardInput } from "./tally_cards/types";
+export type TallyCardInput = {
+  card_uid?: UUID | null;
+  warehouse_id?: UUID | null;
+  warehouse?: string | null;        // optional text mirror
+  tally_card_number: string;
+  item_number: number | string;
+  note?: string | null;
+  is_active?: boolean;
+  snapshot_at?: string | null;      // ISO; DB defaults if null
+};
 
-/**
- * Full writable version table (public.tcm_tally_cards)
- * This is the insert-only, SCD2-style master table.
- * The view v_tcm_tally_cards_current is used for reads.
- */
-const tcmTallyCardsConfig = {
+const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
   table: "tcm_tally_cards",
   pk: "id",
-
-  // All persisted columns in the master table
   select:
-    "id, card_uid, warehouse_id, tally_card_number, item_number, note, is_active, snapshot_at, hashdiff, created_at",
-
-  search: ["tally_card_number", "note"] as const,
-  defaultSort: { column: "snapshot_at", desc: true } as const,
+    "id, card_uid, tally_card_number, warehouse, warehouse_id, item_number, note, is_active, created_at, snapshot_at, hashdiff",
+  search: ["tally_card_number", "warehouse"],
   activeFlag: "is_active",
+  defaultSort: { column: "snapshot_at", desc: true },
 
-  // DB → domain
-  toDomain: (r: any): TallyCard => ({
-    id: r.id,
-    card_uid: r.card_uid,
-    warehouse_id: r.warehouse_id,
-    tally_card_number: r.tally_card_number,
-    item_number: Number(r.item_number),
-    note: r.note ?? null,
-    is_active: !!r.is_active,
-    snapshot_at: r.snapshot_at ?? null,
-    hashdiff: r.hashdiff ?? null,
-    created_at: r.created_at ?? null,
+  fromInput: (input: TallyCardInput) => ({
+    card_uid: input.card_uid ?? null,
+    warehouse_id: input.warehouse_id ?? null,
+    warehouse: input.warehouse ?? null,
+    tally_card_number: String(input.tally_card_number).trim(),
+    item_number:
+      typeof input.item_number === "string"
+        ? Number(input.item_number)
+        : input.item_number,
+    note: input.note ?? null,
+    is_active: input.is_active ?? true,
+    snapshot_at: input.snapshot_at ?? null,
   }),
 
-  // domain input → DB payload
-  fromInput: (i: TallyCardInput) => ({
-    card_uid: i.card_uid ?? null,
-    warehouse_id: i.warehouse_id,
-    tally_card_number: i.tally_card_number,
-    item_number: i.item_number,
-    note: i.note ?? null,
-    is_active: i.is_active ?? true,
-    snapshot_at: i.snapshot_at ?? new Date().toISOString(),
-    // hashdiff is typically computed by backend insert logic
-  }),
+  toDomain: (row: unknown) => row as TcmTallyCard,
 
-  postProcess: (rows: TallyCard[]) => rows,
-} satisfies ResourceConfig<TallyCard, TallyCardInput>;
+  schema: {
+    fields: {
+      id: { type: "uuid", readonly: true },
+      card_uid: { type: "uuid", nullable: true }, // set by trigger
+      tally_card_number: { type: "text", write: true },
+      warehouse: { type: "text", nullable: true, write: true },
+      warehouse_id: { type: "uuid", write: true },
+      item_number: { type: "bigint", write: true },
+      note: { type: "text", nullable: true, write: true },
+      is_active: { type: "bool", write: true },
+      created_at: { type: "timestamp", nullable: true, readonly: true },
+      snapshot_at: { type: "timestamp", write: true },
+      hashdiff: { type: "text", nullable: true, readonly: true },
+    },
+  },
+};
 
-export default tcmTallyCardsConfig;
+export default tcm_tally_cards;

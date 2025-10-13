@@ -1,30 +1,31 @@
-import type { ResourceConfig } from "@/lib/data/types";
+// src/lib/data/resources/tally_cards_current.config.ts
+import type { ResourceConfig, TcmTallyCard } from "../types";
 
-/**
- * Read-only view of latest version per card (v_tcm_tally_cards_current)
- */
-const tcmTallyCardsCurrentConfig = {
-  table: "public.v_tcm_tally_cards_current",
-  pk: "card_uid",
-
-  select: "card_uid, warehouse_id, tally_card_number, item_number, note, is_active, snapshot_at",
-
-  search: ["tally_card_number", "item_number", "note"] as const,
-  defaultSort: { column: "tally_card_number", desc: false } as const,
+/** Read-only "current" view (latest per card_uid). */
+const tcm_tally_cards_current: ResourceConfig<TcmTallyCard, unknown> = {  // ⬅️ changed
+  table: "v_tcm_tally_cards_current",
+  pk: "id",
+  select:
+    "id, card_uid, tally_card_number, warehouse_id, item_number, note, is_active, created_at, snapshot_at",
+search: ["tally_card_number"],
   activeFlag: "is_active",
+  defaultSort: { column: "snapshot_at", desc: true },
 
-  toDomain: (r: any) => ({
-    card_uid: r.card_uid,
-    warehouse_id: r.warehouse_id,
-    tally_card_number: r.tally_card_number,
-    item_number: String(r.item_number),
-    note: r.note ?? null,
-    is_active: !!r.is_active,
-    snapshot_at: r.snapshot_at ?? null,
-  }),
+  toDomain: (row: unknown) => row as TcmTallyCard,
 
-  fromInput: (i: any) => i, // view is read-only
-  postProcess: (rows: any[]) => rows,
-} satisfies ResourceConfig<any, any>;
+  schema: {
+    fields: {
+      id: { type: "uuid", readonly: true },
+      card_uid: { type: "uuid" },
+      tally_card_number: { type: "text" },
+      warehouse_id: { type: "uuid" },
+      item_number: { type: "bigint" },
+      note: { type: "text", nullable: true },
+      is_active: { type: "bool" },
+      created_at: { type: "timestamp", nullable: true },
+      snapshot_at: { type: "timestamp" },
+    },
+  },
+};
 
-export default tcmTallyCardsCurrentConfig;
+export default tcm_tally_cards_current;

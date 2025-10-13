@@ -1,20 +1,29 @@
-import roleWarehouseRules from "./role_warehouse_rules.config";
-import roles from "./roles.config";
-import tcmTallyCards from "./tally_cards.config";
-import tcmTallyCardsCurrent from "./tally_cards_current.config";
-import tcmUserTallyCardEntries from "./user_tally_card_entries.config";
-import users from "./users.config";
-import warehouses from "./warehouses.config";
+// src/lib/data/resources/index.ts
+export { default as warehouses } from "./warehouses.config";
+export { default as roles } from "./roles.config";
+export { default as role_warehouse_rules } from "./role_warehouse_rules.config";
+export { default as tcm_tally_cards } from "./tally_cards.config";
+export { default as tcm_tally_cards_current } from "./tally_cards_current.config";
+export { default as tcm_user_tally_card_entries } from "./user_tally_card_entries.config";
+export { default as users } from "./users.config";
 
-export const resources = {
+// Default export (registry object)
+import warehouses from "./warehouses.config";
+import roles from "./roles.config";
+import role_warehouse_rules from "./role_warehouse_rules.config";
+import tcm_tally_cards from "./tally_cards.config";
+import tcm_tally_cards_current from "./tally_cards_current.config";
+import tcm_user_tally_card_entries from "./user_tally_card_entries.config";
+import users from "./users.config";
+
+const resources = {
   warehouses,
   roles,
-  role_warehouse_rules: roleWarehouseRules,
-  tcm_tally_cards: tcmTallyCards, // full write table
-  tcm_tally_cards_current: tcmTallyCardsCurrent, // read-only view
-  tcm_user_tally_card_entries: tcmUserTallyCardEntries,
+  role_warehouse_rules,
+  tcm_tally_cards,
+  tcm_tally_cards_current,
+  tcm_user_tally_card_entries,
   users,
-} as const;
+};
 
-export type ResourceKey = keyof typeof resources;
-export default resources; // ✅ add this line
+export default resources;

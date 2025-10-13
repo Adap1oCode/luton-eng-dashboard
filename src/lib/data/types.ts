@@ -1,13 +1,19 @@
-// lib/data/types.ts
+// src/lib/data/types.ts
+
+/** Base aliases */
 export type UUID = string;
 export type Relation<T> = T | null;
 
-// Add near the top:
 export type ISODateTime = string;
 export type SortSpec = { column: string; desc?: boolean };
-export type FilterValue = string | number | boolean | null | Array<string | number | boolean | null>;
+export type FilterValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number | boolean | null>;
 
-// Replace ListParams with:
+/** List params used by list handlers (1-based page index) */
 export type ListParams = {
   page?: number; // 1-based
   pageSize?: number;
@@ -17,21 +23,85 @@ export type ListParams = {
   sort?: SortSpec;
 };
 
-// In ResourceConfig, reuse SortSpec:
+/** Registry-first schema metadata (single source of truth for generators) */
+export type ColumnType =
+  | "uuid"
+  | "text"
+  | "bool"
+  | "int"
+  | "bigint"
+  | "number"
+  | "timestamp";
+
+export type FieldSpec = {
+  type: ColumnType;
+  nullable?: boolean;
+  readonly?: boolean; // exclude from create/patch bodies
+  write?: boolean;    // include in create/patch bodies
+};
+
+export type ResourceSchemaSpec = {
+  fields: Record<string, FieldSpec>;
+};
+
+/** Response envelopes */
+export type ListResult<T> = { rows: T[]; total: number };
+export type SingleResult<T> = { row: T };
+export type SuccessResult = { success: true };
+export type ErrorResult = { error: { message: string; code?: string } };
+
+/** Mapped helpers from schema metadata */
+export type TypeFromColumn<T> = T extends "uuid"
+  ? UUID
+  : T extends "text"
+  ? string
+  : T extends "bool"
+  ? boolean
+  : T extends "int"
+  ? number
+  : T extends "bigint"
+  ? number
+  : T extends "number"
+  ? number
+  : T extends "timestamp"
+  ? ISODateTime
+  : unknown;
+
+export type WriteModelFromSchema<S extends ResourceSchemaSpec> = {
+  [K in keyof S["fields"] as S["fields"][K] extends { write: true }
+    ? S["fields"][K] extends { readonly: true }
+      ? never
+      : K
+    : never]: S["fields"][K] extends { type: infer T; nullable: true }
+    ? TypeFromColumn<T> | null
+    : S["fields"][K] extends { type: infer T }
+    ? TypeFromColumn<T>
+    : never;
+};
+
+export type PatchModelFromSchema<S extends ResourceSchemaSpec> = Partial<
+  WriteModelFromSchema<S>
+>;
+
+/** ResourceConfig (pk is single-column only at this layer) */
 export type ResourceConfig<T, TInput> = {
   table: string;
-  pk: string; // NOTE: single-column only; composite keys are not supported at this layer.
+  pk: string; // single-column only
   select: string;
   search?: string[];
   activeFlag?: string;
   defaultSort?: SortSpec;
-  toDomain: (row: any) => T;
-  fromInput?: (input: TInput) => any;
-  relations?: Relation<any>[]; // ✅ fixed line
+
+  toDomain: (row: unknown) => T;
+  fromInput?: (input: TInput) => unknown;
+
+  relations?: Relation<unknown>[];
   postProcess?: (rows: T[]) => T[];
+
+  schema: ResourceSchemaSpec;
 };
 
-// In domain types, (optional) use ISODateTime alias:
+/** Domain types */
 export interface Warehouse {
   id: UUID;
   code: string;

@@ -54,11 +54,17 @@ function maybeApplyAppTimestamps(
   if (hasUpdated) row.updated_at = now;
 }
 
-export async function GET(req: Request, ctx: { params: { resource: string } }) {
-  const invalid = validateResourceParam(ctx?.params?.resource);
-  if (invalid) return invalid;
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTE: Next 15 requires awaiting ctx.params before using its properties
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const resource = ctx.params.resource;
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ resource: string }> }
+) {
+  const { resource } = await ctx.params;
+  const invalid = validateResourceParam(resource);
+  if (invalid) return invalid;
 
   // Preflight: verify the resource is known → 404 if not
   try {
@@ -86,19 +92,14 @@ export async function GET(req: Request, ctx: { params: { resource: string } }) {
  * - Uses ResourceConfig.fromInput (if present) for normalization
  * - Conditionally sets created_at / updated_at when those fields are part of select
  * - Returns { row } with the domain-mapped record
- *
- * TESTS TO UPDATE (minimal):
- *  - src/app/api/[resource]/route.spec.ts:
- *      • POST happy-path (201, { row })
- *      • POST invalid JSON (400)
- *      • POST unknown resource (404)
- *      • (optional) POST DB error (400)
  */
-export async function POST(req: Request, ctx: { params: { resource: string } }) {
-  const invalid = validateResourceParam(ctx?.params?.resource);
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ resource: string }> }
+) {
+  const { resource } = await ctx.params;
+  const invalid = validateResourceParam(resource);
   if (invalid) return invalid;
-
-  const resource = ctx.params.resource;
 
   // Resolve the resource config; if unknown → 404
   let config: ResourceShape;

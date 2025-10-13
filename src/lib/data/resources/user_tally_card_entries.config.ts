@@ -1,34 +1,53 @@
-import type { ResourceConfig } from "@/lib/data/types";
+import type { ResourceConfig, TcmUserEntry, UUID } from "../types";
 
-const tcmUserTallyCardEntriesConfig: ResourceConfig<any, any> = {
-  table: "tcm_user_tally_card_entries",
-  pk: "id", // synthetic; we’ll derive a virtual ID below
+/**
+ * Physical composite key (user_id, tally_card_number), but this layer
+ * supports single-column pk only. We use 'user_id' as pk for typing;
+ * handlers can include 'tally_card_number' in filters/body as needed.
+ */
 
-  select: "user_id, card_uid, qty, location, note, updated_at",
-
-  search: ["note"] as const,
-  defaultSort: { column: "updated_at", desc: true } as const,
-
-  toDomain: (r: any) => ({
-    // Compose a unique key client-side
-    id: `${r.user_id}:${r.card_uid}:${r.updated_at ?? ""}`,
-    user_id: r.user_id,
-    card_uid: r.card_uid,
-    qty: r.qty,
-    location: r.location ?? null,
-    note: r.note ?? null,
-    updated_at: r.updated_at ?? null,
-  }),
-
-  fromInput: (i: any) => ({
-    user_id: i.user_id,
-    card_uid: i.card_uid,
-    qty: i.qty,
-    location: i.location ?? null,
-    note: i.note ?? null,
-  }),
-
-  postProcess: (rows: any[]) => rows,
+export type TallyCardEntryInput = {
+  user_id: UUID;
+  tally_card_number?: string;
+  card_uid?: UUID | null;
+  qty?: number | null;
+  location?: string | null;
+  note?: string | null;
 };
 
-export default tcmUserTallyCardEntriesConfig;
+const tcm_user_tally_card_entries: ResourceConfig<
+  TcmUserEntry,
+  TallyCardEntryInput
+> = {
+  table: "tcm_user_tally_card_entries",
+  pk: "user_id", // single-column pk per current layer constraints
+  select: "user_id, tally_card_number, card_uid, qty, location, note, updated_at",
+  search: ["tally_card_number", "location", "note"],
+  defaultSort: { column: "updated_at", desc: true },
+
+  fromInput: (input: TallyCardEntryInput) => ({
+    user_id: input.user_id,
+    tally_card_number: input.tally_card_number ?? undefined,
+    card_uid: input.card_uid ?? null,
+    qty:
+      input.qty === undefined || input.qty === null ? null : Number(input.qty),
+    location: input.location ?? null,
+    note: input.note ?? null,
+  }),
+
+  toDomain: (row: unknown) => row as TcmUserEntry,
+
+  schema: {
+    fields: {
+      user_id: { type: "uuid", write: true },
+      tally_card_number: { type: "text", write: true },
+      card_uid: { type: "uuid", nullable: true, write: true },
+      qty: { type: "int", nullable: true, write: true },
+      location: { type: "text", nullable: true, write: true },
+      note: { type: "text", nullable: true, write: true },
+      updated_at: { type: "timestamp", nullable: true, readonly: true },
+    },
+  },
+};
+
+export default tcm_user_tally_card_entries;
