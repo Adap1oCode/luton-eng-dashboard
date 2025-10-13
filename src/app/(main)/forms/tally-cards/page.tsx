@@ -26,6 +26,9 @@ import { Toolbar } from "@/components/data-table/toolbar";
 import { ViewsMenu } from "@/components/data-table/views-menu";
 import { supabaseBrowser } from "@/lib/supabase";
 
+import { tallyCardsToolbar, tallyCardsActionMenu, tallyCardsChips } from "./toolbar.config";
+import { STATUS_OPTIONS, COLUMNS, ACTIONS_COLUMN, quickFilters, features, tallyCardsViewConfig } from "./view.config";
+
 type TallyCardRow = {
   id: string;
   tally_card_number: string;
@@ -78,68 +81,8 @@ async function fetchTallyCards(): Promise<TallyCardRow[]> {
   }));
 }
 
-const STATUS_OPTIONS = ["Active", "Inactive"];
-
-const COLUMNS = [
-  {
-    id: "tally_card_number",
-    label: "Tally Card Number",
-    width: "30%",
-    required: true,
-    sortType: "alphabetical" as const,
-    sortOptions: [
-      { label: "A to Z", value: "asc", icon: SortAsc },
-      { label: "Z to A", value: "desc", icon: SortDesc },
-      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
-    ],
-  },
-  {
-    id: "item_number",
-    label: "Item Number",
-    width: "25%",
-    sortType: "alphabetical" as const,
-    sortOptions: [
-      { label: "A to Z", value: "asc", icon: SortAsc },
-      { label: "Z to A", value: "desc", icon: SortDesc },
-      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
-    ],
-  },
-  {
-    id: "status",
-    label: "Status",
-    width: "20%",
-    sortType: "alphabetical" as const,
-    sortOptions: [
-      { label: "A to Z", value: "asc", icon: SortAsc },
-      { label: "Z to A", value: "desc", icon: SortDesc },
-      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
-    ],
-  },
-  {
-    id: "warehouse",
-    label: "Warehouse",
-    width: "20%",
-    sortType: "alphabetical" as const,
-    sortOptions: [
-      { label: "A to Z", value: "asc", icon: SortAsc },
-      { label: "Z to A", value: "desc", icon: SortDesc },
-      { label: "Clear Sorting", value: "none", icon: ArrowUpDown },
-    ],
-  },
-];
-
 // Actions column is separate and always fixed at the end
 // Fix the ACTIONS_COLUMN definition around line 134
-const ACTIONS_COLUMN = {
-  id: "actions",
-  label: "",
-  width: "5%",
-  required: true,
-  fixed: true,
-  sortable: false,
-  sortType: "alphabetical" as const, // Add this property
-  sortOptions: [], // Empty sort options
-};
 
 const formatDateSafely = (date: any) => {
   if (!date) return "-";
