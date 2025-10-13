@@ -1,6 +1,6 @@
 import React from "react";
 
-export const PageHeader: React.FC = () => {
+export const PageHeader: React.FC<{ title?: string }> = ({ title }) => {
   return (
     <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
       <div className="flex items-center gap-4">
@@ -10,7 +10,9 @@ export const PageHeader: React.FC = () => {
           </svg>
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">View Roles</h1>
+          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">
+            {title ?? "View Roles"}
+          </h1>
         </div>
       </div>
     </div>

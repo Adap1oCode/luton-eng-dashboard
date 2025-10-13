@@ -654,7 +654,7 @@ export default function TallyCardsManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 py-6 dark:bg-gray-900">
       {/* Toast Notifications */}
       {toastMessage && <Toast message={toastMessage} />}
 
@@ -691,8 +691,8 @@ export default function TallyCardsManagementPage() {
       />
 
       {/* Page Header Section */}
-      <section className="mb-6">
-        <PageHeader />
+      <section className="mb-6 px-6">
+        <PageHeader title="View Tally Cards" />
       </section>
 
       {/* Toolbar Section */}
@@ -856,7 +856,7 @@ export default function TallyCardsManagementPage() {
       </section>
 
       {/* Pagination Section */}
-      <section className="px-6 pb-6">
+      <section className="px-6">
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <Pagination
             currentPage={currentPage}
