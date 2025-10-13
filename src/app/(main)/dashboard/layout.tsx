@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
+import {
+  getSidebarVariant,
+  getSidebarCollapsible,
+  getContentLayout,
+} from "@/lib/layout-preferences";
 import { supabaseServer } from "@/lib/supabase-server";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +38,13 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) {
-    // Note: browser URL is /dashboard (group "(main)" is not in the URL)
-    redirect("/(main)/auth/v1/login");
+    // Always redirect unauthenticated users to /login with a ?next param
+    redirect(`/login?next=/dashboard`);
   }
 
-  // 🧁 Your existing cookie-driven UI prefs
+  // 🧁 UI prefs
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
@@ -61,7 +66,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
             <div className="flex items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
+              <Separator
+                orientation="vertical"
+                className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2"
+              />
               <div className="hidden sm:block">
                 <SearchDialog />
               </div>

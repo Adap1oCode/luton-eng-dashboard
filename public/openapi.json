@@ -1,0 +1,2664 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tally Card Manager API",
+    "version": "1.0.0",
+    "description": "API contract generated from the resource registry. All list endpoints return { rows, total }"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local dev"
+    }
+  ],
+  "paths": {
+    "/api/warehouses": {
+      "get": {
+        "tags": [
+          "warehouses"
+        ],
+        "summary": "List warehouses",
+        "description": "Operations for warehouses",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/warehouses_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "warehouses"
+        ],
+        "summary": "Create warehouses",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouses_Create"
+              },
+              "example": {
+                "code": "code_value",
+                "name": "name_value",
+                "is_active": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouses_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "code": "code_value",
+                  "name": "name_value",
+                  "is_active": false,
+                  "created_at": null,
+                  "updated_at": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/warehouses/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "id of the warehouses record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "warehouses"
+        ],
+        "summary": "Get warehouses by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/warehouses_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "code": "code_value",
+                    "name": "name_value",
+                    "is_active": false,
+                    "created_at": null,
+                    "updated_at": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "warehouses"
+        ],
+        "summary": "Update warehouses by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouses_Patch"
+              },
+              "example": {
+                "code": "code_value",
+                "name": "name_value",
+                "is_active": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouses_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "code": "code_value",
+                  "name": "name_value",
+                  "is_active": false,
+                  "created_at": null,
+                  "updated_at": null
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "warehouses"
+        ],
+        "summary": "Delete warehouses by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "List roles",
+        "description": "Operations for roles",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/roles_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Create roles",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles_Create"
+              },
+              "example": {
+                "role_code": "role_code_value",
+                "role_name": "role_name_value",
+                "description": null,
+                "is_active": false,
+                "can_manage_roles": false,
+                "can_manage_cards": false,
+                "can_manage_entries": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/roles_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "role_code": "role_code_value",
+                  "role_name": "role_name_value",
+                  "description": null,
+                  "is_active": false,
+                  "can_manage_roles": false,
+                  "can_manage_cards": false,
+                  "can_manage_entries": false,
+                  "created_at": null,
+                  "updated_at": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "id of the roles record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Get roles by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/roles_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "role_code": "role_code_value",
+                    "role_name": "role_name_value",
+                    "description": null,
+                    "is_active": false,
+                    "can_manage_roles": false,
+                    "can_manage_cards": false,
+                    "can_manage_entries": false,
+                    "created_at": null,
+                    "updated_at": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Update roles by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles_Patch"
+              },
+              "example": {
+                "role_code": "role_code_value",
+                "role_name": "role_name_value",
+                "description": null,
+                "is_active": false,
+                "can_manage_roles": false,
+                "can_manage_cards": false,
+                "can_manage_entries": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/roles_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "role_code": "role_code_value",
+                  "role_name": "role_name_value",
+                  "description": null,
+                  "is_active": false,
+                  "can_manage_roles": false,
+                  "can_manage_cards": false,
+                  "can_manage_entries": false,
+                  "created_at": null,
+                  "updated_at": null
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Delete roles by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/role_warehouse_rules": {
+      "get": {
+        "tags": [
+          "role_warehouse_rules"
+        ],
+        "summary": "List role_warehouse_rules",
+        "description": "Operations for role_warehouse_rules",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/role_warehouse_rules_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "role_warehouse_rules"
+        ],
+        "summary": "Create role_warehouse_rules",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/role_warehouse_rules_Create"
+              },
+              "example": {
+                "role_id": "00000000-0000-0000-0000-000000000000",
+                "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                "role_code": "role_code_value",
+                "warehouse": "warehouse_value"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/role_warehouse_rules_Response"
+                },
+                "example": {
+                  "role_id": "00000000-0000-0000-0000-000000000000",
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "role_code": "role_code_value",
+                  "warehouse": "warehouse_value"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/role_warehouse_rules/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "role_id of the role_warehouse_rules record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "role_warehouse_rules"
+        ],
+        "summary": "Get role_warehouse_rules by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/role_warehouse_rules_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "role_id": "00000000-0000-0000-0000-000000000000",
+                    "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                    "role_code": "role_code_value",
+                    "warehouse": "warehouse_value"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "role_warehouse_rules"
+        ],
+        "summary": "Update role_warehouse_rules by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/role_warehouse_rules_Patch"
+              },
+              "example": {
+                "role_id": "00000000-0000-0000-0000-000000000000",
+                "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                "role_code": "role_code_value",
+                "warehouse": "warehouse_value"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/role_warehouse_rules_Response"
+                },
+                "example": {
+                  "role_id": "00000000-0000-0000-0000-000000000000",
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "role_code": "role_code_value",
+                  "warehouse": "warehouse_value"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "role_warehouse_rules"
+        ],
+        "summary": "Delete role_warehouse_rules by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/tcm_tally_cards": {
+      "get": {
+        "tags": [
+          "tcm_tally_cards"
+        ],
+        "summary": "List tcm_tally_cards",
+        "description": "Operations for tcm_tally_cards",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/tcm_tally_cards_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tcm_tally_cards"
+        ],
+        "summary": "Create tcm_tally_cards",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_tally_cards_Create"
+              },
+              "example": {
+                "tally_card_number": "tally_card_number_value",
+                "warehouse": null,
+                "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                "item_number": 9007199254740991,
+                "note": null,
+                "is_active": false,
+                "snapshot_at": "2025-01-01T00:00:00Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_tally_cards_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "card_uid": null,
+                  "tally_card_number": "tally_card_number_value",
+                  "warehouse": null,
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "item_number": 9007199254740991,
+                  "note": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "snapshot_at": "2025-01-01T00:00:00Z",
+                  "hashdiff": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tcm_tally_cards/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "id of the tcm_tally_cards record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "tcm_tally_cards"
+        ],
+        "summary": "Get tcm_tally_cards by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/tcm_tally_cards_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "card_uid": null,
+                    "tally_card_number": "tally_card_number_value",
+                    "warehouse": null,
+                    "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                    "item_number": 9007199254740991,
+                    "note": null,
+                    "is_active": false,
+                    "created_at": null,
+                    "snapshot_at": "2025-01-01T00:00:00Z",
+                    "hashdiff": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tcm_tally_cards"
+        ],
+        "summary": "Update tcm_tally_cards by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_tally_cards_Patch"
+              },
+              "example": {
+                "tally_card_number": "tally_card_number_value",
+                "warehouse": null,
+                "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                "item_number": 9007199254740991,
+                "note": null,
+                "is_active": false,
+                "snapshot_at": "2025-01-01T00:00:00Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_tally_cards_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "card_uid": null,
+                  "tally_card_number": "tally_card_number_value",
+                  "warehouse": null,
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "item_number": 9007199254740991,
+                  "note": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "snapshot_at": "2025-01-01T00:00:00Z",
+                  "hashdiff": null
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tcm_tally_cards"
+        ],
+        "summary": "Delete tcm_tally_cards by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/tcm_tally_cards_current": {
+      "get": {
+        "tags": [
+          "tcm_tally_cards_current"
+        ],
+        "summary": "List tcm_tally_cards_current",
+        "description": "Operations for tcm_tally_cards_current",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/tcm_tally_cards_current_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tcm_tally_cards_current"
+        ],
+        "summary": "Create tcm_tally_cards_current",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_tally_cards_current_Create"
+              },
+              "example": {}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_tally_cards_current_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "card_uid": "00000000-0000-0000-0000-000000000000",
+                  "tally_card_number": "tally_card_number_value",
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "item_number": 9007199254740991,
+                  "note": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "snapshot_at": "2025-01-01T00:00:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tcm_tally_cards_current/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "id of the tcm_tally_cards_current record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "tcm_tally_cards_current"
+        ],
+        "summary": "Get tcm_tally_cards_current by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/tcm_tally_cards_current_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "card_uid": "00000000-0000-0000-0000-000000000000",
+                    "tally_card_number": "tally_card_number_value",
+                    "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                    "item_number": 9007199254740991,
+                    "note": null,
+                    "is_active": false,
+                    "created_at": null,
+                    "snapshot_at": "2025-01-01T00:00:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tcm_tally_cards_current"
+        ],
+        "summary": "Update tcm_tally_cards_current by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_tally_cards_current_Patch"
+              },
+              "example": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_tally_cards_current_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "card_uid": "00000000-0000-0000-0000-000000000000",
+                  "tally_card_number": "tally_card_number_value",
+                  "warehouse_id": "00000000-0000-0000-0000-000000000000",
+                  "item_number": 9007199254740991,
+                  "note": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "snapshot_at": "2025-01-01T00:00:00Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tcm_tally_cards_current"
+        ],
+        "summary": "Delete tcm_tally_cards_current by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/tcm_user_tally_card_entries": {
+      "get": {
+        "tags": [
+          "tcm_user_tally_card_entries"
+        ],
+        "summary": "List tcm_user_tally_card_entries",
+        "description": "Operations for tcm_user_tally_card_entries",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/tcm_user_tally_card_entries_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tcm_user_tally_card_entries"
+        ],
+        "summary": "Create tcm_user_tally_card_entries",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_user_tally_card_entries_Create"
+              },
+              "example": {
+                "user_id": "00000000-0000-0000-0000-000000000000",
+                "tally_card_number": "tally_card_number_value",
+                "card_uid": null,
+                "qty": null,
+                "location": null,
+                "note": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_user_tally_card_entries_Response"
+                },
+                "example": {
+                  "user_id": "00000000-0000-0000-0000-000000000000",
+                  "tally_card_number": "tally_card_number_value",
+                  "card_uid": null,
+                  "qty": null,
+                  "location": null,
+                  "note": null,
+                  "updated_at": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tcm_user_tally_card_entries/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "user_id of the tcm_user_tally_card_entries record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "tcm_user_tally_card_entries"
+        ],
+        "summary": "Get tcm_user_tally_card_entries by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/tcm_user_tally_card_entries_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "user_id": "00000000-0000-0000-0000-000000000000",
+                    "tally_card_number": "tally_card_number_value",
+                    "card_uid": null,
+                    "qty": null,
+                    "location": null,
+                    "note": null,
+                    "updated_at": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tcm_user_tally_card_entries"
+        ],
+        "summary": "Update tcm_user_tally_card_entries by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/tcm_user_tally_card_entries_Patch"
+              },
+              "example": {
+                "user_id": "00000000-0000-0000-0000-000000000000",
+                "tally_card_number": "tally_card_number_value",
+                "card_uid": null,
+                "qty": null,
+                "location": null,
+                "note": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tcm_user_tally_card_entries_Response"
+                },
+                "example": {
+                  "user_id": "00000000-0000-0000-0000-000000000000",
+                  "tally_card_number": "tally_card_number_value",
+                  "card_uid": null,
+                  "qty": null,
+                  "location": null,
+                  "note": null,
+                  "updated_at": null
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tcm_user_tally_card_entries"
+        ],
+        "summary": "Delete tcm_user_tally_card_entries by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List users",
+        "description": "Operations for users",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/users_Response"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create users",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/users_Create"
+              },
+              "example": {
+                "full_name": "full_name_value",
+                "email": null,
+                "role_code": null,
+                "is_active": false,
+                "role_id": null,
+                "is_roles_admin": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/users_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "full_name": "full_name_value",
+                  "email": null,
+                  "role_code": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "auth_id": null,
+                  "updated_at": null,
+                  "role_id": null,
+                  "is_roles_admin": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "id of the users record"
+        }
+      ],
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get users by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SingleResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "$ref": "#/components/schemas/users_Response"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "row": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "full_name": "full_name_value",
+                    "email": null,
+                    "role_code": null,
+                    "is_active": false,
+                    "created_at": null,
+                    "auth_id": null,
+                    "updated_at": null,
+                    "role_id": null,
+                    "is_roles_admin": false
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update users by id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/users_Patch"
+              },
+              "example": {
+                "full_name": "full_name_value",
+                "email": null,
+                "role_code": null,
+                "is_active": false,
+                "role_id": null,
+                "is_roles_admin": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/users_Response"
+                },
+                "example": {
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "full_name": "full_name_value",
+                  "email": null,
+                  "role_code": null,
+                  "is_active": false,
+                  "created_at": null,
+                  "auth_id": null,
+                  "updated_at": null,
+                  "role_id": null,
+                  "is_roles_admin": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete users by id",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ListResponse": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {}
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "SingleResponse": {
+        "type": "object",
+        "properties": {
+          "row": {}
+        },
+        "required": [
+          "row"
+        ],
+        "additionalProperties": false
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      },
+      "warehouses_Response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "code": "code_value",
+          "name": "name_value",
+          "is_active": false,
+          "created_at": null,
+          "updated_at": null
+        }
+      },
+      "warehouses_Create": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "code": "code_value",
+          "name": "name_value",
+          "is_active": false
+        }
+      },
+      "warehouses_Patch": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "code": "code_value",
+          "name": "name_value",
+          "is_active": false
+        }
+      },
+      "roles_Response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_code": {
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "can_manage_roles": {
+            "type": "boolean"
+          },
+          "can_manage_cards": {
+            "type": "boolean"
+          },
+          "can_manage_entries": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "role_code": "role_code_value",
+          "role_name": "role_name_value",
+          "description": null,
+          "is_active": false,
+          "can_manage_roles": false,
+          "can_manage_cards": false,
+          "can_manage_entries": false,
+          "created_at": null,
+          "updated_at": null
+        }
+      },
+      "roles_Create": {
+        "type": "object",
+        "properties": {
+          "role_code": {
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "can_manage_roles": {
+            "type": "boolean"
+          },
+          "can_manage_cards": {
+            "type": "boolean"
+          },
+          "can_manage_entries": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "role_code": "role_code_value",
+          "role_name": "role_name_value",
+          "description": null,
+          "is_active": false,
+          "can_manage_roles": false,
+          "can_manage_cards": false,
+          "can_manage_entries": false
+        }
+      },
+      "roles_Patch": {
+        "type": "object",
+        "properties": {
+          "role_code": {
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "can_manage_roles": {
+            "type": "boolean"
+          },
+          "can_manage_cards": {
+            "type": "boolean"
+          },
+          "can_manage_entries": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "role_code": "role_code_value",
+          "role_name": "role_name_value",
+          "description": null,
+          "is_active": false,
+          "can_manage_roles": false,
+          "can_manage_cards": false,
+          "can_manage_entries": false
+        }
+      },
+      "role_warehouse_rules_Response": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_code": {
+            "type": "string"
+          },
+          "warehouse": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "role_id": "00000000-0000-0000-0000-000000000000",
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "role_code": "role_code_value",
+          "warehouse": "warehouse_value"
+        }
+      },
+      "role_warehouse_rules_Create": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_code": {
+            "type": "string"
+          },
+          "warehouse": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "role_id": "00000000-0000-0000-0000-000000000000",
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "role_code": "role_code_value",
+          "warehouse": "warehouse_value"
+        }
+      },
+      "role_warehouse_rules_Patch": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role_code": {
+            "type": "string"
+          },
+          "warehouse": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "role_id": "00000000-0000-0000-0000-000000000000",
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "role_code": "role_code_value",
+          "warehouse": "warehouse_value"
+        }
+      },
+      "tcm_tally_cards_Response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "card_uid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tally_card_number": {
+            "type": "string"
+          },
+          "warehouse": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_number": {
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hashdiff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "card_uid": null,
+          "tally_card_number": "tally_card_number_value",
+          "warehouse": null,
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "item_number": 9007199254740991,
+          "note": null,
+          "is_active": false,
+          "created_at": null,
+          "snapshot_at": "2025-01-01T00:00:00Z",
+          "hashdiff": null
+        }
+      },
+      "tcm_tally_cards_Create": {
+        "type": "object",
+        "properties": {
+          "tally_card_number": {
+            "type": "string"
+          },
+          "warehouse": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_number": {
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "snapshot_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "tally_card_number": "tally_card_number_value",
+          "warehouse": null,
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "item_number": 9007199254740991,
+          "note": null,
+          "is_active": false,
+          "snapshot_at": "2025-01-01T00:00:00Z"
+        }
+      },
+      "tcm_tally_cards_Patch": {
+        "type": "object",
+        "properties": {
+          "tally_card_number": {
+            "type": "string"
+          },
+          "warehouse": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_number": {
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "snapshot_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "tally_card_number": "tally_card_number_value",
+          "warehouse": null,
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "item_number": 9007199254740991,
+          "note": null,
+          "is_active": false,
+          "snapshot_at": "2025-01-01T00:00:00Z"
+        }
+      },
+      "tcm_tally_cards_current_Response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "card_uid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tally_card_number": {
+            "type": "string"
+          },
+          "warehouse_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_number": {
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "card_uid": "00000000-0000-0000-0000-000000000000",
+          "tally_card_number": "tally_card_number_value",
+          "warehouse_id": "00000000-0000-0000-0000-000000000000",
+          "item_number": 9007199254740991,
+          "note": null,
+          "is_active": false,
+          "created_at": null,
+          "snapshot_at": "2025-01-01T00:00:00Z"
+        }
+      },
+      "tcm_tally_cards_current_Create": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "example": {}
+      },
+      "tcm_tally_cards_current_Patch": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": [],
+        "example": {}
+      },
+      "tcm_user_tally_card_entries_Response": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tally_card_number": {
+            "type": "string"
+          },
+          "card_uid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "user_id": "00000000-0000-0000-0000-000000000000",
+          "tally_card_number": "tally_card_number_value",
+          "card_uid": null,
+          "qty": null,
+          "location": null,
+          "note": null,
+          "updated_at": null
+        }
+      },
+      "tcm_user_tally_card_entries_Create": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tally_card_number": {
+            "type": "string"
+          },
+          "card_uid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "user_id": "00000000-0000-0000-0000-000000000000",
+          "tally_card_number": "tally_card_number_value",
+          "card_uid": null,
+          "qty": null,
+          "location": null,
+          "note": null
+        }
+      },
+      "tcm_user_tally_card_entries_Patch": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tally_card_number": {
+            "type": "string"
+          },
+          "card_uid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "user_id": "00000000-0000-0000-0000-000000000000",
+          "tally_card_number": "tally_card_number_value",
+          "card_uid": null,
+          "qty": null,
+          "location": null,
+          "note": null
+        }
+      },
+      "users_Response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auth_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_roles_admin": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "full_name": "full_name_value",
+          "email": null,
+          "role_code": null,
+          "is_active": false,
+          "created_at": null,
+          "auth_id": null,
+          "updated_at": null,
+          "role_id": null,
+          "is_roles_admin": false
+        }
+      },
+      "users_Create": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_roles_admin": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "full_name": "full_name_value",
+          "email": null,
+          "role_code": null,
+          "is_active": false,
+          "role_id": null,
+          "is_roles_admin": false
+        }
+      },
+      "users_Patch": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_roles_admin": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [],
+        "example": {
+          "full_name": "full_name_value",
+          "email": null,
+          "role_code": null,
+          "is_active": false,
+          "role_id": null,
+          "is_roles_admin": false
+        }
+      }
+    }
+  }
+}

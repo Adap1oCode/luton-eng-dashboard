@@ -66,7 +66,8 @@ export function LoginFormV1() {
 
   const onSubmit = (values: z.infer<typeof FormSchema>) => {
     start(async () => {
-      const email = values.email.trim();
+      if (pending) return;
+      const email = values.email.toLowerCase().trim();
       const password = (values.password ?? "").trim();
       const next = getNextFromLocation();
 
@@ -134,6 +135,7 @@ export function LoginFormV1() {
                       autoComplete="email"
                       inputMode="email"
                       className="h-12 rounded-lg border-gray-300 text-base focus:border-orange-500 focus:ring-orange-500"
+                      disabled={pending}
                       {...field}
                     />
                   </FormControl>
@@ -160,6 +162,7 @@ export function LoginFormV1() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="h-12 rounded-lg border-gray-300 pr-12 text-base focus:border-orange-500 focus:ring-orange-500"
+                        disabled={pending}
                         {...field}
                       />
                       <Button
@@ -170,6 +173,7 @@ export function LoginFormV1() {
                         onClick={togglePasswordVisibility}
                         tabIndex={-1}
                         aria-label={showPassword ? "Hide password" : "Show password"}
+                        disabled={pending}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -197,6 +201,7 @@ export function LoginFormV1() {
                       onCheckedChange={(v) => field.onChange(Boolean(v))}
                       className="mt-1 border-gray-300 focus:ring-orange-500 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500"
                       aria-describedby="remember-desc"
+                      disabled={pending}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -242,6 +247,7 @@ export function LoginFormV1() {
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
             onClick={() => toast.info("GitHub OAuth not configured yet")}
             aria-label="Continue with GitHub"
+            disabled={pending}
           >
             <Github className="mr-3 h-5 w-5" />
             GitHub
@@ -253,6 +259,7 @@ export function LoginFormV1() {
             className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
             onClick={() => toast.info("Google OAuth not configured yet")}
             aria-label="Continue with Google"
+            disabled={pending}
           >
             <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path

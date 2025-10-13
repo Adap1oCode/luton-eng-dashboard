@@ -1,20 +1,22 @@
 // src/lib/data/resources/index.ts
-export { default as warehouses } from "./warehouses.config";
-export { default as roles } from "./roles.config";
-export { default as role_warehouse_rules } from "./role_warehouse_rules.config";
-export { default as tcm_tally_cards } from "./tally_cards.config";
-export { default as tcm_tally_cards_current } from "./tally_cards_current.config";
-export { default as tcm_user_tally_card_entries } from "./user_tally_card_entries.config";
-export { default as users } from "./users.config";
+
+// Re-exports (named)
+export { default as warehouses } from "./warehouses.config.ts";
+export { default as roles } from "./roles.config.ts";
+export { default as role_warehouse_rules } from "./role_warehouse_rules.config.ts";
+export { default as tcm_tally_cards } from "./tally_cards.config.ts";
+export { default as tcm_tally_cards_current } from "./tally_cards_current.config.ts";
+export { default as tcm_user_tally_card_entries } from "./user_tally_card_entries.config.ts";
+export { default as users } from "./users.config.ts";
 
 // Default export (registry object)
-import warehouses from "./warehouses.config";
-import roles from "./roles.config";
-import role_warehouse_rules from "./role_warehouse_rules.config";
-import tcm_tally_cards from "./tally_cards.config";
-import tcm_tally_cards_current from "./tally_cards_current.config";
-import tcm_user_tally_card_entries from "./user_tally_card_entries.config";
-import users from "./users.config";
+import warehouses from "./warehouses.config.ts";
+import roles from "./roles.config.ts";
+import role_warehouse_rules from "./role_warehouse_rules.config.ts";
+import tcm_tally_cards from "./tally_cards.config.ts";
+import tcm_tally_cards_current from "./tally_cards_current.config.ts";
+import tcm_user_tally_card_entries from "./user_tally_card_entries.config.ts";
+import users from "./users.config.ts";
 
 const resources = {
   warehouses,
