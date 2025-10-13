@@ -1,4 +1,5 @@
 "use client";
+// cspell:words hashdiff cardUID
 
 import React, { useState } from "react";
 
@@ -81,7 +82,7 @@ export default function NewTallyCardPage() {
             <Input value={cardUID} disabled />
           </div>
           <div>
-            <Label>Hashdiff (Readonly)</Label>
+            <Label>Hash Diff (Readonly)</Label>
             <Input value={hashdiff} disabled />
           </div>
         </div>
