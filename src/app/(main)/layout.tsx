@@ -6,11 +6,11 @@ import { redirect } from "next/navigation";
 
 import { MoreHorizontal, Search } from "lucide-react";
 
-import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
-import { DataViewerButton } from "@/app/(main)/dashboard/_components/sidebar/data-viewer-button";
-import { LayoutControls } from "@/app/(main)/dashboard/_components/sidebar/layout-controls";
-import { SearchDialog } from "@/app/(main)/dashboard/_components/sidebar/search-dialog";
-import { ThemeSwitcher } from "@/app/(main)/dashboard/_components/sidebar/theme-switcher";
+import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
+import { DataViewerButton } from "@/app/(main)/_components/sidebar/data-viewer-button";
+import { LayoutControls } from "@/app/(main)/_components/sidebar/layout-controls";
+import { SearchDialog } from "@/app/(main)/_components/sidebar/search-dialog";
+import { ThemeSwitcher } from "@/app/(main)/_components/sidebar/theme-switcher";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,11 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  getSidebarVariant,
-  getSidebarCollapsible,
-  getContentLayout,
-} from "@/lib/layout-preferences";
+import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
 import { supabaseServer } from "@/lib/supabase-server";
 import { cn } from "@/lib/utils";
 
@@ -66,10 +62,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
             <div className="flex items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2"
-              />
+              <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
               <div className="hidden sm:block">
                 <SearchDialog />
               </div>

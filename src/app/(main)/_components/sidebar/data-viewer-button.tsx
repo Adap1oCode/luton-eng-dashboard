@@ -1,0 +1,56 @@
+"use client";
+
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+
+import { PlusCircleIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+
+export function DataViewerButton() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const handleClick = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    params.set("viewTable", "true");
+    const url = `${pathname ?? ""}?${params.toString()}`;
+    // try router.push(), then router.replace(), then full navigation as a last resort
+    // add logs to help debug why navigation might not take effect
+
+    console.debug("DataViewerButton: navigating to", url);
+    try {
+      await router.push(url, { scroll: false });
+
+      console.debug("DataViewerButton: router.push succeeded");
+      return;
+    } catch (err: unknown) {
+      console.warn("DataViewerButton: router.push failed, trying replace", err);
+    }
+
+    try {
+      await router.replace(url, { scroll: false });
+
+      console.debug("DataViewerButton: router.replace succeeded");
+      return;
+    } catch (err: unknown) {
+      // fallback to full navigation
+
+      console.warn("DataViewerButton: router.replace failed, falling back to location.href", err);
+      window.location.href = url;
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleClick}
+      type="button"
+      className="bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/90 pointer-events-auto relative z-40 min-w-8 duration-200 ease-linear"
+    >
+      <PlusCircleIcon className="mr-2 size-4" />
+      View Full Table
+    </Button>
+  );
+}
