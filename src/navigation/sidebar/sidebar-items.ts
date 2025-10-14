@@ -77,13 +77,13 @@ export const sidebarItems: NavGroup[] = [
       },
     ],
   },
-    {
+  {
     id: 1.7,
     label: "Tally Card Manager",
     items: [
       {
         title: "Tally Card Manager",
-        url: "/forms/tally_cards",
+        url: "/forms/tally-cards",
         icon: Grid2X2,
         subItems: [
           { title: "Tally Cards", url: "/forms/tally-cards", icon: Grid2X2 },
