@@ -1,18 +1,13 @@
-"use client";
+import type { ToolbarConfig, ChipsConfig } from "@/components/forms/shell/toolbar/types";
 
-import * as React from "react";
-
-import { Plus, Download } from "lucide-react";
-
-// Remove duplicate type definitions and just export the values
-export const tallyCardsToolbar = {
+export const tallyCardsToolbar: ToolbarConfig = {
   right: [
-    { id: "new", label: "New Tally Card", icon: Plus, variant: "default" as const, href: "/forms/tally-cards/new" },
-    { id: "export", label: "Export", icon: Download, variant: "outline" as const, onClickId: "exportCsv" },
+    { id: "new", label: "New Tally Card", icon: "Plus", variant: "default", href: "/forms/tally-cards/new" },
+    { id: "export", label: "Export", icon: "Download", variant: "outline", action: "exportCsv" },
   ],
 };
 
-export const tallyCardsChips = undefined;
+export const tallyCardsChips: ChipsConfig | undefined = undefined;
 
 export const tallyCardsActionMenu = [
   { id: "edit", label: "Edit" },

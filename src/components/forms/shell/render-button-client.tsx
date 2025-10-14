@@ -1,14 +1,10 @@
-// -----------------------------------------------------------------------------
-// FILE: src/components/forms/shell/RenderButtonClient.tsx
-// TYPE: Client Component
-// PURPOSE: Small reusable button renderer (supports plain, link, and dropdown)
-// -----------------------------------------------------------------------------
-
 "use client";
 
 import * as React from "react";
+
+import { ChevronDown, Plus, Download, Layout, Settings, ArrowUpDown, Filter } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,77 +12,69 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ToolbarButton = {
-  id: string;
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  variant?: "default" | "secondary" | "outline" | "destructive" | "ghost";
-  href?: string;
-  onClickId?: string;
-  disabled?: boolean;
+import type { ToolbarButton } from "./toolbar/types";
+
+const ICONS = { Plus, Download, Layout, Settings, ArrowUpDown, Filter } as const;
+
+// Small reusable button renderer (supports plain, link, and dropdown)
+export default function RenderButton({
+  button,
+  className,
+  disabled,
+  onClick,
+}: {
+  button: ToolbarButton;
   className?: string;
-  trailingIcon?: React.ComponentType<{ className?: string }>;
-  menu?: {
-    align?: "start" | "end";
-    items: Array<{
-      id: string;
-      label: string;
-      icon?: React.ComponentType<{ className?: string }>;
-      href?: string;
-      onClickId?: string;
-      disabled?: boolean;
-    }>;
-  };
-};
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = typeof button.icon === "string" ? ICONS[button.icon as keyof typeof ICONS] : undefined;
+  const merged = [className].filter(Boolean).join(" ");
+  const allowedVariants = ["default", "secondary", "destructive", "outline", "ghost", "link"] as const;
+  type AllowedVariant = (typeof allowedVariants)[number];
+  const desired = button.variant ?? "default";
+  const safeVariant: AllowedVariant = allowedVariants.includes(desired) ? desired : "default";
 
-export default function RenderButton({ btn, className }: { btn: ToolbarButton; className?: string }) {
-  const Icon = btn.icon;
-  const Trailing = btn.trailingIcon;
-  const merged = [className, btn.className].filter(Boolean).join(" ");
-
-  if (btn.menu && btn.menu.items?.length) {
+  // Optional dropdown menu support
+  const menu = button.menu;
+  if (menu && menu.items.length) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant={btn.variant ?? "outline"}
-            className={merged}
-            disabled={btn.disabled}
-            data-testid={undefined}
-          >
+          <Button variant={safeVariant} className={merged} disabled={!!disabled}>
             {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
-            {btn.label}
+            {button.label}
             <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align={btn.menu.align ?? "start"}>
-          {btn.menu.items.map((it) =>
-            it.href ? (
+        <DropdownMenuContent align={menu.align ?? "start"}>
+          {menu.items.map((it) => {
+            const ItemIcon = typeof it.icon === "string" ? ICONS[it.icon as keyof typeof ICONS] : undefined;
+            return it.href ? (
               <DropdownMenuItem key={it.id} asChild disabled={it.disabled}>
                 <a href={it.href}>
-                  {it.icon ? <it.icon className="mr-2 h-4 w-4" /> : null}
+                  {ItemIcon ? <ItemIcon className="mr-2 h-4 w-4" /> : null}
                   {it.label}
                 </a>
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem key={it.id} disabled={it.disabled} data-onclick-id={it.onClickId || it.id}>
-                {it.icon ? <it.icon className="mr-2 h-4 w-4" /> : null}
+              <DropdownMenuItem key={it.id} disabled={it.disabled} data-onclick-id={it.action || it.onClickId || it.id}>
+                {ItemIcon ? <ItemIcon className="mr-2 h-4 w-4" /> : null}
                 {it.label}
               </DropdownMenuItem>
-            ),
-          )}
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     );
   }
 
-  if (btn.href) {
+  if (button.href) {
     return (
-      <Button variant={btn.variant ?? "default"} asChild className={merged} disabled={btn.disabled}>
-        <a href={btn.href}>
+      <Button variant={safeVariant} asChild className={merged} disabled={!!disabled}>
+        <a href={button.href}>
           {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
-          {btn.label}
-          {Trailing ? <Trailing className="ml-2 h-4 w-4" /> : null}
+          {button.label}
         </a>
       </Button>
     );
@@ -94,14 +82,14 @@ export default function RenderButton({ btn, className }: { btn: ToolbarButton; c
 
   return (
     <Button
-      variant={btn.variant ?? "default"}
+      variant={safeVariant}
       className={merged}
-      disabled={btn.disabled}
-      data-onclick-id={btn.onClickId || btn.id}
+      disabled={!!disabled}
+      onClick={onClick}
+      data-onclick-id={button.action || button.onClickId || button.id}
     >
       {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
-      {btn.label}
-      {Trailing ? <Trailing className="ml-2 h-4 w-4" /> : null}
+      {button.label}
     </Button>
   );
 }

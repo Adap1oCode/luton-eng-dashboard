@@ -1,15 +1,13 @@
 "use client";
-
 import * as React from "react";
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { SortAsc, SortDesc, ArrowUpDown } from "lucide-react";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { makeDefaultToolbar, type BaseViewConfig } from "@/components/data-table/view-defaults";
 import { Badge } from "@/components/ui/badge";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
-
-import { tallyCardsToolbar } from "./toolbar.config";
 
 export type TableFeatures = {
   sortable?: boolean;
@@ -108,7 +106,7 @@ export type QuickFilter = {
   defaultValue?: string;
 };
 
-export function buildColumns(includeActions: boolean = true): ColumnDef<TallyCardRow, any>[] {
+export function buildColumns(): ColumnDef<TallyCardRow>[] {
   return [
     {
       accessorKey: "tally_card_number",
@@ -174,16 +172,10 @@ export const features: TableFeatures = {
   viewStorageKey: "tally-cards-view",
 };
 
-export type TallyCardsViewConfig = {
-  features: TableFeatures;
-  toolbar: typeof tallyCardsToolbar;
-  quickFilters: QuickFilter[];
-  buildColumns: (includeActions?: boolean) => ColumnDef<TallyCardRow, any>[];
-};
-
-export const tallyCardsViewConfig: TallyCardsViewConfig = {
+// NB: toolbar for DataTable must use icon components (not strings)
+export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> = {
   features,
-  toolbar: tallyCardsToolbar,
+  toolbar: makeDefaultToolbar("Tally Card", "/forms/tally-cards/new"),
   quickFilters,
-  buildColumns: (includeActions = true) => buildColumns(includeActions),
+  buildColumns: () => buildColumns(),
 };

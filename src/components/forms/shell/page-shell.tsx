@@ -2,37 +2,22 @@
 // FILE: src/components/forms/shell/PageShell.tsx
 // TYPE: Server Component
 // PURPOSE: Shared server shell for Forms list screens (Roles-parity header/cards)
-// NOTES:
-//  • No data fetching here. Pure chrome + slots.
-//  • Right-side toolbar buttons rendered via a small client helper (RenderButtonClient).
-//  • Accepts children (the table island) and an optional footerSlot.
-//  • NEW (non-breaking): accepts toolbarConfig/chipConfig which take priority.
 // -----------------------------------------------------------------------------
 
 import * as React from "react";
+
+import { ChevronDown, Layout, Settings, ArrowUpDown, Filter } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Layout, Settings, ArrowUpDown, Filter } from "lucide-react";
+
 import { RenderButtonCluster } from "./render-button-cluster";
-
-import type { ToolbarButton } from "./types";
-export type { ToolbarButton } from "./types";
-
-type ToolbarConfig = {
-  primary?: ToolbarButton[];
-  left?: ToolbarButton[];
-  right?: ToolbarButton[];
-};
-
-type ChipConfig = {
-  filter?: boolean;
-  sorting?: boolean;
-};
+import type { ToolbarButton, ToolbarConfig, ChipsConfig } from "./toolbar/types";
 
 type PageShellProps = {
   // Header
-  title: string;          // e.g. "View Tally Cards"
-  count?: number;         // optional count badge to the right of title
+  title: string;
+  count?: number;
 
   // Row 1 action buttons (left cluster) — legacy props (kept for backwards compat)
   primaryButtons?: ToolbarButton[];
@@ -47,14 +32,14 @@ type PageShellProps = {
 
   // NEW: Preferred config-driven inputs (take priority over legacy props)
   toolbarConfig?: ToolbarConfig;
-  chipConfig?: ChipConfig;
+  chipConfig?: ChipsConfig;
 
   // Toolbar area immediately above the table (left/right or a complete custom slot)
   toolbarLeft?: React.ReactNode;
   toolbarRight?: React.ReactNode;
-  toolbarSlot?: React.ReactNode; // overrides left/right if provided
+  toolbarSlot?: React.ReactNode;
 
-  // Optional quick-filters lane (between toolbar and table)
+  // Optional quick filters lane (between toolbar and table)
   quickFiltersSlot?: React.ReactNode;
 
   // Main content (table island)
@@ -67,18 +52,13 @@ type PageShellProps = {
 export default function PageShell({
   title,
   count,
-
-  // legacy props
   primaryButtons,
   leftButtons,
   rightButtons,
   showFilterChip,
   showSortingChip,
-
-  // new config-first props
   toolbarConfig,
   chipConfig,
-
   toolbarLeft,
   toolbarRight,
   toolbarSlot,
@@ -87,12 +67,13 @@ export default function PageShell({
   footerSlot,
 }: PageShellProps) {
   // ---- Effective buttons & chips (config takes precedence; legacy as fallback) ----
-  const effectivePrimary = (toolbarConfig?.primary ?? primaryButtons) ?? [];
-  const effectiveLeft    = (toolbarConfig?.left    ?? leftButtons)    ?? [];
-  const effectiveRight   = (toolbarConfig?.right   ?? rightButtons)   ?? [];
+  const effectivePrimary = toolbarConfig?.primary ?? primaryButtons ?? [];
+  const effectiveLeft = toolbarConfig?.left ?? leftButtons ?? [];
+  const effectiveRight = toolbarConfig?.right ?? rightButtons ?? [];
 
-  const effectiveShowFilter  = (typeof chipConfig?.filter  === "boolean" ? chipConfig!.filter  : showFilterChip)   ?? false;
-  const effectiveShowSorting = (typeof chipConfig?.sorting === "boolean" ? chipConfig!.sorting : showSortingChip)  ?? false;
+  const effectiveShowFilter = (typeof chipConfig?.filter === "boolean" ? chipConfig.filter : showFilterChip) ?? false;
+  const effectiveShowSorting =
+    (typeof chipConfig?.sorting === "boolean" ? chipConfig.sorting : showSortingChip) ?? false;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -107,7 +88,7 @@ export default function PageShell({
               </svg>
             </div>
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 sm:text-2xl">{title}</h1>
+              <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">{title}</h1>
               {typeof count === "number" ? (
                 <Badge variant="outline" className="ml-2">
                   {count}
@@ -121,7 +102,7 @@ export default function PageShell({
         <div className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           {/* Row 1: primary buttons + chips */}
           <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-<RenderButtonCluster buttons={effectivePrimary} />
+            <RenderButtonCluster buttons={effectivePrimary} />
             <div className="flex flex-wrap items-center gap-4">
               {effectiveShowSorting ? (
                 <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100" variant="secondary">
@@ -129,7 +110,10 @@ export default function PageShell({
                 </Badge>
               ) : null}
               {effectiveShowFilter ? (
-                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100" variant="secondary">
+                <Badge
+                  className="bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100"
+                  variant="secondary"
+                >
                   Filter/Sorting Applied
                 </Badge>
               ) : null}
@@ -138,8 +122,8 @@ export default function PageShell({
 
           {/* Row 2: left buttons (dropdowns) + right buttons */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-<RenderButtonCluster buttons={effectiveLeft} />
-<RenderButtonCluster buttons={effectiveRight} />
+            <RenderButtonCluster buttons={effectiveLeft} />
+            <RenderButtonCluster buttons={effectiveRight} />
           </div>
         </div>
 
@@ -147,9 +131,7 @@ export default function PageShell({
         <div className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
           {/* Toolbar header strip */}
           {toolbarSlot ? (
-            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-              {toolbarSlot}
-            </div>
+            <div className="border-b border-gray-200 p-4 dark:border-gray-700">{toolbarSlot}</div>
           ) : (
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">
               <div className="flex flex-col gap-4">
@@ -180,7 +162,9 @@ export default function PageShell({
                       </>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">{toolbarRight}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {toolbarRight ?? <RenderButtonCluster buttons={effectiveRight} />}
+                  </div>
                 </div>
               </div>
             </div>
