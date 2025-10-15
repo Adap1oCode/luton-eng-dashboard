@@ -101,6 +101,8 @@ export default async function Page({ searchParams }: PageProps) {
       toolbarConfig={tallyCardsToolbar}
       toolbarActions={tallyCardsActions}
       chipConfig={tallyCardsChips}
+      // Enable advanced filters to show Sort, Columns, and Export buttons
+      enableAdvancedFilters={true}
     >
       <ResourceTableClient<TallyCardRow>
         config={tallyCardsViewConfig}

@@ -1,3 +1,4 @@
+// src/navigation/sidebar/sidebar-items.ts
 import {
   Home,
   ChartPie,
@@ -18,6 +19,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+type PermKeys = string[];
+
 export interface NavSubItem {
   title: string;
   url: string;
@@ -25,15 +28,13 @@ export interface NavSubItem {
   comingSoon?: boolean;
   newTab?: boolean;
   subItems?: NavSubItem[];
+  requiredAny?: PermKeys; // ANY permission must match
+  requiredAll?: PermKeys; // ALL permissions must match
+  public?: boolean; // show even if user has no role/permissions
 }
 
-export interface NavMainItem {
-  title: string;
-  url: string;
-  icon?: LucideIcon;
+export interface NavMainItem extends Omit<NavSubItem, "subItems"> {
   subItems?: NavSubItem[];
-  comingSoon?: boolean;
-  newTab?: boolean;
 }
 
 export interface NavGroup {
@@ -86,7 +87,14 @@ export const sidebarItems: NavGroup[] = [
         url: "/forms/tally-cards",
         icon: Grid2X2,
         subItems: [
-          { title: "Tally Cards", url: "/forms/tally-cards", icon: Grid2X2 },
+          {
+            title: "Tally Cards",
+            url: "/forms/tally-cards",
+            icon: Grid2X2,
+            // IMPORTANT: use a key you actually have (based on your /api/me/permissions)
+            // You currently have "menu:forms:tally_cards" — using that here ensures strict mode works.
+            requiredAny: ["menu:forms:tally_cards"],
+          },
           { title: "Stock Adjustments", url: "/forms/stock-adjustments", icon: Grid2X2 },
         ],
       },
@@ -100,53 +108,19 @@ export const sidebarItems: NavGroup[] = [
         title: "Authentication",
         url: "/auth",
         icon: Fingerprint,
+        public: true,
         subItems: [
-          { title: "Login v1", url: "/auth/v1/login", newTab: true },
-          { title: "Register v1", url: "/auth/v1/register", newTab: true },
+          { title: "Login v1", url: "/auth/v1/login", newTab: true, public: true },
+          { title: "Register v1", url: "/auth/v1/register", newTab: true, public: true },
         ],
       },
-      {
-        title: "Email",
-        url: "/mail",
-        icon: Mail,
-        comingSoon: true,
-      },
-      {
-        title: "Chat",
-        url: "/chat",
-        icon: MessageSquare,
-        comingSoon: true,
-      },
-      {
-        title: "Calendar",
-        url: "/calendar",
-        icon: Calendar,
-        comingSoon: true,
-      },
-      {
-        title: "Kanban",
-        url: "/kanban",
-        icon: Kanban,
-        comingSoon: true,
-      },
-      {
-        title: "Invoice",
-        url: "/invoice",
-        icon: ReceiptText,
-        comingSoon: true,
-      },
-      {
-        title: "Users",
-        url: "/users",
-        icon: Users,
-        comingSoon: true,
-      },
-      {
-        title: "Roles",
-        url: "/roles",
-        icon: Lock,
-        comingSoon: true,
-      },
+      { title: "Email", url: "/mail", icon: Mail, comingSoon: true },
+      { title: "Chat", url: "/chat", icon: MessageSquare, comingSoon: true },
+      { title: "Calendar", url: "/calendar", icon: Calendar, comingSoon: true },
+      { title: "Kanban", url: "/kanban", icon: Kanban, comingSoon: true },
+      { title: "Invoice", url: "/invoice", icon: ReceiptText, comingSoon: true },
+      { title: "Users", url: "/users", icon: Users, comingSoon: true },
+      { title: "Roles", url: "/roles", icon: Lock, comingSoon: true },
     ],
   },
   {

@@ -1,8 +1,8 @@
-// src/app/(main)/dashboard/layout.tsx
+// src/app/(main)/layout.tsx
 import { ReactNode } from "react";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation"; // ⬅️ removed (middleware owns auth)
 
 import { MoreHorizontal, Search } from "lucide-react";
 
@@ -25,20 +25,23 @@ import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/li
 import { supabaseServer } from "@/lib/supabase-server";
 import { cn } from "@/lib/utils";
 
-// ensure this auth check runs on every request (no static cache)
+// ensure this runs on every request (no static cache)
 export const dynamic = "force-dynamic";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  // 🔐 Auth guard (server-side)
+  // 🔐 Resolve current user on the server (auth is enforced globally via middleware)
   const supabase = await supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    // Always redirect unauthenticated users to /login with a ?next param
-    redirect(`/login?next=/dashboard`);
-  }
+  // 🪪 Derive account info for sidebar (SSR → passed to client)
+  const displayName = (user?.user_metadata && (user.user_metadata.full_name as string)) || user?.email || "User";
+  const email = user?.email ?? "";
+  // Best-effort role (Phase-1): prefer app_metadata.role, then user_metadata.role
+  const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
+  const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const role = (appMeta.role as string | undefined) ?? (userMeta.role as string | undefined) ?? undefined;
 
   // 🧁 UI prefs
   const cookieStore = await cookies();
@@ -50,7 +53,11 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar variant={sidebarVariant} collapsible={sidebarCollapsible} />
+      <AppSidebar
+        variant={sidebarVariant}
+        collapsible={sidebarCollapsible}
+        account={{ name: displayName, email, role, avatar: "" }}
+      />
       <SidebarInset
         className={cn(
           contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
