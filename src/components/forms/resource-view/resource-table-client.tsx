@@ -2,18 +2,17 @@
 // FILE: src/components/forms/resource-view/ResourceTableClient.tsx
 // TYPE: Client Component
 // PURPOSE: Generic client island for "View All <Resource>" screens.
-//          - Builds a TanStack table from config
-//          - Renders your shared DataTable
-//          - Provides a standard footer with DataTablePagination
+//          - Uses SSR-materialised columns (config.columns) as canonical.
+//          - Adds UI parity with Tally Cards: selection checkbox column,
+//            grip icon, and sort button in each header.
 // NOTES:
-//  • No data fetching here. SSR page passes initialRows & total.
-//  • Uses your existing data-table primitives unchanged.
+//  • No fetching here; SSR passes initialRows & initialTotal.
+//  • Keeps inline Status editing behavior.
 // -----------------------------------------------------------------------------
 
 "use client";
 
 import * as React from "react";
-
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -29,6 +28,7 @@ import {
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ColumnDef,
+  flexRender,
   getCoreRowModel,
   getSortedRowModel,
   getExpandedRowModel,
@@ -45,13 +45,16 @@ import { useColumnResize } from "@/components/data-table/use-column-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { GripVertical, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
 type ResourceTableClientProps<TRow extends { id: string }> = {
   config: BaseViewConfig<TRow>;
   initialRows: TRow[];
   initialTotal: number;
   page: number;
   pageSize: number;
-  // Optional slot to render an expanded row
   renderExpanded?: (row: TRow) => React.ReactNode;
 };
 
@@ -69,15 +72,22 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
 
-  // Columns from config, includeActions = true to keep parity with your view-defaults
-  const columns = React.useMemo<ColumnDef<TRow, any>[]>(() => config.buildColumns?.(true) ?? [], [config]);
+  // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
+  const baseColumns = React.useMemo<ColumnDef<TRow, any>[]>(() => {
+    const injected = (config as any)?.columns;
+    if (Array.isArray(injected)) return injected as ColumnDef<TRow, any>[];
+    if (typeof (config as any)?.buildColumns === "function") {
+      return (config as any).buildColumns(true) as ColumnDef<TRow, any>[];
+    }
+    return [];
+  }, [config]);
 
   // Local TanStack table state
   const [sorting, setSorting] = React.useState<any>([]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    warehouse: false, // Hide warehouse column by default
+    warehouse: false, // example: hide by default
   });
 
   // Column widths state for resizing
@@ -96,7 +106,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Handle column reordering
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (active && over && active.id !== over.id) {
       setColumnOrder((items) => {
         const oldIndex = items.indexOf(active.id as string);
@@ -110,70 +119,133 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const handleStatusEditStart = (rowId: string, currentStatus: string) => {
     setEditingStatus({ rowId, value: currentStatus });
   };
-
   const handleStatusEditChange = (value: string) => {
-    if (editingStatus) {
-      setEditingStatus({ ...editingStatus, value });
-    }
+    if (editingStatus) setEditingStatus({ ...editingStatus, value });
   };
-
   const handleStatusSave = async () => {
     if (!editingStatus) return;
-
     try {
-      // Update status via API
       const resourceKey = (config as any)?.resourceKeyForDelete ?? "tcm_tally_cards";
       const res = await fetch(`/api/${resourceKey}/${editingStatus.rowId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: editingStatus.value }),
       });
-
-      if (res.ok) {
-        router.refresh();
-      } else {
-        alert("Failed to update status");
-      }
-    } catch (error) {
+      if (res.ok) router.refresh();
+      else alert("Failed to update status");
+    } catch {
       alert("Error updating status");
     } finally {
       setEditingStatus(null);
     }
   };
+  const handleStatusCancel = () => setEditingStatus(null);
 
-  const handleStatusCancel = () => {
-    setEditingStatus(null);
-  };
+  // ✅ Client-only "select" column (header + per-row checkboxes)
+  const selectionColumn: ColumnDef<TRow, any> = React.useMemo(
+    () => ({
+      id: "__select",
+      header: ({ table }) => {
+        const all = table.getIsAllPageRowsSelected();
+        const indeterminate = table.getIsSomePageRowsSelected();
+        return (
+          <div className="px-1">
+            <Checkbox
+              checked={all || indeterminate}
+              onCheckedChange={(val) => table.toggleAllPageRowsSelected(!!val)}
+              aria-label="Select all"
+            />
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="px-1">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(val) => row.toggleSelected(!!val)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      size: 42,
+      enableHiding: false,
+      enableResizing: false,
+      enableSorting: false,
+    }),
+    [],
+  );
 
-  // Enhanced columns with inline editing for status
-  const enhancedColumns = React.useMemo(() => {
-    return columns.map((col) => {
-      // Add inline editing to status column
-      if (col.id === "status") {
-        return {
-          ...col,
-          cell: ({ row }: any) => {
-            const status = row.getValue("status") as string;
-            const isEditing = editingStatus?.rowId === row.original.id;
+  // 🎛️ Header decorator: Grip + label + Sort button (client-side only)
+  function decorateHeader(label: React.ReactNode) {
+    return ({ column }: any) => {
+      const sorted = column.getIsSorted() as false | "asc" | "desc";
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex min-w-0 items-center gap-1">
+              <GripVertical className="h-4 w-4 cursor-move text-gray-400" />
+              <span className="mr-2 truncate">{label}</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => column.toggleSorting(sorted === "asc")}
+                className="has-[>svg]:px-3"
+              >
+                {sorted === "asc" ? (
+                  <ArrowUp className="h-4 w-4" />
+                ) : sorted === "desc" ? (
+                  <ArrowDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+  }
 
-            return (
-              <StatusCell
-                status={status}
-                isEditing={isEditing}
-                editingStatus={editingStatus?.value || status}
-                statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-                onEditStart={() => handleStatusEditStart(row.original.id, status)}
-                onEditChange={handleStatusEditChange}
-                onSave={handleStatusSave}
-                onCancel={handleStatusCancel}
-              />
-            );
-          },
+  // 🧩 Enhance columns:
+  //  - Prepend selection column
+  //  - Wrap each header with grip + sort button (if header was plain text / ReactNode)
+  //  - Add inline Status cell editor
+  const enhancedColumns = React.useMemo<ColumnDef<TRow, any>[]>(() => {
+    const mapped = baseColumns.map((col) => {
+      const c: ColumnDef<TRow, any> = { ...col };
+
+      // If header is a plain string or ReactNode, replace with client function that decorates it
+      const header = (col as any).header;
+      if (typeof header === "string" || React.isValidElement(header) || header == null) {
+        const label = header ?? (col as any).id ?? "";
+        c.header = decorateHeader(label);
+      }
+      // Inline Status editing (keep your previous behavior)
+      if (c.id === "status") {
+        c.cell = ({ row }: any) => {
+          const status = row.getValue("status") as string;
+          const isEditing = editingStatus?.rowId === row.original.id;
+          return (
+            <StatusCell
+              status={status}
+              isEditing={isEditing}
+              editingStatus={editingStatus?.value || status}
+              statusOptions={["Active", "Inactive", "Pending", "Completed"]}
+              onEditStart={() => handleStatusEditStart(row.original.id, status)}
+              onEditChange={handleStatusEditChange}
+              onSave={handleStatusSave}
+              onCancel={handleStatusCancel}
+            />
+          );
         };
       }
-      return col;
+      return c;
     });
-  }, [columns, editingStatus]);
+
+    return [selectionColumn, ...mapped];
+  }, [baseColumns, editingStatus, selectionColumn]);
 
   const table = useReactTable<TRow>({
     data: initialRows,
@@ -212,17 +284,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     const resourceKey = (config as any)?.resourceKeyForDelete ?? "tcm_tally_cards";
 
     async function handleDelete(rowId: string) {
-      // Simple confirmation before deletion
       const confirmed = window.confirm("Are you sure you want to delete this record?");
       if (!confirmed) return;
-
       const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
-      if (res.ok) {
-        router.refresh();
-      } else {
-        // Error display can be improved later
-        alert("Failed to delete record");
-      }
+      if (res.ok) router.refresh();
+      else alert("Failed to delete record");
     }
 
     const onClick = (ev: MouseEvent) => {
@@ -230,22 +296,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       if (!target) return;
       const actionEl = target.closest("[data-action-id]");
       if (!actionEl) return;
-
       const actionId = actionEl.getAttribute("data-action-id") || "";
       const rowId = actionEl.getAttribute("data-row-id") || "";
-
       if (!rowId) return;
-
       if (actionId === "delete") {
         ev.preventDefault();
         ev.stopPropagation();
         handleDelete(rowId);
       }
-      // Initially focusing on delete only as requested
-      // Can later support edit/copy here if desired
     };
 
-    // use capture=true to ensure event capture even from nested Radix elements
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
   }, [config, router]);
@@ -275,7 +335,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
         <DataTable
-          dndEnabled={true} // Enable column reordering
+          dndEnabled={true}
           table={table as any}
           dataIds={dataIds}
           handleDragEnd={handleDragEnd}
@@ -283,9 +343,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sortableId="resource-table"
           renderExpanded={
             renderExpanded
-              ? (row) => {
-                  return renderExpanded(row.original as TRow);
-                }
+              ? (row) => renderExpanded(row.original as TRow)
               : undefined
           }
         />
