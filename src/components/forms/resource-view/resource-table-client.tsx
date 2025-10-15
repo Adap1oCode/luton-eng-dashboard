@@ -13,7 +13,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 import {
   DndContext,
@@ -36,6 +36,7 @@ import {
   useReactTable,
   type ColumnOrderState,
   type VisibilityState,
+  type Row, // for getRowId typings
 } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table/data-table";
@@ -68,6 +69,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 }: ResourceTableClientProps<TRow>) {
   const router = useRouter();
   const search = useSearchParams();
+  const pathname = usePathname();
 
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
@@ -88,6 +90,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     warehouse: false, // example: hide by default
+  });
+
+  // ✅ Controlled pagination (0-based index)
+  const [pagination, setPagination] = React.useState({
+    pageIndex: Math.max(0, page - 1),
+    pageSize,
   });
 
   // Column widths state for resizing
@@ -208,10 +216,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     };
   }
 
-  // 🧩 Enhance columns:
-  //  - Prepend selection column
-  //  - Wrap each header with grip + sort button (if header was plain text / ReactNode)
-  //  - Add inline Status cell editor
+  // 🧩 Enhance columns
   const enhancedColumns = React.useMemo<ColumnDef<TRow, any>[]>(() => {
     const mapped = baseColumns.map((col) => {
       const c: ColumnDef<TRow, any> = { ...col };
@@ -255,14 +260,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       rowSelection,
       columnOrder,
       columnVisibility,
-      pagination: { pageIndex: Math.max(0, page - 1), pageSize },
+      pagination, // controlled
     },
+    // ⬇️ These belong at the top level (NOT inside `state`)
     manualPagination: true,
-    pageCount: Math.max(1, Math.ceil(initialTotal / Math.max(1, pageSize))),
+    pageCount: Math.max(1, Math.ceil(initialTotal / Math.max(1, pagination.pageSize))),
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination, // critical for controlled pagination
+
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -270,13 +278,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     columnResizeMode: "onChange",
     enableRowSelection: true,
     enableColumnResizing: true,
-    getRowId: (row, idx, parent) => (row as any).id ?? `${parent?.id ?? "row"}_${idx}`,
+    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) =>
+      (row as any).id ?? `${parent?.id ?? "row"}_${idx}`,
   });
 
   // Sync selected IDs with the store
   React.useEffect(() => {
-    const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setSelectedIds(ids);
+    const ids = table.getSelectedRowModel().rows.map((r) => (r.original as TRow).id);
+    setSelectedIds(ids as string[]);
   }, [rowSelection, table, setSelectedIds]);
 
   // Listen for action from actions column via event delegation (includes nested Radix elements)
@@ -310,26 +319,29 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return () => document.removeEventListener("click", onClick, true);
   }, [config, router]);
 
-  const totalPages = Math.max(1, Math.ceil(initialTotal / Math.max(1, pageSize)));
+  // 🔄 Keep URL in sync whenever the controlled pagination changes
+  React.useEffect(() => {
+    const nextPage = pagination.pageIndex + 1;
+    const nextSize = pagination.pageSize;
+    const curPage = Number(search.get("page") ?? String(page));
+    const curSize = Number(search.get("pageSize") ?? String(pageSize));
+    if (curPage === nextPage && curSize === nextSize) return;
+    const sp = new URLSearchParams(search.toString());
+    sp.set("page", String(nextPage));
+    sp.set("pageSize", String(nextSize));
+    router.replace(`${pathname}?${sp.toString()}`);
+  }, [pagination, pathname, router, search, page, pageSize]);
+
+  // 🔁 When SSR props change (after navigation), update local pagination state
+  React.useEffect(() => {
+    setPagination((prev) => {
+      const next = { pageIndex: Math.max(0, page - 1), pageSize };
+      return prev.pageIndex === next.pageIndex && prev.pageSize === next.pageSize ? prev : next;
+    });
+  }, [page, pageSize]);
+
   const selectedCount = table.getSelectedRowModel().rows.length;
-
-  // URL navigation helpers (SSR refetch via router)
-  const onPageChange = (nextPage: number) => {
-    const clamped = Math.min(Math.max(1, nextPage), totalPages);
-    const params = new URLSearchParams(search.toString());
-    params.set("page", String(clamped));
-    params.set("pageSize", String(pageSize));
-    router.push(`?${params.toString()}`);
-  };
-
-  const onItemsPerPageChange = (size: number) => {
-    const params = new URLSearchParams(search.toString());
-    params.set("page", "1");
-    params.set("pageSize", String(size));
-    router.push(`?${params.toString()}`);
-  };
-
-  const footer = <DataTablePagination table={table} />;
+  const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
@@ -342,9 +354,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={
-            renderExpanded
-              ? (row) => renderExpanded(row.original as TRow)
-              : undefined
+            renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined
           }
         />
         {footer}
