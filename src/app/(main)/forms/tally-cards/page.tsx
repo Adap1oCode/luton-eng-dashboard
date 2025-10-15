@@ -15,7 +15,7 @@ import ResourceTableClient from "@/components/forms/resource-view/resource-table
 import PageShell from "@/components/forms/shell/page-shell";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
-import { tallyCardsToolbar, tallyCardsChips } from "./toolbar.config";
+import { tallyCardsToolbar, tallyCardsChips, tallyCardsActions } from "./toolbar.config";
 import { tallyCardsViewConfig } from "./view.config";
 
 type SPValue = string | string[] | undefined;
@@ -95,7 +95,13 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   return (
-    <PageShell title="View Tally Cards" count={total} toolbarConfig={tallyCardsToolbar} chipConfig={tallyCardsChips}>
+    <PageShell
+      title="View Tally Cards"
+      count={total}
+      toolbarConfig={tallyCardsToolbar}
+      toolbarActions={tallyCardsActions}
+      chipConfig={tallyCardsChips}
+    >
       <ResourceTableClient<TallyCardRow>
         config={tallyCardsViewConfig}
         initialRows={rows}

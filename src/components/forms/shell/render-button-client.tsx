@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ChevronDown, Plus, Download, Layout, Settings, ArrowUpDown, Filter } from "lucide-react";
+import { ChevronDown, Plus, Download, Layout, Settings, ArrowUpDown, Filter, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
 
 import type { ToolbarButton } from "./toolbar/types";
 
-const ICONS = { Plus, Download, Layout, Settings, ArrowUpDown, Filter } as const;
+const ICONS = { Plus, Download, Layout, Settings, ArrowUpDown, Filter, "Delete Selected": Trash2 } as const;
 
 // Small reusable button renderer (supports plain, link, and dropdown)
 export default function RenderButton({

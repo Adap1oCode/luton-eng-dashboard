@@ -5,6 +5,7 @@
 "use client";
 
 import * as React from "react";
+
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2, Plus, Download } from "lucide-react";
 
@@ -132,13 +133,12 @@ export function makeDefaultViewState(columns: ColumnLike[]) {
   };
 }
 
-
 // -----------------------------------------------------------------------------
 // Reusable Actions column
 // Page handles clicks via event delegation on data-* attributes.
 // -----------------------------------------------------------------------------
 export function makeActionsColumn<TRow extends { id: string }>(
-  actions: RowAction[] = DEFAULT_ACTIONS
+  actions: RowAction[] = DEFAULT_ACTIONS,
 ): ColumnDef<TRow, any> {
   return {
     id: "actions",
@@ -178,9 +178,7 @@ export function makeActionsColumn<TRow extends { id: string }>(
 // Merging utils
 // -----------------------------------------------------------------------------
 type DeepPartial<T> =
-  T extends Array<infer U> ? Array<DeepPartial<U>> :
-  T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } :
-  T;
+  T extends Array<infer U> ? Array<DeepPartial<U>> : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 export function mergeDefaults<T extends object>(base: T, overrides?: DeepPartial<T>): T {
   if (!overrides) return base;
@@ -193,7 +191,7 @@ export function mergeDefaults<T extends object>(base: T, overrides?: DeepPartial
     if (Array.isArray(cur) && Array.isArray(v)) {
       out[k] = v; // arrays override by replacement
     } else if (v && typeof v === "object" && !Array.isArray(v)) {
-      out[k] = mergeDefaults(cur ?? {}, v as any);
+      out[k] = mergeDefaults(cur ?? {}, v);
     } else {
       out[k] = v;
     }
@@ -209,6 +207,8 @@ export type BaseViewConfig<TRow> = {
   toolbar: ToolbarConfig;
   quickFilters: any[]; // intentionally flexible; views define their own
   buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
+  // مفتاح المورد المطلوب لطلبات الحذف الفردي عبر /api/[resource]/[id]
+  resourceKeyForDelete?: string;
 };
 
 export function createViewConfig<TRow>(opts: {

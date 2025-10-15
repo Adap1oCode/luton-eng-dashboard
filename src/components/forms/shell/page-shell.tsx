@@ -11,8 +11,10 @@ import { ChevronDown, Layout, Settings, ArrowUpDown, Filter } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+import { AdvancedFilterBar } from "./advanced-filter-bar";
 import { RenderButtonCluster } from "./render-button-cluster";
-import type { ToolbarButton, ToolbarConfig, ChipsConfig } from "./toolbar/types";
+import Toolbar from "./toolbar/toolbar";
+import type { ToolbarButton, ToolbarConfig, ChipsConfig, ActionConfig } from "./toolbar/types";
 
 type PageShellProps = {
   // Header
@@ -32,6 +34,7 @@ type PageShellProps = {
 
   // NEW: Preferred config-driven inputs (take priority over legacy props)
   toolbarConfig?: ToolbarConfig;
+  toolbarActions?: ActionConfig;
   chipConfig?: ChipsConfig;
 
   // Toolbar area immediately above the table (left/right or a complete custom slot)
@@ -47,6 +50,9 @@ type PageShellProps = {
 
   // Footer (selected count, rows/page, pagination)
   footerSlot?: React.ReactNode;
+
+  // Advanced filter bar configuration
+  enableAdvancedFilters?: boolean;
 };
 
 export default function PageShell({
@@ -58,6 +64,7 @@ export default function PageShell({
   showFilterChip,
   showSortingChip,
   toolbarConfig,
+  toolbarActions,
   chipConfig,
   toolbarLeft,
   toolbarRight,
@@ -65,6 +72,7 @@ export default function PageShell({
   quickFiltersSlot,
   children,
   footerSlot,
+  enableAdvancedFilters = true,
 }: PageShellProps) {
   // ---- Effective buttons & chips (config takes precedence; legacy as fallback) ----
   const effectivePrimary = toolbarConfig?.primary ?? primaryButtons ?? [];
@@ -120,18 +128,19 @@ export default function PageShell({
             </div>
           </div>
 
-          {/* Row 2: left buttons (dropdowns) + right buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <RenderButtonCluster buttons={effectiveLeft} />
-            <RenderButtonCluster buttons={effectiveRight} />
-          </div>
+          {/* Row 2: Use Toolbar component with actions support */}
+          <Toolbar config={toolbarConfig} actions={toolbarActions} />
         </div>
 
         {/* Toolbar + quick filters + table + footer card */}
         <div className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
-          {/* Toolbar header strip */}
+          {/* Advanced Filter Bar */}
           {toolbarSlot ? (
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">{toolbarSlot}</div>
+          ) : enableAdvancedFilters ? (
+            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
+              <AdvancedFilterBar toolbarLeft={toolbarLeft} toolbarRight={toolbarRight} />
+            </div>
           ) : (
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">
               <div className="flex flex-col gap-4">

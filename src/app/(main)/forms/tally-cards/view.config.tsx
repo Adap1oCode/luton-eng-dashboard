@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { SortAsc, SortDesc, ArrowUpDown } from "lucide-react";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { makeDefaultToolbar, type BaseViewConfig } from "@/components/data-table/view-defaults";
+import { makeDefaultToolbar, type BaseViewConfig, makeActionsColumn } from "@/components/data-table/view-defaults";
 import { Badge } from "@/components/ui/badge";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
@@ -109,6 +109,31 @@ export type QuickFilter = {
 export function buildColumns(): ColumnDef<TallyCardRow>[] {
   return [
     {
+      id: "select",
+      header: ({ table }) => (
+        <div className="px-1">
+          <input
+            type="checkbox"
+            checked={table.getIsAllRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+            className="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="px-1">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            className="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
       accessorKey: "tally_card_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card Number" />,
       cell: ({ row }) => {
@@ -144,6 +169,8 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
         return <div>{row.getValue("warehouse")}</div>;
       },
     },
+    // عمود الإجراءات الجاهز عبر الاستيراد (بدون كتابة Dropdown هنا)
+    makeActionsColumn<TallyCardRow>(),
   ];
 }
 
@@ -168,14 +195,17 @@ export const features: TableFeatures = {
   pagination: true,
   rowSelection: true,
   dnd: false,
-  saveView: true,
+  saveView: false,
   viewStorageKey: "tally-cards-view",
 };
 
 // NB: toolbar for DataTable must use icon components (not strings)
+// tallyCardsViewConfig (object export)
 export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> = {
   features,
-  toolbar: makeDefaultToolbar("Tally Card", "/forms/tally-cards/new"),
+  toolbar: { left: undefined, right: [] },
   quickFilters,
   buildColumns: () => buildColumns(),
+  // نحدد مورد الحذف الصحيح من الجدول الأصلي وليس الـ view
+  resourceKeyForDelete: "tcm_tally_cards",
 };
