@@ -18,6 +18,9 @@ export type TableFeatures = {
   dnd?: boolean;
   saveView?: boolean;
   viewStorageKey?: string;
+  columnResizing?: boolean;
+  columnReordering?: boolean;
+  advancedFilters?: boolean;
 };
 
 // cspell:disable-next-line
@@ -108,31 +111,8 @@ export type QuickFilter = {
 
 export function buildColumns(): ColumnDef<TallyCardRow>[] {
   return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <div className="px-1">
-          <input
-            type="checkbox"
-            checked={table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-            className="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="px-1">
-          <input
-            type="checkbox"
-            checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
-            className="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
+    // تم حذف عمود select لتجنّب التكرار مع عمود الاختيار في العميل
+
     {
       accessorKey: "tally_card_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card Number" />,
@@ -169,7 +149,7 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
         return <div>{row.getValue("warehouse")}</div>;
       },
     },
-    // عمود الإجراءات الجاهز عبر الاستيراد (بدون كتابة Dropdown هنا)
+    // عمود الإجراءات
     makeActionsColumn<TallyCardRow>(),
   ];
 }
@@ -197,6 +177,9 @@ export const features: TableFeatures = {
   dnd: false,
   saveView: false,
   viewStorageKey: "tally-cards-view",
+  columnResizing: true,
+  columnReordering: true,
+  advancedFilters: true,
 };
 
 // NB: toolbar for DataTable must use icon components (not strings)

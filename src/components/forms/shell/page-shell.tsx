@@ -53,6 +53,67 @@ type PageShellProps = {
 
   // Advanced filter bar configuration
   enableAdvancedFilters?: boolean;
+
+  // Button visibility controls for AdvancedFilterBar
+  showViewsButton?: boolean;
+  showColumnsButton?: boolean;
+  showSortButton?: boolean;
+  showMoreFiltersButton?: boolean;
+  showExportButton?: boolean;
+  showSaveViewButton?: boolean;
+
+  // Column functionality controls
+  enableColumnResizing?: boolean;
+  enableColumnReordering?: boolean;
+
+  // ✅ جديد: حِزمة خصائص تُمرَّر للـ AdvancedFilterBar لتوصيل الأعمدة والفرز والعروض
+  advancedFilterBarProps?: AdvancedFilterBarPropBag;
+};
+
+// حِزمة خصائص قابلة للتمرير لـ AdvancedFilterBar (كلها اختيارية)
+type AdvancedFilterBarPropBag = {
+  // Column management
+  COLUMNS?: any[];
+  visibleColumns?: Record<string, boolean>;
+  displayColumns?: any[];
+  isResizing?: boolean;
+  onColumnToggle?: (columnId: string, visible: boolean) => void;
+  onShowAllColumns?: () => void;
+  onHideAllColumns?: () => void;
+  onResetColumnOrder?: () => void;
+  onDragStart?: (e: React.DragEvent, columnId: string) => void;
+  onDragOver?: (e: React.DragEvent, columnId: string) => void;
+  onDrop?: (e: React.DragEvent, columnId: string) => void;
+
+  // Sort
+  sortConfig?: { column: string | null; direction: "asc" | "desc" | "none" };
+  onSortFromDropdown?: (columnId: string, direction: "asc" | "desc" | "none") => void;
+  onClearSorting?: () => void;
+
+  // Views
+  savedViews?: any[];
+  currentViewId?: string;
+  onApplyView?: (view: any) => void;
+  onDeleteView?: (viewId: string) => void;
+  formatDateSafely?: (date: any) => string;
+
+  // Actions
+  onExportCSV?: () => void;
+  onSaveView?: () => void;
+
+  // Button visibility + column capabilities (Overrides)
+  showViewsButton?: boolean;
+  showColumnsButton?: boolean;
+  showSortButton?: boolean;
+  showMoreFiltersButton?: boolean;
+  showExportButton?: boolean;
+  showSaveViewButton?: boolean;
+  enableColumnResizing?: boolean;
+  enableColumnReordering?: boolean;
+
+  // Optional toolbar slots
+  toolbarLeft?: React.ReactNode;
+  toolbarRight?: React.ReactNode;
 };
 
 export default function PageShell({
@@ -73,8 +134,22 @@ export default function PageShell({
   children,
   footerSlot,
   enableAdvancedFilters = true,
+  // Button visibility controls with default values
+  showViewsButton = true,
+  showColumnsButton = true,
+  showSortButton = true,
+  showMoreFiltersButton = true,
+  showExportButton = true,
+  showSaveViewButton = true,
+
+  // Column functionality controls with default values
+  enableColumnResizing = true,
+  enableColumnReordering = true,
+
+  // ✅ جديد
+  advancedFilterBarProps,
 }: PageShellProps) {
-  // ---- Effective buttons & chips (config takes precedence; legacy as fallback) ----
+  // ---- Effective buttons & chips (config precedence; legacy fallback) ----
   const effectivePrimary = toolbarConfig?.primary ?? primaryButtons ?? [];
   const effectiveLeft = toolbarConfig?.left ?? leftButtons ?? [];
   const effectiveRight = toolbarConfig?.right ?? rightButtons ?? [];
@@ -139,7 +214,45 @@ export default function PageShell({
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">{toolbarSlot}</div>
           ) : enableAdvancedFilters ? (
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-              <AdvancedFilterBar toolbarLeft={toolbarLeft} toolbarRight={toolbarRight} />
+              <AdvancedFilterBar
+                // ✅ تمرير الـ slots لو متوفرة من الحِزمة وإلا استخدم props الحالية
+                toolbarLeft={advancedFilterBarProps?.toolbarLeft ?? toolbarLeft}
+                toolbarRight={advancedFilterBarProps?.toolbarRight ?? toolbarRight}
+                // ✅ تحكم إظهار الأزرار (حِزمة > props)
+                showViewsButton={advancedFilterBarProps?.showViewsButton ?? showViewsButton}
+                showColumnsButton={advancedFilterBarProps?.showColumnsButton ?? showColumnsButton}
+                showSortButton={advancedFilterBarProps?.showSortButton ?? showSortButton}
+                showMoreFiltersButton={advancedFilterBarProps?.showMoreFiltersButton ?? showMoreFiltersButton}
+                showExportButton={advancedFilterBarProps?.showExportButton ?? showExportButton}
+                showSaveViewButton={advancedFilterBarProps?.showSaveViewButton ?? showSaveViewButton}
+                // ✅ إمكانيات الأعمدة (حِزمة > props)
+                enableColumnResizing={advancedFilterBarProps?.enableColumnResizing ?? enableColumnResizing}
+                enableColumnReordering={advancedFilterBarProps?.enableColumnReordering ?? enableColumnReordering}
+                // ✅ إدارة الأعمدة
+                COLUMNS={advancedFilterBarProps?.COLUMNS}
+                visibleColumns={advancedFilterBarProps?.visibleColumns}
+                displayColumns={advancedFilterBarProps?.displayColumns}
+                isResizing={advancedFilterBarProps?.isResizing}
+                onColumnToggle={advancedFilterBarProps?.onColumnToggle}
+                onShowAllColumns={advancedFilterBarProps?.onShowAllColumns}
+                onHideAllColumns={advancedFilterBarProps?.onHideAllColumns}
+                onResetColumnOrder={advancedFilterBarProps?.onResetColumnOrder}
+                onDragStart={advancedFilterBarProps?.onDragStart}
+                onDragOver={advancedFilterBarProps?.onDragOver}
+                onDrop={advancedFilterBarProps?.onDrop}
+                // ✅ الفرز
+                sortConfig={advancedFilterBarProps?.sortConfig}
+                onSortFromDropdown={advancedFilterBarProps?.onSortFromDropdown}
+                onClearSorting={advancedFilterBarProps?.onClearSorting}
+                // ✅ العروض المحفوظة + الأكشنز
+                savedViews={advancedFilterBarProps?.savedViews}
+                currentViewId={advancedFilterBarProps?.currentViewId}
+                onApplyView={advancedFilterBarProps?.onApplyView}
+                onDeleteView={advancedFilterBarProps?.onDeleteView}
+                formatDateSafely={advancedFilterBarProps?.formatDateSafely}
+                onExportCSV={advancedFilterBarProps?.onExportCSV}
+                onSaveView={advancedFilterBarProps?.onSaveView}
+              />
             </div>
           ) : (
             <div className="border-b border-gray-200 p-4 dark:border-gray-700">

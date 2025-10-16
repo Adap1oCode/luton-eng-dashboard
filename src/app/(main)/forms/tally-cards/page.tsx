@@ -2,11 +2,6 @@
 // FILE: src/app/(main)/forms/tally_cards/page.tsx
 // TYPE: Server Component
 // PURPOSE: SSR page for "View All Tally Cards" using shared Shell + ResourceTableClient
-// NOTES:
-//  • Compatible with Next 15 async searchParams
-//  • Fetches from /api/tcm_tally_cards_current with no-store
-//  • Forwards cookies to preserve Supabase session (RLS)
-//  • Parses page/pageSize defensively (handles string | string[] | undefined)
 // -----------------------------------------------------------------------------
 
 import { headers, cookies } from "next/headers";
@@ -16,12 +11,11 @@ import PageShell from "@/components/forms/shell/page-shell";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
 import { tallyCardsToolbar, tallyCardsChips, tallyCardsActions } from "./toolbar.config";
-import { tallyCardsViewConfig } from "./view.config";
+import { tallyCardsViewConfig, features, type TableFeatures } from "./view.config";
 
 type SPValue = string | string[] | undefined;
 type SPRecord = Record<string, SPValue>;
 type PageProps = {
-  // Next 15: searchParams may be a Promise in server components
   searchParams?: Promise<SPRecord> | SPRecord;
 };
 
@@ -69,7 +63,7 @@ export default async function Page({ searchParams }: PageProps) {
   const sp = await resolveSearchParams(searchParams);
 
   const page = parsePositiveInt(sp.page, 1, { min: 1 });
-  const pageSize = parsePositiveInt(sp.pageSize, 200, { min: 1, max: 500 });
+  const pageSize = parsePositiveInt(sp.pageSize, 10, { min: 1, max: 500 });
 
   const base = await getBaseUrl();
   const cookieHeader = await getCookieHeader();
@@ -89,7 +83,6 @@ export default async function Page({ searchParams }: PageProps) {
     rows = parsedRows;
     total = Number.isFinite(parsedTotal) ? parsedTotal : parsedRows.length;
   } else {
-    // Keep SSR stable even on API errors
     rows = [];
     total = 0;
   }
@@ -101,8 +94,13 @@ export default async function Page({ searchParams }: PageProps) {
       toolbarConfig={tallyCardsToolbar}
       toolbarActions={tallyCardsActions}
       chipConfig={tallyCardsChips}
-      // Enable advanced filters to show Sort, Columns, and Export buttons
       enableAdvancedFilters={true}
+      showViewsButton={false}
+      showSaveViewButton={false}
+      enableColumnResizing={true}
+      enableColumnReordering={true}
+      showColumnsButton={false}
+      showSortButton={false}
     >
       <ResourceTableClient<TallyCardRow>
         config={tallyCardsViewConfig}
@@ -110,6 +108,8 @@ export default async function Page({ searchParams }: PageProps) {
         initialTotal={total}
         page={page}
         pageSize={pageSize}
+        enableColumnResizing={features.columnResizing}
+        enableColumnReordering={features.columnReordering}
       />
     </PageShell>
   );

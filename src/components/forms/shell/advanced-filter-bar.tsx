@@ -91,6 +91,18 @@ interface AdvancedFilterBarProps {
   // Toolbar props
   toolbarLeft?: React.ReactNode;
   toolbarRight?: React.ReactNode;
+
+  // Button visibility controls
+  showViewsButton?: boolean;
+  showColumnsButton?: boolean;
+  showSortButton?: boolean;
+  showMoreFiltersButton?: boolean;
+  showExportButton?: boolean;
+  showSaveViewButton?: boolean;
+
+  // Column functionality controls
+  enableColumnResizing?: boolean;
+  enableColumnReordering?: boolean;
 }
 
 export const AdvancedFilterBar: React.FC<AdvancedFilterBarProps> = ({
@@ -117,6 +129,17 @@ export const AdvancedFilterBar: React.FC<AdvancedFilterBarProps> = ({
   onSaveView = () => {},
   toolbarLeft,
   toolbarRight,
+  // Default values for button visibility
+  showViewsButton = true,
+  showColumnsButton = true,
+  showSortButton = true,
+  showMoreFiltersButton = true,
+  showExportButton = true,
+  showSaveViewButton = true,
+
+  // Default values for column functionality
+  enableColumnResizing = false,
+  enableColumnReordering = false,
 }) => {
   const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
@@ -130,85 +153,95 @@ export const AdvancedFilterBar: React.FC<AdvancedFilterBarProps> = ({
           {toolbarLeft ?? (
             <>
               {/* Views Menu */}
-              <DropdownMenu open={viewsMenuOpen} onOpenChange={setViewsMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Layout className="h-4 w-4" />
-                    Views
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
-                  <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <ViewsMenu
-                    views={savedViews}
-                    currentViewId={currentViewId}
-                    onApplyView={onApplyView}
-                    onDeleteView={onDeleteView}
-                    formatDate={formatDateSafely}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {showViewsButton && (
+                <DropdownMenu open={viewsMenuOpen} onOpenChange={setViewsMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Layout className="h-4 w-4" />
+                      Views
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-64">
+                    <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <ViewsMenu
+                      views={savedViews}
+                      currentViewId={currentViewId}
+                      onApplyView={onApplyView}
+                      onDeleteView={onDeleteView}
+                      formatDate={formatDateSafely}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               {/* Columns Menu */}
-              <DropdownMenu open={columnsMenuOpen} onOpenChange={setColumnsMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Columns
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[320px]">
-                  <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Show/Hide Columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <ColumnsMenu
-                    columns={COLUMNS}
-                    visibleColumns={visibleColumns}
-                    displayColumnsCount={displayColumns.length}
-                    isResizing={isResizing}
-                    onColumnToggle={onColumnToggle}
-                    onShowAll={onShowAllColumns}
-                    onHideAll={onHideAllColumns}
-                    onResetOrder={onResetColumnOrder}
-                    onDragStart={onDragStart}
-                    onDragOver={onDragOver}
-                    onDrop={onDrop}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {showColumnsButton && (
+                <DropdownMenu open={columnsMenuOpen} onOpenChange={setColumnsMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Columns
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[320px]">
+                    <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
+                      Show/Hide Columns
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <ColumnsMenu
+                      columns={COLUMNS}
+                      visibleColumns={visibleColumns}
+                      displayColumnsCount={displayColumns.length}
+                      isResizing={isResizing}
+                      onColumnToggle={onColumnToggle}
+                      onShowAll={onShowAllColumns}
+                      onHideAll={onHideAllColumns}
+                      onResetOrder={onResetColumnOrder}
+                      onDragStart={onDragStart}
+                      onDragOver={onDragOver}
+                      onDrop={onDrop}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               {/* Sort Menu */}
-              <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <ArrowUpDown className="h-4 w-4" />
-                    Sort
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Sort by Column</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <SortMenu
-                    columns={COLUMNS}
-                    sortConfig={sortConfig}
-                    onSort={onSortFromDropdown}
-                    onClearAll={onClearSorting}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {showSortButton && (
+                <DropdownMenu open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <ArrowUpDown className="h-4 w-4" />
+                      Sort
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Sort by Column</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <SortMenu
+                      columns={COLUMNS}
+                      sortConfig={sortConfig}
+                      onSort={onSortFromDropdown}
+                      onClearAll={onClearSorting}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-              <Button
-                variant="outline"
-                onClick={() => setShowMoreFilters(!showMoreFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                More Filters
-                <ChevronDown className={`h-4 w-4 transition-transform ${showMoreFilters ? "rotate-180" : ""}`} />
-              </Button>
+              {showMoreFiltersButton && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMoreFilters(!showMoreFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  More Filters
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showMoreFilters ? "rotate-180" : ""}`} />
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -216,23 +249,27 @@ export const AdvancedFilterBar: React.FC<AdvancedFilterBarProps> = ({
         <div className="flex gap-2">
           {toolbarRight ?? (
             <>
-              <Button
-                variant="outline"
-                onClick={onExportCSV}
-                className="bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
+              {showExportButton && (
+                <Button
+                  variant="outline"
+                  onClick={onExportCSV}
+                  className="bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+              )}
 
-              <Button
-                variant="outline"
-                onClick={onSaveView}
-                className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save View
-              </Button>
+              {showSaveViewButton && (
+                <Button
+                  variant="outline"
+                  onClick={onSaveView}
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save View
+                </Button>
+              )}
             </>
           )}
         </div>

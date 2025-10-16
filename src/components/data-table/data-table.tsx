@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+import { DataTableFilters, type FilterColumn, type ColumnFilterState } from "./data-table-filters";
 import { useColumnResize } from "./use-column-resize";
 
 // Legacy interface for custom data table
@@ -73,6 +74,17 @@ interface TanStackDataTableProps<T = Record<string, unknown>> {
   sortableId: string;
   filters?: Record<string, unknown>;
   renderExpanded?: (row: any) => React.ReactNode;
+  columnWidthsPct?: Record<string, number>;
+  tableContainerRef?: React.MutableRefObject<HTMLElement | null>;
+  filtersConfig?: {
+    columns: FilterColumn[];
+    columnWidthsPct?: Record<string, number>;
+    show?: boolean;
+    search?: string;
+    onSearchChange?: (v: string) => void;
+    filters: Record<string, ColumnFilterState>;
+    onChange: (columnId: string, next: ColumnFilterState) => void;
+  };
 }
 
 // Type guard to check which props we're dealing with
@@ -89,22 +101,44 @@ function TanStackDataTable<T = Record<string, unknown>>({
   handleDragEnd,
   sensors,
   renderExpanded,
+  columnWidthsPct,
+  tableContainerRef,
+  filtersConfig,
 }: TanStackDataTableProps<T>) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <SortableContext items={dataIds}>
-        <div className="overflow-x-auto">
+        <div ref={tableContainerRef as any} className="overflow-x-auto">
           <Table className="min-w-full">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="p-3">
+                    <TableHead
+                      key={header.id}
+                      className="p-3"
+                      style={
+                        columnWidthsPct?.[header.column.id]
+                          ? { width: `${columnWidthsPct[header.column.id]}%` }
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
               ))}
+              {filtersConfig ? (
+                <DataTableFilters
+                  columns={filtersConfig.columns}
+                  columnWidthsPct={filtersConfig.columnWidthsPct}
+                  show={filtersConfig.show ?? true}
+                  search={filtersConfig.search}
+                  onSearchChange={filtersConfig.onSearchChange}
+                  filters={filtersConfig.filters}
+                  onChange={filtersConfig.onChange}
+                />
+              ) : null}
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.length ? (
@@ -112,21 +146,29 @@ function TanStackDataTable<T = Record<string, unknown>>({
                   <React.Fragment key={row.id}>
                     <TableRow data-state={row.getIsSelected() && "selected"}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="p-3">
+                        <TableCell
+                          key={cell.id}
+                          className="p-3"
+                          style={
+                            columnWidthsPct?.[cell.column.id]
+                              ? { width: `${columnWidthsPct[cell.column.id]}%` }
+                              : undefined
+                          }
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
-                    {row.getIsExpanded() && renderExpanded && (
+                    {renderExpanded ? (
                       <TableRow>
-                        <TableCell colSpan={table.getAllColumns().length}>{renderExpanded(row)}</TableCell>
+                        <TableCell colSpan={row.getVisibleCells().length}>{renderExpanded(row)}</TableCell>
                       </TableRow>
-                    )}
+                    ) : null}
                   </React.Fragment>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center">
+                  <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
