@@ -1,4 +1,3 @@
-// src/lib/api/scope.ts
 import type { OwnershipScopeCfg, WarehouseScopeCfg } from "@/lib/data/types";
 
 /**
@@ -10,26 +9,51 @@ type FilterableQB = {
   eq(column: string, value: any): FilterableQB;
 };
 
+/** Heuristic: treat columns ending with `_id` as UUID-scoped. */
+function columnWantsIds(column: string) {
+  return /_id$/i.test(column);
+}
+
 /**
  * Apply warehouse scope:
  * - mode: "none" => no-op
- * - mode: "column" => in(column, allowedWarehouses), unless global access
+ * - mode: "column" => in(column, allowed ...), unless global access
+ *
+ * NOTE:
+ *  - If cfg.column ends with `_id`, we prefer allowedWarehouseIds (UUIDs).
+ *  - Else we fall back to codes (allowedWarehouseCodes / allowedWarehouses).
  */
 export function applyWarehouseScopeToSupabase(
   qb: FilterableQB,
   cfg: WarehouseScopeCfg | undefined,
-  ctx: { canSeeAllWarehouses: boolean; allowedWarehouses: string[] }
+  ctx: {
+    canSeeAllWarehouses: boolean;
+    /** legacy alias (codes) */
+    allowedWarehouses?: string[];
+    /** enriched (preferred) */
+    allowedWarehouseCodes?: string[];
+    allowedWarehouseIds?: string[];
+  }
 ): FilterableQB {
   if (!cfg || cfg.mode === "none") return qb;
 
   // Global access unless requireBinding=true forces explicit bindings
-  const global = ctx.canSeeAllWarehouses && !cfg.requireBinding;
+  const global = ctx.canSeeAllWarehouses && !(cfg as any).requireBinding;
   if (global) return qb;
 
   if (cfg.mode === "column") {
-    const list = ctx.allowedWarehouses ?? [];
-    if (list.length === 0) {
-      // No bindings + not global => return empty by using an impossible predicate
+    // Decide which list to use (ids for *_id, else codes)
+    const useIds = columnWantsIds(cfg.column);
+    const codes =
+      ctx.allowedWarehouseCodes ??
+      ctx.allowedWarehouses /* legacy alias */ ??
+      [];
+    const ids = ctx.allowedWarehouseIds ?? [];
+
+    const list = useIds ? ids : codes;
+
+    if (!list || list.length === 0) {
+      // No bindings + not global => ensure empty result via impossible predicate
       return qb.in(cfg.column, ["__NO_ALLOWED_WAREHOUSES__"]);
     }
     return qb.in(cfg.column, list);

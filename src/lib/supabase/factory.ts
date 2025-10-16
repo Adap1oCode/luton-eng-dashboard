@@ -216,13 +216,17 @@ export function createSupabaseProvider<T, TInput>(
       if (!isBrowser && AUTH_SCOPING_ENABLED) {
         const ctx = await getSessionContext();
 
+        // 🔒 Warehouse scoping (now passes codes + ids; function picks correctly)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
           canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-          allowedWarehouses: ctx.allowedWarehouses,
+          allowedWarehouses: ctx.allowedWarehouses,             // legacy alias (codes)
+          allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
+          allowedWarehouseIds:   (ctx as any).allowedWarehouseIds,   // enriched (UUIDs)
         });
 
+        // 🔒 Ownership scoping (uses deprecated alias `userId` for now)
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: ctx.userId,
+          userId: (ctx as any).userId,
           permissions: ctx.permissions,
         });
 
@@ -232,9 +236,11 @@ export function createSupabaseProvider<T, TInput>(
           warehouseScope: cfg.warehouseScope,
           ownershipScope: cfg.ownershipScope,
           ctx: {
-            userId: ctx.userId,
+            userId: (ctx as any).userId,
             canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-            allowedWarehouses: ctx.allowedWarehouses,
+            allowedWarehouses: ctx.allowedWarehouses, // legacy
+            allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes,
+            allowedWarehouseIds: (ctx as any).allowedWarehouseIds,
           },
         });
       }
@@ -268,13 +274,17 @@ export function createSupabaseProvider<T, TInput>(
       if (!isBrowser && AUTH_SCOPING_ENABLED) {
         const ctx = await getSessionContext();
 
+        // 🔒 Warehouse scoping (same enriched context passed)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
           canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-          allowedWarehouses: ctx.allowedWarehouses,
+          allowedWarehouses: ctx.allowedWarehouses,             // legacy alias (codes)
+          allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
+          allowedWarehouseIds:   (ctx as any).allowedWarehouseIds,   // enriched (UUIDs)
         });
 
+        // 🔒 Ownership scoping
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: ctx.userId,
+          userId: (ctx as any).userId,
           permissions: ctx.permissions,
         });
       }

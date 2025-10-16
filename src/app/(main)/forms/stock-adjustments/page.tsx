@@ -15,7 +15,7 @@ export default function Page(props: { searchParams?: any }) {
   return (
     <ResourceSSRPage
       title="Stock Adjustments"
-      endpoint="/api/tcm_user_tally_card_entries"
+      endpoint="/api/v_tcm_user_tally_card_entries"
       config={stockAdjustmentsViewConfig}
       toolbar={stockAdjustmentsToolbar}
       chips={stockAdjustmentsChips}

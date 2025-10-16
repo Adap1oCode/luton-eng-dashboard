@@ -32,6 +32,7 @@ export async function authMiddleware(req: NextRequest) {
   if (pathname.startsWith("/dashboard") && !user) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/v1/login";
+    url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

@@ -2,19 +2,51 @@
 import "server-only";
 
 /**
- * The shape your app expects from /api/me/role
+ * The shape your app expects from /api/me/role (enriched).
+ * - Backwards compatible: `allowedWarehouses` remains, now alias for codes.
  */
 export type SessionContext = {
+  /** @deprecated Use effectiveUser.appUserId instead */
   userId: string;
-  fullName: string | null;
-  email: string | null;
-  roleName: string | null;
-  roleCode: string | null;
-  avatarUrl: string | null;
+  // Real user (the authenticated principal)
+  realUser: {
+    authUserId: string;           // Supabase auth user id (UUID)
+    appUserId: string;            // Your internal users.id/uuid
+    fullName: string | null;
+    email: string | null;
+    roleName: string | null;
+    roleCode: string | null;
+  };
+
+  // Effective user (who we act as: impersonated or same as real)
+  effectiveUser: {
+    appUserId: string;
+    fullName: string | null;
+    email: string | null;
+    roleName: string | null;
+    roleCode: string | null;
+    permissions: string[];        // flattened permission keys
+  };
+
+  // Permissions (flattened) of the effective user (kept here for convenience)
   permissions: string[];
   permissionDetails: Array<{ key: string; description: string | null }>;
-  allowedWarehouses: string[];     // [] + canSeeAllWarehouses=true => global access
+
+  // Warehouse scope
   canSeeAllWarehouses: boolean;
+
+  // Codes/IDs are both provided; `allowedWarehouses` kept as alias for codes
+  allowedWarehouseCodes: string[]; // e.g. ["RTZ"]
+  allowedWarehouseIds: string[];   // e.g. ["6a7b...-..."]
+  allowedWarehouses: string[];     // alias of allowedWarehouseCodes
+
+  // Impersonation metadata
+  meta: {
+    impersonating: boolean;
+    startedAt?: string | null;
+    requestedImpersonateId?: string | null;
+    denial?: string | null;
+  };
 };
 
 /**
@@ -45,10 +77,6 @@ function resolveBaseUrl(): string {
 /**
  * Fetch the session context from /api/me/role.
  * Pass server headers (with cookies) so Supabase session is forwarded.
- *
- * Usage (Server/Route Handler):
- *   import { headers } from "next/headers";
- *   const ctx = await setSessionContext(headers());
  */
 export async function setSessionContext(
   cookiesOrHeaders: HeadersLike,
@@ -63,12 +91,39 @@ export async function setSessionContext(
   const body = await res.json();
 
   if (!res.ok) {
-    // Surface the backend error during development; keep message terse otherwise
-    const msg =
-      (body?.error as string) ||
-      `session_context_failed (${res.status})`;
+    const msg = (body?.error as string) || `session_context_failed (${res.status})`;
     throw new Error(msg);
   }
 
-  return body as SessionContext;
+  // Enforce invariants & backwards-compat here (guard old payloads gracefully)
+  const ctx = body as Partial<SessionContext>;
+
+  const codes = ctx.allowedWarehouseCodes ?? ctx.allowedWarehouses ?? [];
+  const ids = ctx.allowedWarehouseIds ?? [];
+
+  const effectiveUser = ctx.effectiveUser!;
+  const userId = (ctx as any).userId ?? effectiveUser.appUserId;
+
+  const normalized: SessionContext = {
+    
+    userId,    realUser: ctx.realUser!,
+    effectiveUser: ctx.effectiveUser!,
+    permissions: ctx.permissions ?? ctx.effectiveUser?.permissions ?? [],
+    permissionDetails: ctx.permissionDetails ?? [],
+    canSeeAllWarehouses: Boolean(ctx.canSeeAllWarehouses),
+
+    // Keep both; ensure alias kept in sync
+    allowedWarehouseCodes: codes,
+    allowedWarehouseIds: ids,
+    allowedWarehouses: codes,
+
+    meta: {
+      impersonating: Boolean(ctx.meta?.impersonating),
+      startedAt: ctx.meta?.startedAt ?? null,
+      requestedImpersonateId: ctx.meta?.requestedImpersonateId ?? null,
+      denial: ctx.meta?.denial ?? null,
+    },
+  };
+
+  return normalized;
 }

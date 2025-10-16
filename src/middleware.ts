@@ -81,13 +81,20 @@ export async function middleware(req: NextRequest) {
   const role = (appMeta.role as string | undefined) ?? (userMeta.role as string | undefined) ?? undefined;
 
   // Public routes which should be reachable without a session
-  const PUBLIC = new Set<string>(["/login", "/register", "/unauthorized"]);
+    const PUBLIC = new Set<string>([
+    "/auth/v1/login",
+    "/auth/v1/register",
+    "/login",          // keep if you might still link to it anywhere
+    "/register",
+    "/unauthorized",
+  ]);
+
   const isPublicExact = PUBLIC.has(pathname);
 
   // 1) Unauthenticated → redirect to /login?next=... (deny-by-default)
-  if (!user && !isPublicExact) {
+if (!user && !isPublicExact) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/auth/v1/login";
     url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
     const redirectRes = NextResponse.redirect(url);
     return withDebugHeaders(redirectRes, {
@@ -132,5 +139,6 @@ export async function middleware(req: NextRequest) {
  * - Common public files
  */
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|auth/v1/login|auth/v1/register|login|register).*)",],
 };

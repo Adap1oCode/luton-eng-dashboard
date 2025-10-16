@@ -8,6 +8,7 @@ import { setSessionContext, type SessionContext } from "./set-session-context";
  * using the Next.js request headers (including Supabase cookies).
  */
 export async function getSessionContext(): Promise<SessionContext> {
-  const hdrs = await headers();            // ✅ must await in Next 15+
+  // Next 15+ returns a Promise<ReadonlyHeaders>
+  const hdrs = await headers();
   return setSessionContext(hdrs);
 }

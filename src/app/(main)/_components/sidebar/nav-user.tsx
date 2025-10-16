@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut } from "lucide-react";
+import { SwitchUserDialog } from "./switch-user-dialog";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -25,6 +27,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   return (
     <SidebarMenu>
@@ -46,6 +49,7 @@ export function NavUser({
               <EllipsisVertical className="ml-auto size-3 shrink-0 sm:size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
@@ -64,7 +68,9 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <CircleUser />
@@ -78,14 +84,24 @@ export function NavUser({
                 <MessageSquareDot />
                 Notifications
               </DropdownMenuItem>
+
+              {/* NEW: open impersonation dialog */}
+              <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
+                View as user…
+              </DropdownMenuItem>
             </DropdownMenuGroup>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuItem>
               <LogOut />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Impersonation dialog (admin-gated by API) */}
+        <SwitchUserDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
       </SidebarMenuItem>
     </SidebarMenu>
   );
