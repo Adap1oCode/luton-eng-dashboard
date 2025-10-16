@@ -6,7 +6,7 @@ import { createSupabaseServerProvider } from "@/lib/supabase/factory";
 import { resolveResource } from "@/lib/api/resolve-resource";
 import { parseListQuery } from "@/lib/http/list-params";
 
-// 🆕 imports
+// Scoping + debug flags
 import { AUTH_SCOPING_ENABLED } from "@/lib/env";
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import { debugAuth } from "@/lib/api/debug";
@@ -25,7 +25,10 @@ function mapError(resourceKey: string, err: unknown) {
     (err as any)?.code === "RESOURCE_NOT_FOUND" ||
     /unknown resource|invalid resource|no config|not found/i.test(msg)
   ) {
-    return json({ error: { message: "Unknown resource" }, resource: resourceKey }, 404);
+    return json(
+      { error: { message: "Unknown resource" }, resource: resourceKey },
+      404
+    );
   }
   return json(
     {
@@ -51,31 +54,15 @@ export async function listHandler(req: Request, resourceKey: string) {
     const url = new URL(req.url);
     const { q, page, pageSize, activeOnly, raw } = parseListQuery(url);
 
-    // 🆕 only fetch session when scoping is enabled
-    const session = AUTH_SCOPING_ENABLED ? await getSessionContext() : null;
-
     const provider = createSupabaseServerProvider(entry.config as any);
 
-    // 🆕 pass internal scope blob to provider (ignored if flag is off)
-    const { rows, total } = await provider.list(
-      { q, page, pageSize, activeOnly },
-      AUTH_SCOPING_ENABLED
-        ? {
-            scope: {
-              warehouseScope: (entry.config as any)?.warehouseScope,
-              ownershipScope: (entry.config as any)?.ownershipScope,
-              session: session && {
-                userId: session.userId,
-                permissions: session.permissions,
-                canSeeAllWarehouses: session.canSeeAllWarehouses,
-                allowedWarehouses: session.allowedWarehouses,
-              },
-            },
-          }
-        : undefined
-    );
+    // ✅ Scoping is applied inside the provider (server mode) when AUTH_SCOPING_ENABLED is true.
+    //    Provider calls getSessionContext() and applies warehouse/ownership scope internally.
+    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly });
 
+    // Optional debug logging (safe; separate session fetch used only for logs)
     if (AUTH_SCOPING_ENABLED) {
+      const session = await getSessionContext();
       debugAuth({
         at: "list",
         resource: resourceKey,
@@ -94,7 +81,11 @@ export async function listHandler(req: Request, resourceKey: string) {
       payloadRows = rows.map((r: any) => entry.toRow!(r));
     } else if (raw && !entry.allowRaw) {
       return json(
-        { error: { message: `Raw mode is not allowed for resource "${resourceKey}".` } },
+        {
+          error: {
+            message: `Raw mode is not allowed for resource "${resourceKey}".`,
+          },
+        },
         400
       );
     }
