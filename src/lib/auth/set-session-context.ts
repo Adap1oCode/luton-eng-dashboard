@@ -1,4 +1,8 @@
-// src/lib/auth/set-session-context.ts
+// -----------------------------------------------------------------------------
+// FILE: src/lib/auth/set-session-context.ts
+// PURPOSE: Handle session context and user role fetching
+// -----------------------------------------------------------------------------
+
 import "server-only";
 
 /**
@@ -10,8 +14,8 @@ export type SessionContext = {
   userId: string;
   // Real user (the authenticated principal)
   realUser: {
-    authUserId: string;           // Supabase auth user id (UUID)
-    appUserId: string;            // Your internal users.id/uuid
+    authUserId: string; // Supabase auth user id (UUID)
+    appUserId: string; // Your internal users.id/uuid
     fullName: string | null;
     email: string | null;
     roleName: string | null;
@@ -25,7 +29,7 @@ export type SessionContext = {
     email: string | null;
     roleName: string | null;
     roleCode: string | null;
-    permissions: string[];        // flattened permission keys
+    permissions: string[]; // flattened permission keys
   };
 
   // Permissions (flattened) of the effective user (kept here for convenience)
@@ -37,8 +41,8 @@ export type SessionContext = {
 
   // Codes/IDs are both provided; `allowedWarehouses` kept as alias for codes
   allowedWarehouseCodes: string[]; // e.g. ["RTZ"]
-  allowedWarehouseIds: string[];   // e.g. ["6a7b...-..."]
-  allowedWarehouses: string[];     // alias of allowedWarehouseCodes
+  allowedWarehouseIds: string[]; // e.g. ["6a7b...-..."]
+  allowedWarehouses: string[]; // alias of allowedWarehouseCodes
 
   // Impersonation metadata
   meta: {
@@ -61,15 +65,27 @@ export type HeadersLike =
 
 /**
  * Resolve an absolute base URL for server-side fetches.
+ * - In development: always use HTTP to avoid SSL errors
  * - Use NEXT_PUBLIC_SITE_URL if set (e.g. https://app.example.com)
  * - Else use VERCEL_URL if set (domain only -> we add https://)
  * - Else default to http://localhost:3000
  */
 function resolveBaseUrl(): string {
+  // Check if we're in development mode
+  const isDevelopment = process.env.NODE_ENV === "development";
+
+  // For development, always use HTTP with localhost to avoid SSL issues
+  if (isDevelopment) {
+    const port = process.env.PORT || "3000";
+    return `http://localhost:${port}`;
+  }
+
+  // For production, use environment variables
   const envUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.SITE_URL?.trim() ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
   const base = envUrl || "http://localhost:3000";
   return base.replace(/\/+$/, "");
 }
@@ -78,52 +94,60 @@ function resolveBaseUrl(): string {
  * Fetch the session context from /api/me/role.
  * Pass server headers (with cookies) so Supabase session is forwarded.
  */
-export async function setSessionContext(
-  cookiesOrHeaders: HeadersLike,
-): Promise<SessionContext> {
-  const cookie = cookiesOrHeaders.get("cookie") ?? "";
+export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<SessionContext> {
+  try {
+    const cookie = cookiesOrHeaders.get("cookie") ?? "";
+    const baseUrl = resolveBaseUrl();
 
-  const res = await fetch(`${resolveBaseUrl()}/api/me/role`, {
-    headers: cookie ? { cookie } : {},
-    cache: "no-store",
-  });
+    console.log("🔗 Fetching session from:", `${baseUrl}/api/me/role`);
 
-  const body = await res.json();
+    const res = await fetch(`${baseUrl}/api/me/role`, {
+      headers: cookie ? { cookie } : {},
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    const msg = (body?.error as string) || `session_context_failed (${res.status})`;
-    throw new Error(msg);
+    const body = await res.json();
+
+    if (!res.ok) {
+      const msg = (body?.error as string) || `session_context_failed (${res.status})`;
+      console.error("❌ Session context error:", msg);
+      throw new Error(msg);
+    }
+
+    // Enforce invariants & backwards-compat here (guard old payloads gracefully)
+    const ctx = body as Partial<SessionContext>;
+
+    const codes = ctx.allowedWarehouseCodes ?? ctx.allowedWarehouses ?? [];
+    const ids = ctx.allowedWarehouseIds ?? [];
+
+    const effectiveUser = ctx.effectiveUser!;
+    const userId = (ctx as any).userId ?? effectiveUser.appUserId;
+
+    const normalized: SessionContext = {
+      userId,
+      realUser: ctx.realUser!,
+      effectiveUser: ctx.effectiveUser!,
+      permissions: ctx.permissions ?? ctx.effectiveUser?.permissions ?? [],
+      permissionDetails: ctx.permissionDetails ?? [],
+      canSeeAllWarehouses: Boolean(ctx.canSeeAllWarehouses),
+
+      // Keep both; ensure alias kept in sync
+      allowedWarehouseCodes: codes,
+      allowedWarehouseIds: ids,
+      allowedWarehouses: codes,
+
+      meta: {
+        impersonating: Boolean(ctx.meta?.impersonating),
+        startedAt: ctx.meta?.startedAt ?? null,
+        requestedImpersonateId: ctx.meta?.requestedImpersonateId ?? null,
+        denial: ctx.meta?.denial ?? null,
+      },
+    };
+
+    console.log("✅ Session context loaded successfully");
+    return normalized;
+  } catch (error) {
+    console.error("❌ Error in setSessionContext:", error);
+    throw error;
   }
-
-  // Enforce invariants & backwards-compat here (guard old payloads gracefully)
-  const ctx = body as Partial<SessionContext>;
-
-  const codes = ctx.allowedWarehouseCodes ?? ctx.allowedWarehouses ?? [];
-  const ids = ctx.allowedWarehouseIds ?? [];
-
-  const effectiveUser = ctx.effectiveUser!;
-  const userId = (ctx as any).userId ?? effectiveUser.appUserId;
-
-  const normalized: SessionContext = {
-    
-    userId,    realUser: ctx.realUser!,
-    effectiveUser: ctx.effectiveUser!,
-    permissions: ctx.permissions ?? ctx.effectiveUser?.permissions ?? [],
-    permissionDetails: ctx.permissionDetails ?? [],
-    canSeeAllWarehouses: Boolean(ctx.canSeeAllWarehouses),
-
-    // Keep both; ensure alias kept in sync
-    allowedWarehouseCodes: codes,
-    allowedWarehouseIds: ids,
-    allowedWarehouses: codes,
-
-    meta: {
-      impersonating: Boolean(ctx.meta?.impersonating),
-      startedAt: ctx.meta?.startedAt ?? null,
-      requestedImpersonateId: ctx.meta?.requestedImpersonateId ?? null,
-      denial: ctx.meta?.denial ?? null,
-    },
-  };
-
-  return normalized;
 }

@@ -170,11 +170,11 @@ export function NewTallyCardForm() {
                   <FormLabel>Warehouse *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select warehouse" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="w-full">
                       {warehouses.map((wh) => (
                         <SelectItem key={wh.value} value={wh.value}>
                           {wh.label}
@@ -216,11 +216,11 @@ export function NewTallyCardForm() {
                   <FormLabel>Status *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="w-full">
                       {statusOptions.map((status: { value: string; label: string }) => (
                         <SelectItem key={status.value} value={status.value}>
                           {status.label}

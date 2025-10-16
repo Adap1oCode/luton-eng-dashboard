@@ -11,8 +11,8 @@ import { NewTallyCardForm } from "./form-component";
 
 export default function NewTallyCardPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="mx-auto max-w-7xl space-y-8 p-6">
+    <div className="min-h-screen rounded-2xl border bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="mx-auto w-full space-y-8 p-6">
         {/* Page Header */}
         <NewTallyCardPageHeader />
         {/* Toolbar */}

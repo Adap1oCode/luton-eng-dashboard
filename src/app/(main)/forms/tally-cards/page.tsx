@@ -8,6 +8,7 @@ import { headers, cookies } from "next/headers";
 
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
+import { mapRows } from "@/lib/data/resources/tally_cards/projection";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
 import { tallyCardsToolbar, tallyCardsChips, tallyCardsActions } from "./toolbar.config";
@@ -68,7 +69,7 @@ export default async function Page({ searchParams }: PageProps) {
   const base = await getBaseUrl();
   const cookieHeader = await getCookieHeader();
 
-  const res = await fetch(`${base}/api/tcm_tally_cards_current?page=${page}&pageSize=${pageSize}`, {
+  const res = await fetch(`${base}/api/tcm_tally_cards?page=${page}&pageSize=${pageSize}&raw=true`, {
     cache: "no-store",
     headers: cookieHeader,
   });
@@ -78,10 +79,11 @@ export default async function Page({ searchParams }: PageProps) {
 
   if (res.ok) {
     const payload = (await res.json()) ?? {};
-    const parsedRows = (payload.rows ?? payload.data ?? []) as TallyCardRow[];
-    const parsedTotal = Number(payload.total ?? payload.count ?? parsedRows.length);
-    rows = parsedRows;
-    total = Number.isFinite(parsedTotal) ? parsedTotal : parsedRows.length;
+    const domainRows = (payload.rows ?? payload.data ?? []) as any[];
+    const parsedTotal = Number(payload.total ?? payload.count ?? domainRows.length);
+
+    rows = mapRows(domainRows);
+    total = Number.isFinite(parsedTotal) ? parsedTotal : rows.length;
   } else {
     rows = [];
     total = 0;

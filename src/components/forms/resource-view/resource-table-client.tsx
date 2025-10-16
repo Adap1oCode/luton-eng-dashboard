@@ -174,14 +174,17 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   onCancel,
 }: StatusCellWrapperProps<TRow>) => {
   const status = row.getValue("status");
+  // ✅ FIX: Ensure status is treated as a string
+  const statusString = typeof status === "string" ? status : String(status || "");
   const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
+
   return (
     <StatusCell
-      status={status}
+      status={statusString}
       isEditing={isEditing}
-      editingStatus={editingStatus?.value || status}
+      editingStatus={editingStatus?.value || statusString}
       statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, status)}
+      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
       onEditChange={onEditChange}
       onSave={onSave}
       onCancel={onCancel}
