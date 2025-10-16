@@ -2,7 +2,7 @@
 
 /** Base aliases */
 export type UUID = string;
-export type Relation<T> = T | null;
+export type Id = UUID;
 
 export type ISODateTime = string;
 export type SortSpec = { column: string; desc?: boolean };
@@ -39,19 +39,18 @@ export type FieldSpec = {
   write?: boolean;
   readonly?: boolean;
 
-  // NEW (all optional, used by generators when present)
+  // Optional metadata (useful for form generators / validation)
   required?: boolean;          // if false, treat as optional in Create/Patch
-  defaulted?: boolean;         // field has a DB/server default (makes it optional on create)
+  defaulted?: boolean;         // field has a DB/server default (optional on create)
   enum?: Array<string | number>;
-  min?: number;                // numbers: minimum (>=). strings: min length (map as min length if string)
-  max?: number;                // numbers: maximum (<=). strings: max length
-  length?: number;             // exact length for strings (e.g., codes)
-  pattern?: string;            // regex pattern for strings
+  min?: number;                // numbers: minimum (>=) | strings: min length
+  max?: number;                // numbers: maximum (<=) | strings: max length
+  length?: number;             // exact string length
+  pattern?: string;            // regex for strings
   format?: "email" | "url" | "hostname" | "ipv4" | "ipv6" | "date" | "date-time";
   description?: string;
   example?: unknown;
 };
-
 
 export type ResourceSchemaSpec = {
   fields: Record<string, FieldSpec>;
@@ -96,6 +95,91 @@ export type PatchModelFromSchema<S extends ResourceSchemaSpec> = Partial<
   WriteModelFromSchema<S>
 >;
 
+/* =========================================================================================
+   ACCESS SCOPING — Optional descriptors generic handlers can use.
+   They let you express:
+     1) "I can only see MY data"                -> ownershipScope: { mode: "self", column: "user_id" }
+     2) "I can only see MY warehouse(s)"        -> warehouseScope: { mode: "column", column: "warehouse" }
+     3) "I can see MULTIPLE warehouses"         -> via SessionContext.allowedWarehouses (runtime)
+     4) "I can see EVERYBODY (global bypass)"   -> via canSeeAllWarehouses or bypassPermissions
+========================================================================================= */
+
+/** Warehouse scope descriptor */
+export type WarehouseScopeCfg =
+  | { mode: "none" }
+  | {
+      mode: "column";
+      /** Column in the selected projection that contains warehouse code/id (e.g., "warehouse") */
+      column: string;
+      /**
+       * When true, require at least one binding to see data (ignore session.canSeeAllWarehouses).
+       * Defaults false to keep the “empty bindings => global” rule.
+       */
+      requireBinding?: boolean;
+    };
+
+/** Ownership scope descriptor */
+export type OwnershipScopeCfg =
+  | undefined
+  | {
+      mode: "self";
+      /** Column that holds the owning user's id (typically "user_id" or "created_by") */
+      column: string;
+      /** Any of these permissions bypass the self-only restriction (e.g., admin/read:any). */
+      bypassPermissions?: string[];
+    };
+
+/* =========================================================================================
+   RELATION SPECS — Strongly-typed relation metadata for hydration.
+   This replaces the previous generic Relation<unknown>[] which made TSC infer 'unknown'.
+========================================================================================= */
+
+export type ManyToManyRelationSpec = {
+  kind: "manyToMany";
+  name: string;                       // property to set on each row
+  includeByDefault?: boolean;
+
+  viaTable: string;                   // junction table
+  thisKey: string;                    // FK in junction pointing to parent (cfg.pk)
+  thatKey: string;                    // FK in junction pointing to target id
+
+  // When resolveAs !== "ids", we fetch from targetTable to embed objects
+  targetTable: string;
+  targetSelect: string;               // projection for target fetch
+  resolveAs: "ids" | "objects";
+
+  // Optional scope label for debug/UX: if no junction rows exist
+  onEmptyPolicy?: "ALL" | "NONE" | "RESTRICTED";
+};
+
+export type OneToManyRelationSpec = {
+  kind: "oneToMany";
+  name: string;                       // property to set on each row (array)
+  includeByDefault?: boolean;
+
+  targetTable: string;                // child table
+  targetSelect: string;               // projection
+  foreignKey: string;                 // column on child referencing parent pk
+
+  orderBy?: SortSpec;                 // optional ordering
+  limit?: number;                     // optional limit per parent
+};
+
+export type ManyToOneRelationSpec = {
+  kind: "manyToOne";
+  name: string;                       // property to set on each row (single object)
+  includeByDefault?: boolean;
+
+  targetTable: string;                // parent table
+  targetSelect: string;               // projection
+  localKey: string;                   // column on row referencing target id
+};
+
+export type RelationSpec =
+  | ManyToManyRelationSpec
+  | OneToManyRelationSpec
+  | ManyToOneRelationSpec;
+
 /** ResourceConfig (pk is single-column only at this layer) */
 export type ResourceConfig<T, TInput> = {
   table: string;
@@ -108,11 +192,27 @@ export type ResourceConfig<T, TInput> = {
   toDomain: (row: unknown) => T;
   fromInput?: (input: TInput) => unknown;
 
-  relations?: Relation<unknown>[];
+  relations?: RelationSpec[];
   postProcess?: (rows: T[]) => T[];
 
   schema: ResourceSchemaSpec;
+
+  /** Optional scoping descriptors consumed by generic handlers */
+  warehouseScope?: WarehouseScopeCfg;
+  ownershipScope?: OwnershipScopeCfg;
 };
+
+/* =========================================================================================
+   Provider abstraction — central place (imported by supabase/factory.ts)
+========================================================================================= */
+
+export interface DataProvider<T, TInput> {
+  list(params?: ListParams): Promise<{ rows: T[]; page: number; pageSize: number; total: number }>;
+  get(id: Id): Promise<T | null>;
+  create(input: TInput): Promise<Id>;
+  update(id: Id, patch: TInput): Promise<void>;
+  remove(id: Id): Promise<void>;
+}
 
 /** Domain types */
 export interface Warehouse {

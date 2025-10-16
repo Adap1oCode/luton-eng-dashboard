@@ -6,6 +6,11 @@ import { createSupabaseServerProvider } from "@/lib/supabase/factory";
 import { resolveResource } from "@/lib/api/resolve-resource";
 import { parseListQuery } from "@/lib/http/list-params";
 
+// 🆕 imports
+import { AUTH_SCOPING_ENABLED } from "@/lib/env";
+import { getSessionContext } from "@/lib/auth/get-session-context";
+import { debugAuth } from "@/lib/api/debug";
+
 function json(body: any, init?: number | ResponseInit): NextResponse {
   const base: ResponseInit =
     typeof init === "number" ? { status: init } : (init ?? {});
@@ -14,7 +19,6 @@ function json(body: any, init?: number | ResponseInit): NextResponse {
 }
 
 // Narrow mapper so "unknown resource" becomes 404 (not 500)
-// Keeps internals out of the response.
 function mapError(resourceKey: string, err: unknown) {
   const msg = String((err as any)?.message ?? err ?? "");
   if (
@@ -23,7 +27,6 @@ function mapError(resourceKey: string, err: unknown) {
   ) {
     return json({ error: { message: "Unknown resource" }, resource: resourceKey }, 404);
   }
-  // Fallback
   return json(
     {
       error: {
@@ -38,7 +41,6 @@ function mapError(resourceKey: string, err: unknown) {
 }
 
 export async function listHandler(req: Request, resourceKey: string) {
-  // Light param validation so direct calls don't bubble as 500s
   if (!resourceKey || typeof resourceKey !== "string" || resourceKey.length > 64) {
     return json({ error: { message: "Invalid resource parameter" } }, 400);
   }
@@ -49,13 +51,43 @@ export async function listHandler(req: Request, resourceKey: string) {
     const url = new URL(req.url);
     const { q, page, pageSize, activeOnly, raw } = parseListQuery(url);
 
+    // 🆕 only fetch session when scoping is enabled
+    const session = AUTH_SCOPING_ENABLED ? await getSessionContext() : null;
+
     const provider = createSupabaseServerProvider(entry.config as any);
-    const { rows, total } = await provider.list({
-      q,
-      page,
-      pageSize,
-      activeOnly,
-    });
+
+    // 🆕 pass internal scope blob to provider (ignored if flag is off)
+    const { rows, total } = await provider.list(
+      { q, page, pageSize, activeOnly },
+      AUTH_SCOPING_ENABLED
+        ? {
+            scope: {
+              warehouseScope: (entry.config as any)?.warehouseScope,
+              ownershipScope: (entry.config as any)?.ownershipScope,
+              session: session && {
+                userId: session.userId,
+                permissions: session.permissions,
+                canSeeAllWarehouses: session.canSeeAllWarehouses,
+                allowedWarehouses: session.allowedWarehouses,
+              },
+            },
+          }
+        : undefined
+    );
+
+    if (AUTH_SCOPING_ENABLED) {
+      debugAuth({
+        at: "list",
+        resource: resourceKey,
+        warehouseScope: (entry.config as any)?.warehouseScope,
+        ownershipScope: (entry.config as any)?.ownershipScope,
+        session: session && {
+          userId: session.userId,
+          canSeeAllWarehouses: session.canSeeAllWarehouses,
+          allowedWarehouses: session.allowedWarehouses,
+        },
+      });
+    }
 
     let payloadRows: any[] = rows;
     if (!raw && typeof entry.toRow === "function") {
@@ -76,7 +108,6 @@ export async function listHandler(req: Request, resourceKey: string) {
       raw: raw && entry.allowRaw ? true : false,
     });
   } catch (err) {
-    // Log only unexpected 5xx to keep signal/noise good
     const res = mapError(resourceKey, err);
     if (res.status === 500) {
       console.error("[listHandler]", resourceKey, err);

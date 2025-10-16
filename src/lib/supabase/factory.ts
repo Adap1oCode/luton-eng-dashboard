@@ -2,12 +2,27 @@
 // Generic, UI-agnostic provider for Supabase-backed resources.
 // Handles search, filters, sorting, pagination + relation hydration.
 
-import type { DataProvider, Id, ListParams, ResourceConfig } from "@/lib/data/types";
+import type {
+  DataProvider,
+  Id,
+  ListParams,
+  ResourceConfig,
+  RelationSpec,
+} from "@/lib/data/types";
 
 // NOTE: keep these two imports exactly as below to match your existing files.
 // - src/lib/supabase-server.ts should export either `createClient` OR `getServerClient` OR `supabaseServer`
 // - src/lib/supabase.ts should export either `supabaseBrowser` OR `createClient` OR `getBrowserClient`
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
+
+// Scoping
+import { AUTH_SCOPING_ENABLED } from "@/lib/env";
+import {
+  applyOwnershipScopeToSupabase,
+  applyWarehouseScopeToSupabase,
+} from "@/lib/api/scope";
+import { getSessionContext } from "@/lib/auth/get-session-context";
+import { debugAuth } from "@/lib/api/debug";
 
 type Mode = "server" | "browser";
 
@@ -39,11 +54,14 @@ async function getClient(mode: Mode): Promise<any> {
       const url =
         process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
       const key =
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY;
       if (!url || !key) {
         throw new Error("Missing Supabase env vars for browser-mode fallback");
       }
-      return createSupabaseJsClient(url, key, { auth: { persistSession: false } });
+      return createSupabaseJsClient(url, key, {
+        auth: { persistSession: false },
+      });
     }
   }
 
@@ -69,10 +87,11 @@ async function getClient(mode: Mode): Promise<any> {
     if (!url || !key) {
       throw new Error("Missing Supabase env vars for server-mode fallback");
     }
-    return createSupabaseJsClient(url, key, { auth: { persistSession: false } });
+    return createSupabaseJsClient(url, key, {
+      auth: { persistSession: false },
+    });
   }
 }
-
 
 // -----------------------------------------------------------------------------
 // Relation hydration
@@ -82,10 +101,10 @@ async function hydrateRelations<T>(
   cfg: ResourceConfig<T, any>,
   sb: any
 ): Promise<T[]> {
-  const rels = cfg.relations?.filter((r) => r.includeByDefault) ?? [];
+  const rels: RelationSpec[] = cfg.relations?.filter((r) => r.includeByDefault) ?? [];
   if (!rows.length || rels.length === 0) return rows;
 
-  const ids = (rows as any[]).map((r) => r[cfg.pk]);
+  const ids = (rows as any[]).map((r) => (r as any)[cfg.pk]);
 
   for (const r of rels) {
     if (r.kind === "manyToMany") {
@@ -97,7 +116,8 @@ async function hydrateRelations<T>(
 
       const targetIdsByParent = new Map<any, any[]>();
       for (const j of junction ?? []) {
-        if (!targetIdsByParent.has(j[r.thisKey])) targetIdsByParent.set(j[r.thisKey], []);
+        if (!targetIdsByParent.has(j[r.thisKey]))
+          targetIdsByParent.set(j[r.thisKey], []);
         targetIdsByParent.get(j[r.thisKey])!.push(j[r.thatKey]);
       }
 
@@ -113,18 +133,18 @@ async function hydrateRelations<T>(
       }
 
       for (const row of rows as any[]) {
-        const mine = targetIdsByParent.get(row[cfg.pk]) ?? [];
+        const mine = targetIdsByParent.get((row as any)[cfg.pk]) ?? [];
         if (r.resolveAs === "ids") {
-          row[r.name] = mine.map(String).sort();
+          (row as any)[r.name] = mine.map(String).sort();
         } else {
-          row[r.name] = mine.map((id) => targetById?.get(id)).filter(Boolean);
+          (row as any)[r.name] = mine.map((id) => targetById?.get(id)).filter(Boolean);
         }
         if (mine.length === 0 && r.onEmptyPolicy === "ALL") {
-          row[`${r.name}_scope`] = "ALL";
+          (row as any)[`${r.name}_scope`] = "ALL";
         } else if (mine.length === 0) {
-          row[`${r.name}_scope`] = "NONE";
+          (row as any)[`${r.name}_scope`] = "NONE";
         } else {
-          row[`${r.name}_scope`] = "RESTRICTED";
+          (row as any)[`${r.name}_scope`] = "RESTRICTED";
         }
       }
     }
@@ -143,20 +163,20 @@ async function hydrateRelations<T>(
       }
 
       for (const row of rows as any[]) {
-        let arr = grouped.get(row[cfg.pk]) ?? [];
+        let arr = grouped.get((row as any)[cfg.pk]) ?? [];
         if (r.orderBy) {
           const { column, desc } = r.orderBy;
           const asc = !desc;
           arr = arr.sort((a, b) => (a[column] < b[column] ? -1 : 1) * (asc ? 1 : -1));
         }
         if (r.limit != null) arr = arr.slice(0, r.limit);
-        row[r.name] = arr;
+        (row as any)[r.name] = arr;
       }
     }
 
     if (r.kind === "manyToOne") {
       const targetIds = Array.from(
-        new Set((rows as any[]).map((row) => row[r.localKey]).filter(Boolean))
+        new Set((rows as any[]).map((row) => (row as any)[r.localKey]).filter(Boolean))
       );
       let m = new Map<any, any>();
       if (targetIds.length) {
@@ -168,7 +188,7 @@ async function hydrateRelations<T>(
         m = new Map(parents.map((x: any) => [x.id, x]));
       }
       for (const row of rows as any[]) {
-        row[r.name] = m.get(row[r.localKey]) ?? null;
+        (row as any)[r.name] = m.get((row as any)[r.localKey]) ?? null;
       }
     }
   }
@@ -191,6 +211,33 @@ export function createSupabaseProvider<T, TInput>(
       const sb = await getClient(mode);
 
       let query = sb.from(cfg.table).select(cfg.select, { count: "exact" });
+
+      // Apply scoping (server-only + flag-gated)
+      if (!isBrowser && AUTH_SCOPING_ENABLED) {
+        const ctx = await getSessionContext();
+
+        query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
+          canSeeAllWarehouses: ctx.canSeeAllWarehouses,
+          allowedWarehouses: ctx.allowedWarehouses,
+        });
+
+        query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
+          userId: ctx.userId,
+          permissions: ctx.permissions,
+        });
+
+        debugAuth({
+          at: "list",
+          resource: cfg.table,
+          warehouseScope: cfg.warehouseScope,
+          ownershipScope: cfg.ownershipScope,
+          ctx: {
+            userId: ctx.userId,
+            canSeeAllWarehouses: ctx.canSeeAllWarehouses,
+            allowedWarehouses: ctx.allowedWarehouses,
+          },
+        });
+      }
 
       if (q && cfg.search?.length) query = query.or(buildOrIlike(q, cfg.search));
       if (isObject(filters)) {
@@ -215,13 +262,27 @@ export function createSupabaseProvider<T, TInput>(
 
     async get(id: Id) {
       const sb = await getClient(mode);
-      const { data, error } = await sb
-        .from(cfg.table)
-        .select(cfg.select)
-        .eq(cfg.pk, id)
-        .maybeSingle();
+      let query = sb.from(cfg.table).select(cfg.select).eq(cfg.pk, id);
+
+      // Apply scoping to single record (server-only)
+      if (!isBrowser && AUTH_SCOPING_ENABLED) {
+        const ctx = await getSessionContext();
+
+        query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
+          canSeeAllWarehouses: ctx.canSeeAllWarehouses,
+          allowedWarehouses: ctx.allowedWarehouses,
+        });
+
+        query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
+          userId: ctx.userId,
+          permissions: ctx.permissions,
+        });
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       if (!data) return null;
+
       const base = cfg.toDomain(data);
       const [hydrated] = await hydrateRelations([base], cfg, sb);
       return hydrated ?? null;
