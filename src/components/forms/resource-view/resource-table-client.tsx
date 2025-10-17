@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// FILE: src/components/forms/resource-view/ResourceTableClient.tsx
+// FILE: src/components/forms/resource-view/resource-table-client.tsx
 // TYPE: Client Component
 // PURPOSE: Generic client island for "View All <Resource>" screens.
 //          - Uses SSR-materialised columns (config.columns) as canonical.
@@ -183,16 +183,24 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   onSave,
   onCancel,
 }: StatusCellWrapperProps<TRow>) => {
-  const status = row.getValue("status");
+  const rawStatus = row.getValue("status");
+
+  // Safer coercion:
+  // - Preserve strings as-is
+  // - Map null/undefined to ""
+  // - String() for everything else
+  const statusString = typeof rawStatus === "string" ? rawStatus : rawStatus == null ? "" : String(rawStatus);
+
   const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
 
   return (
     <StatusCell
-      status={status}
+      status={statusString}
       isEditing={isEditing}
-      editingStatus={editingStatus?.value || status}
+      // Use ?? to preserve intentional empty strings
+      editingStatus={editingStatus?.value ?? statusString}
       statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, status)}
+      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
       onEditChange={onEditChange}
       onSave={onSave}
       onCancel={onCancel}
