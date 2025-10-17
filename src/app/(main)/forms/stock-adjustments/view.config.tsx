@@ -14,9 +14,9 @@ import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 // Keep this local and minimal to avoid cross-file type coupling.
 // If you later add a Zod schema, you can infer this type from it.
 export type StockAdjustmentRow = {
-  user_id: string;
+  full_name: string;
+  warehouse: string;
   tally_card_number?: string | null;
-  card_uid?: string | null;
   qty?: number | null;
   location?: string | null;
   note?: string | null;
@@ -25,6 +25,20 @@ export type StockAdjustmentRow = {
 
 function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
   return [
+            {
+      id: "full_name",
+      accessorKey: "full_name",
+      header: "Name",
+      enableSorting: true,
+      size: 160,
+    },
+        {
+      id: "warehouse",
+      accessorKey: "warehouse",
+      header: "warehouse",
+      enableSorting: true,
+      size: 160,
+    },
     {
       id: "tally_card_number",
       accessorKey: "tally_card_number",
@@ -56,26 +70,8 @@ function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
       size: 280,
     },
     {
-      id: "user_id",
-      accessorKey: "user_id",
-      header: "User ID",
-      enableSorting: false,
-      enableHiding: true,
-      size: 260,
-      meta: { hiddenByDefault: true },
-    },
-    {
-      id: "card_uid",
-      accessorKey: "card_uid",
-      header: "Card UID",
-      enableSorting: false,
-      enableHiding: true,
-      size: 300,
-      meta: { hiddenByDefault: true },
-    },
-    {
-      id: "updated_at",
-      accessorKey: "updated_at",
+      id: "updated_at_pretty",
+      accessorKey: "updated_at_pretty",
       header: "Updated",
       enableSorting: true,
       size: 180,

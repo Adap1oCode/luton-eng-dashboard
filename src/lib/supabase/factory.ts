@@ -226,23 +226,26 @@ export function createSupabaseProvider<T, TInput>(
 
         // 🔒 Ownership scoping (uses deprecated alias `userId` for now)
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: (ctx as any).userId,
-          permissions: ctx.permissions,
-        });
+  // Prefer effective app user id (impersonation-safe); fall back to legacy alias
+  userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
+  permissions: ctx.permissions,
+});
+
 
         debugAuth({
-          at: "list",
-          resource: cfg.table,
-          warehouseScope: cfg.warehouseScope,
-          ownershipScope: cfg.ownershipScope,
-          ctx: {
-            userId: (ctx as any).userId,
-            canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-            allowedWarehouses: ctx.allowedWarehouses, // legacy
-            allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes,
-            allowedWarehouseIds: (ctx as any).allowedWarehouseIds,
-          },
-        });
+  at: "list",
+  resource: cfg.table,
+  warehouseScope: cfg.warehouseScope,
+  ownershipScope: cfg.ownershipScope,
+  ctx: {
+    userId: (ctx as any).userId,
+    effectiveUserAppUserId: (ctx as any).effectiveUser?.appUserId,
+    canSeeAllWarehouses: ctx.canSeeAllWarehouses,
+    allowedWarehouses: ctx.allowedWarehouses, // legacy
+    allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes,
+    allowedWarehouseIds: (ctx as any).allowedWarehouseIds,
+  },
+});
       }
 
       if (q && cfg.search?.length) query = query.or(buildOrIlike(q, cfg.search));
@@ -284,9 +287,11 @@ export function createSupabaseProvider<T, TInput>(
 
         // 🔒 Ownership scoping
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: (ctx as any).userId,
-          permissions: ctx.permissions,
-        });
+  // Prefer effective app user id (impersonation-safe); fall back to legacy alias
+  userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
+  permissions: ctx.permissions,
+});
+
       }
 
       const { data, error } = await query.maybeSingle();
