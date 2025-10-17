@@ -1,19 +1,13 @@
-// -----------------------------------------------------------------------------
-// FILE: src/app/(main)/forms/stock-adjustments/view.config.tsx
-// TYPE: Config
-// PURPOSE: Column + view config for "Stock Adjustments" (backed by user_tally_card_entries)
-// NOTES:
-//  • Single source of truth = TanStack ColumnDef[] via buildColumns()
-//  • No resource-specific strings outside of this screen's context
-//  • Safe defaults: selection enabled; stable storage key; delete targets base table
-// -----------------------------------------------------------------------------
+"use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+
+import { makeActionsColumn, type BaseViewConfig } from "@/components/data-table/view-defaults";
 
 // Keep this local and minimal to avoid cross-file type coupling.
 // If you later add a Zod schema, you can infer this type from it.
 export type StockAdjustmentRow = {
+  id: string; // ensure client has a stable id for actions/selection
   user_id: string;
   tally_card_number?: string | null;
   card_uid?: string | null;
@@ -80,11 +74,10 @@ function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
       enableSorting: true,
       size: 180,
     },
+    // Actions column (event delegation reads data-row-id from Dropdown items)
+    makeActionsColumn<StockAdjustmentRow>(),
   ];
 }
-
-// materialize columns on the server to avoid passing functions to client
-const columns: ColumnDef<StockAdjustmentRow>[] = buildColumns();
 
 export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   resourceKeyForDelete: "tcm_user_tally_card_entries",
@@ -94,5 +87,6 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
     rowSelection: true,
     pagination: true,
   },
-  buildColumns, // ← keep the function here to satisfy BaseViewConfig typing
+  formsRouteSegment: "stock-adjustments",
+  buildColumns, // only referenced by the client table
 };

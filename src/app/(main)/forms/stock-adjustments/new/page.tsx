@@ -40,7 +40,7 @@ export default function NewTallyCardPage() {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log("Saving tally card:", values);
-    router.push("/forms/tally-cards");
+    router.push("/forms/stock-adjustments"); // updated route after save
   };
 
   return (
@@ -235,7 +235,7 @@ export default function NewTallyCardPage() {
 
               {/* Buttons */}
               <div className="mt-6 flex justify-end gap-4">
-                <Button type="button" variant="outline" onClick={() => router.push("/forms/tally-cards")}>
+                <Button type="button" variant="outline" onClick={() => router.push("/forms/stock-adjustments")}>
                   Cancel
                 </Button>
                 <Button type="submit">Save</Button>
