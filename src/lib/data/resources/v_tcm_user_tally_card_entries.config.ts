@@ -18,9 +18,9 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
 
   // ⬇️ include warehouse_id (UUID) and warehouse (code) for scoping & UI
   select:
-    "user_id, tally_card_number, card_uid, qty, location, note, updated_at, warehouse_id, warehouse",
+    "user_id, full_name, tally_card_number, card_uid, qty, location, note, updated_at, updated_at_pretty, warehouse_id, warehouse",
 
-  search: ["tally_card_number", "location", "note"],
+  search: ["tally_card_number", "location", "note", "full_name"],
   defaultSort: { column: "updated_at", desc: true },
 
   // 🔒 SCOPING
@@ -50,12 +50,14 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
   schema: {
     fields: {
       user_id: { type: "uuid", write: true },
+      full_name: { type: "text", readonly: true },
       tally_card_number: { type: "text", write: true },
       card_uid: { type: "uuid", nullable: true, write: true },
       qty: { type: "int", nullable: true, write: true },
       location: { type: "text", nullable: true, write: true },
       note: { type: "text", nullable: true, write: true },
       updated_at: { type: "timestamp", nullable: true, readonly: true },
+      updated_at_pretty: { type: "text", nullable: true, readonly: true },
 
       // read-only fields surfaced by the view:
       warehouse_id: { type: "uuid", readonly: true },

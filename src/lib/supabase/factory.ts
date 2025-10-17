@@ -2,27 +2,14 @@
 // Generic, UI-agnostic provider for Supabase-backed resources.
 // Handles search, filters, sorting, pagination + relation hydration.
 
-import type {
-  DataProvider,
-  Id,
-  ListParams,
-  ResourceConfig,
-  RelationSpec,
-} from "@/lib/data/types";
-
-// NOTE: keep these two imports exactly as below to match your existing files.
-// - src/lib/supabase-server.ts should export either `createClient` OR `getServerClient` OR `supabaseServer`
-// - src/lib/supabase.ts should export either `supabaseBrowser` OR `createClient` OR `getBrowserClient`
+// Module top-level imports (تم إزالة الفراغات بين أسطر الـ imports)
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 
-// Scoping
-import { AUTH_SCOPING_ENABLED } from "@/lib/env";
-import {
-  applyOwnershipScopeToSupabase,
-  applyWarehouseScopeToSupabase,
-} from "@/lib/api/scope";
-import { getSessionContext } from "@/lib/auth/get-session-context";
 import { debugAuth } from "@/lib/api/debug";
+import { applyOwnershipScopeToSupabase, applyWarehouseScopeToSupabase } from "@/lib/api/scope";
+import { getSessionContext } from "@/lib/auth/get-session-context";
+import type { DataProvider, Id, ListParams, ResourceConfig, RelationSpec } from "@/lib/data/types";
+import { AUTH_SCOPING_ENABLED } from "@/lib/env";
 
 type Mode = "server" | "browser";
 
@@ -39,7 +26,7 @@ function isObject(v: unknown): v is Record<string, unknown> {
 async function getClient(mode: Mode): Promise<any> {
   if (mode === "browser") {
     try {
-      const Browser = require("@/lib/supabase");
+      const Browser = await import("@/lib/supabase");
       const cand =
         (Browser as any).supabaseBrowser ??
         (Browser as any).getBrowserClient ??
@@ -47,15 +34,12 @@ async function getClient(mode: Mode): Promise<any> {
         (Browser as any).default;
       if (typeof cand === "function") {
         const c = cand();
-        return (c && typeof (c as any).then === "function") ? await c : c;
+        return c && typeof c.then === "function" ? await c : c;
       }
       return Browser;
     } catch {
-      const url =
-        process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-      const key =
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        process.env.SUPABASE_ANON_KEY;
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
       if (!url || !key) {
         throw new Error("Missing Supabase env vars for browser-mode fallback");
       }
@@ -66,7 +50,7 @@ async function getClient(mode: Mode): Promise<any> {
   }
 
   try {
-    const Server = require("@/lib/supabase-server");
+    const Server = await import("@/lib/supabase-server");
     const cand =
       (Server as any).createClient ??
       (Server as any).getServerClient ??
@@ -74,16 +58,13 @@ async function getClient(mode: Mode): Promise<any> {
       (Server as any).default;
     if (typeof cand === "function") {
       const c = cand();
-      return (c && typeof (c as any).then === "function") ? await c : c;
+      return c && typeof c.then === "function" ? await c : c;
     }
     return Server;
   } catch {
-    const url =
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key =
-      process.env.SUPABASE_SERVICE_ROLE ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY;
+      process.env.SUPABASE_SERVICE_ROLE || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     if (!url || !key) {
       throw new Error("Missing Supabase env vars for server-mode fallback");
     }
@@ -96,15 +77,11 @@ async function getClient(mode: Mode): Promise<any> {
 // -----------------------------------------------------------------------------
 // Relation hydration
 // -----------------------------------------------------------------------------
-async function hydrateRelations<T>(
-  rows: T[],
-  cfg: ResourceConfig<T, any>,
-  sb: any
-): Promise<T[]> {
+async function hydrateRelations<T>(rows: T[], cfg: ResourceConfig<T, any>, sb: any): Promise<T[]> {
   const rels: RelationSpec[] = cfg.relations?.filter((r) => r.includeByDefault) ?? [];
   if (!rows.length || rels.length === 0) return rows;
 
-  const ids = (rows as any[]).map((r) => (r as any)[cfg.pk]);
+  const ids = (rows as any[]).map((r) => r[cfg.pk]);
 
   for (const r of rels) {
     if (r.kind === "manyToMany") {
@@ -116,8 +93,7 @@ async function hydrateRelations<T>(
 
       const targetIdsByParent = new Map<any, any[]>();
       for (const j of junction ?? []) {
-        if (!targetIdsByParent.has(j[r.thisKey]))
-          targetIdsByParent.set(j[r.thisKey], []);
+        if (!targetIdsByParent.has(j[r.thisKey])) targetIdsByParent.set(j[r.thisKey], []);
         targetIdsByParent.get(j[r.thisKey])!.push(j[r.thatKey]);
       }
 
@@ -133,27 +109,24 @@ async function hydrateRelations<T>(
       }
 
       for (const row of rows as any[]) {
-        const mine = targetIdsByParent.get((row as any)[cfg.pk]) ?? [];
+        const mine = targetIdsByParent.get(row[cfg.pk]) ?? [];
         if (r.resolveAs === "ids") {
-          (row as any)[r.name] = mine.map(String).sort();
+          row[r.name] = mine.map(String).sort();
         } else {
-          (row as any)[r.name] = mine.map((id) => targetById?.get(id)).filter(Boolean);
+          row[r.name] = mine.map((id) => targetById?.get(id)).filter(Boolean);
         }
         if (mine.length === 0 && r.onEmptyPolicy === "ALL") {
-          (row as any)[`${r.name}_scope`] = "ALL";
+          row[`${r.name}_scope`] = "ALL";
         } else if (mine.length === 0) {
-          (row as any)[`${r.name}_scope`] = "NONE";
+          row[`${r.name}_scope`] = "NONE";
         } else {
-          (row as any)[`${r.name}_scope`] = "RESTRICTED";
+          row[`${r.name}_scope`] = "RESTRICTED";
         }
       }
     }
 
     if (r.kind === "oneToMany") {
-      const { data: kids, error } = await sb
-        .from(r.targetTable)
-        .select(r.targetSelect)
-        .in(r.foreignKey, ids);
+      const { data: kids, error } = await sb.from(r.targetTable).select(r.targetSelect).in(r.foreignKey, ids);
       if (error) throw error;
 
       const grouped = new Map<any, any[]>();
@@ -163,32 +136,27 @@ async function hydrateRelations<T>(
       }
 
       for (const row of rows as any[]) {
-        let arr = grouped.get((row as any)[cfg.pk]) ?? [];
+        let arr = grouped.get(row[cfg.pk]) ?? [];
         if (r.orderBy) {
           const { column, desc } = r.orderBy;
           const asc = !desc;
           arr = arr.sort((a, b) => (a[column] < b[column] ? -1 : 1) * (asc ? 1 : -1));
         }
         if (r.limit != null) arr = arr.slice(0, r.limit);
-        (row as any)[r.name] = arr;
+        row[r.name] = arr;
       }
     }
 
     if (r.kind === "manyToOne") {
-      const targetIds = Array.from(
-        new Set((rows as any[]).map((row) => (row as any)[r.localKey]).filter(Boolean))
-      );
+      const targetIds = Array.from(new Set((rows as any[]).map((row) => row[r.localKey]).filter(Boolean)));
       let m = new Map<any, any>();
       if (targetIds.length) {
-        const { data: parents, error } = await sb
-          .from(r.targetTable)
-          .select(r.targetSelect)
-          .in("id", targetIds);
+        const { data: parents, error } = await sb.from(r.targetTable).select(r.targetSelect).in("id", targetIds);
         if (error) throw error;
         m = new Map(parents.map((x: any) => [x.id, x]));
       }
       for (const row of rows as any[]) {
-        (row as any)[r.name] = m.get((row as any)[r.localKey]) ?? null;
+        row[r.name] = m.get(row[r.localKey]) ?? null;
       }
     }
   }
@@ -201,7 +169,7 @@ async function hydrateRelations<T>(
 // -----------------------------------------------------------------------------
 export function createSupabaseProvider<T, TInput>(
   cfg: ResourceConfig<T, TInput>,
-  mode: Mode = "server"
+  mode: Mode = "server",
 ): DataProvider<T, TInput> {
   const isBrowser = mode === "browser";
 
@@ -219,14 +187,15 @@ export function createSupabaseProvider<T, TInput>(
         // 🔒 Warehouse scoping (now passes codes + ids; function picks correctly)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
           canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-          allowedWarehouses: ctx.allowedWarehouses,             // legacy alias (codes)
+          allowedWarehouses: ctx.allowedWarehouses, // legacy alias (codes)
           allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
-          allowedWarehouseIds:   (ctx as any).allowedWarehouseIds,   // enriched (UUIDs)
+          allowedWarehouseIds: (ctx as any).allowedWarehouseIds, // enriched (UUIDs)
         });
 
         // 🔒 Ownership scoping (uses deprecated alias `userId` for now)
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: (ctx as any).userId,
+          // Prefer effective app user id (impersonation-safe); fall back to legacy alias
+          userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
           permissions: ctx.permissions,
         });
 
@@ -237,6 +206,7 @@ export function createSupabaseProvider<T, TInput>(
           ownershipScope: cfg.ownershipScope,
           ctx: {
             userId: (ctx as any).userId,
+            effectiveUserAppUserId: (ctx as any).effectiveUser?.appUserId,
             canSeeAllWarehouses: ctx.canSeeAllWarehouses,
             allowedWarehouses: ctx.allowedWarehouses, // legacy
             allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes,
@@ -277,14 +247,15 @@ export function createSupabaseProvider<T, TInput>(
         // 🔒 Warehouse scoping (same enriched context passed)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
           canSeeAllWarehouses: ctx.canSeeAllWarehouses,
-          allowedWarehouses: ctx.allowedWarehouses,             // legacy alias (codes)
+          allowedWarehouses: ctx.allowedWarehouses, // legacy alias (codes)
           allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
-          allowedWarehouseIds:   (ctx as any).allowedWarehouseIds,   // enriched (UUIDs)
+          allowedWarehouseIds: (ctx as any).allowedWarehouseIds, // enriched (UUIDs)
         });
 
         // 🔒 Ownership scoping
         query = applyOwnershipScopeToSupabase(query, cfg.ownershipScope, {
-          userId: (ctx as any).userId,
+          // Prefer effective app user id (impersonation-safe); fall back to legacy alias
+          userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
           permissions: ctx.permissions,
         });
       }
@@ -304,7 +275,7 @@ export function createSupabaseProvider<T, TInput>(
       const payload = cfg.fromInput ? cfg.fromInput(input) : (input as any);
       const { data, error } = await sb.from(cfg.table).insert(payload).select(cfg.pk).single();
       if (error) throw error;
-      return (data as any)[cfg.pk];
+      return data[cfg.pk];
     },
 
     async update(id: Id, patch: TInput) {

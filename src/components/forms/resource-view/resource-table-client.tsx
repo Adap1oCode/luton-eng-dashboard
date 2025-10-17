@@ -184,17 +184,15 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   onCancel,
 }: StatusCellWrapperProps<TRow>) => {
   const status = row.getValue("status");
-  // ✅ FIX: Ensure status is treated as a string
-  const statusString = typeof status === "string" ? status : String(status || "");
   const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
 
   return (
     <StatusCell
-      status={statusString}
+      status={status}
       isEditing={isEditing}
-      editingStatus={editingStatus?.value || statusString}
+      editingStatus={editingStatus?.value || status}
       statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
+      onEditStart={() => onEditStart((row.original as { id: string }).id, status)}
       onEditChange={onEditChange}
       onSave={onSave}
       onCancel={onCancel}
@@ -238,7 +236,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     tally_card_number: true,
     item_number: true,
     is_active: true,
-    warehouse: false,
+    warehouse: true,
   });
 
   // ✅ Filters state tied to DataTableFilters

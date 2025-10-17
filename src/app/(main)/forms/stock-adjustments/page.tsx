@@ -15,6 +15,8 @@ function toRow(d: any) {
   return {
     id: String(d?.user_id ?? d?.id ?? ""),
     user_id: String(d?.user_id ?? ""),
+    full_name: String(d?.full_name ?? ""), // added
+    warehouse: String(d?.warehouse ?? ""), // added
     tally_card_number: d?.tally_card_number ?? null,
     card_uid: d?.card_uid ?? null,
     qty: d?.qty ?? null,
