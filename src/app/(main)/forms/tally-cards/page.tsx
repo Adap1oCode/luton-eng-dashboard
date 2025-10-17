@@ -103,6 +103,8 @@ export default async function Page({ searchParams }: PageProps) {
       enableColumnReordering={true}
       showColumnsButton={false}
       showSortButton={false}
+      showExportButton={false}
+      showMoreFiltersButton={false}
     >
       <ResourceTableClient<TallyCardRow>
         config={tallyCardsViewConfig}

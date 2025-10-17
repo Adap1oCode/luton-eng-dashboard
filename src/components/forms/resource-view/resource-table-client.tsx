@@ -40,7 +40,17 @@ import {
   type VisibilityState,
   type Row,
 } from "@tanstack/react-table";
-import { GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Settings, ChevronDown, SortAsc, SortDesc } from "lucide-react";
+import {
+  GripVertical,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Settings,
+  ChevronDown,
+  SortAsc,
+  SortDesc,
+  Filter,
+} from "lucide-react";
 
 import { ColumnsMenu } from "@/components/data-table/columns-menu";
 import { exportCSV } from "@/components/data-table/csv-export";
@@ -243,6 +253,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     pageSize,
   });
 
+  // ✅ NEW: State لإظهار/إخفاء قسم More Filters
+  const [showMoreFilters, setShowMoreFilters] = React.useState(false);
+
   // Column widths state for resizing
   const [columnWidths] = React.useState<Record<string, number>>({});
   const tableRef = React.useRef<HTMLDivElement>(null);
@@ -365,6 +378,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     const mapped = columnsWithHeaders.map((col) => {
       const c: ColumnDef<TRow, unknown> = { ...col };
 
+      // ✅ جعل عمود الـ actions ثابتًا بدون فلترة
+      if (c.id === "actions") {
+        c.enableColumnFilter = false;
+        c.enableSorting = false;
+        c.enableHiding = false;
+        c.enableResizing = false;
+        return c;
+      }
+
       // Assign a flexible filter function supporting modes
       (c as { filterFn?: (row: Row<TRow>, id: string, filter: ColumnFilterState) => boolean }).filterFn = (
         row: Row<TRow>,
@@ -448,13 +470,30 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Listen for action from actions column via event delegation (includes nested Radix elements)
   React.useEffect(() => {
     const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+    const routeSegment =
+      (config as Record<string, unknown>)?.formsRouteSegment ?? String(resourceKey).replace(/_/g, "-");
 
     async function handleDelete(rowId: string) {
-      const confirmed = window.confirm("Are you sure you want to delete this record?");
+      const confirmed = window.confirm("Are you sure you want to delete this item? This action cannot be undone.");
       if (!confirmed) return;
-      const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
-      if (res.ok) router.refresh();
-      else alert("Failed to delete record");
+
+      try {
+        const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
+        if (res.ok) {
+          alert("Item deleted successfully!");
+          router.refresh();
+        } else {
+          const errorData = await res.json();
+          alert(`Failed to delete item: ${errorData.error?.message || "Unknown error"}`);
+        }
+      } catch (error) {
+        alert("Failed to delete item. Please try again.");
+      }
+    }
+
+    async function handleEdit(rowId: string) {
+      // Navigate to the correct forms route segment
+      router.push(`/forms/${routeSegment}/edit/${rowId}`);
     }
 
     const onClick = (ev: MouseEvent) => {
@@ -465,10 +504,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       const actionId = actionEl.getAttribute("data-action-id") || "";
       const rowId = actionEl.getAttribute("data-row-id") || "";
       if (!rowId) return;
+
       if (actionId === "delete") {
         ev.preventDefault();
         ev.stopPropagation();
         void handleDelete(rowId);
+      } else if (actionId === "edit") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        void handleEdit(rowId);
       }
     };
 
@@ -601,7 +645,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     const onClearAll = clearSorting;
 
     return (
-      <div className="flex items-center gap-2 border-b border-gray-200 p-2 dark:border-gray-700">
+      <div className="flex items-center gap-2">
         {/* Columns dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -650,14 +694,54 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             />
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Export CSV */}
-        <Button variant="outline" className="ml-auto" onClick={() => exportCSV(table as never, "tally_cards")}>
-          Export CSV
-        </Button>
       </div>
     );
   }, [table, isResizing, setColumnOrder, dragIdRef]);
+
+  // ✅ NEW: More Filters Section
+  const MoreFiltersSection = React.useMemo(() => {
+    if (!showMoreFilters) return null;
+
+    // حساب عدد الفلاتر النشطة
+    const activeFiltersCount = Object.values(filters).filter((filter) => filter.value.trim() !== "").length;
+
+    // دالة مسح جميع الفلاتر
+    const clearAllFilters = () => {
+      setFilters({});
+    };
+
+    return (
+      <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => setShowMoreFilters(false)} className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Hide Filters
+            </Button>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {activeFiltersCount > 0 ? (
+                <span>
+                  {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
+                </span>
+              ) : (
+                <span>No filters applied</span>
+              )}
+            </div>
+          </div>
+          {activeFiltersCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              Clear all filters
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }, [showMoreFilters, filters]);
 
   // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
   const filterColumns: FilterColumn[] = React.useMemo(() => {
@@ -680,7 +764,31 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
-        {ColumnsAndSortToolbar}
+        {/* ✅ NEW: Toolbar مع زر More Filters وزر Export */}
+        <div className="border-b border-gray-200 p-4 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {ColumnsAndSortToolbar}
+              {/* زر More Filters */}
+              <Button
+                variant="outline"
+                onClick={() => setShowMoreFilters(!showMoreFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                {showMoreFilters ? "Hide Filters" : "More Filters"}
+              </Button>
+            </div>
+            {/* زر Export في أقصى اليمين */}
+            <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
+              Export CSV
+            </Button>
+          </div>
+        </div>
+
+        {/* ✅ NEW: قسم More Filters */}
+        {MoreFiltersSection}
+
         <DataTable
           dndEnabled={enableColumnReordering}
           table={table as never}
@@ -694,6 +802,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           filtersConfig={{
             columns: filterColumns,
             columnWidthsPct: columnWidths,
+            show: showMoreFilters, // ربط إظهار الفلاتر بحالة showMoreFilters
             filters,
             onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
           }}

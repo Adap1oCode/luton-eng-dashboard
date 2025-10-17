@@ -209,6 +209,8 @@ export type BaseViewConfig<TRow> = {
   buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
   // مفتاح المورد المطلوب لطلبات الحذف الفردي عبر /api/[resource]/[id]
   resourceKeyForDelete?: string;
+  // Route segment for forms pages (e.g., 'tally-cards')
+  formsRouteSegment?: string;
 };
 
 export function createViewConfig<TRow>(opts: {

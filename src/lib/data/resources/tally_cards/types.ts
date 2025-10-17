@@ -6,6 +6,7 @@ export interface TallyCard {
   id: string;
   card_uid: string;
   warehouse_id: string;
+  warehouse: string; // warehouse name/code for display
   tally_card_number: string;
   item_number: number;
   note: string | null;
@@ -13,19 +14,27 @@ export interface TallyCard {
   snapshot_at: string | null;
   hashdiff: string | null;
   created_at: string | null;
+  updated_at: string | null;
+  status: string | null;
+  owner: string | null;
+  quantity: number | null;
 }
 
 export interface TallyCardInput {
   card_uid?: string | null;
   warehouse_id: string;
+  warehouse?: string | null; // warehouse name/code for display
   tally_card_number: string;
   item_number: number;
   note?: string | null;
   is_active?: boolean;
   snapshot_at?: string | null;
+  status?: string | null;
+  owner?: string | null;
+  quantity?: number | null;
 }
 
-// Transport shape for “View All Tally Cards”
+// Transport shape for "View All Tally Cards"
 export type TallyCardRow = {
   id: string;
   tally_card_number: string;
@@ -34,4 +43,8 @@ export type TallyCardRow = {
   note: string | null;
   is_active: boolean;
   created_at: string | null;
+  updated_at: string | null;
+  status: string | null;
+  owner: string | null;
+  quantity: number | null;
 };

@@ -159,7 +159,7 @@ export default function PageShell({
     (typeof chipConfig?.sorting === "boolean" ? chipConfig.sorting : showSortingChip) ?? false;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen rounded-2xl border bg-gray-50 dark:bg-gray-900">
       {/* Outer padding/spacing wrapper */}
       <div className="w-full space-y-6 p-4 sm:p-6">
         {/* Header card (Roles parity) */}
@@ -223,7 +223,7 @@ export default function PageShell({
                 showColumnsButton={advancedFilterBarProps?.showColumnsButton ?? showColumnsButton}
                 showSortButton={advancedFilterBarProps?.showSortButton ?? showSortButton}
                 showMoreFiltersButton={advancedFilterBarProps?.showMoreFiltersButton ?? showMoreFiltersButton}
-                showExportButton={advancedFilterBarProps?.showExportButton ?? showExportButton}
+                showExportButton={false} // ✅ إخفاء زر Export من الـ AdvancedFilterBar لمنع التكرار
                 showSaveViewButton={advancedFilterBarProps?.showSaveViewButton ?? showSaveViewButton}
                 // ✅ إمكانيات الأعمدة (حِزمة > props)
                 enableColumnResizing={advancedFilterBarProps?.enableColumnResizing ?? enableColumnResizing}

@@ -9,6 +9,10 @@ export function toRow(d: TallyCard): TallyCardRow {
     note: d.note ?? null,
     is_active: !!d.is_active,
     created_at: d.created_at ?? null,
+    updated_at: d.updated_at ?? null,
+    status: d.status ?? null,
+    owner: d.owner ?? null,
+    quantity: d.quantity ?? null,
   };
 }
 

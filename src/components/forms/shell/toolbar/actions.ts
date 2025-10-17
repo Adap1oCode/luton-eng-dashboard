@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+
 import { useSelectionStore } from "../selection/selection-store";
+
 import type { ActionConfig } from "./types";
 
 /**
@@ -19,6 +21,14 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
     const def = actionConfig[key];
     const ids = selectedIds ?? [];
 
+    // Add confirmation for delete actions
+    if (key === "deleteSelected" && ids.length > 0) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete ${ids.length} selected record(s)? This action cannot be undone.`,
+      );
+      if (!confirmed) return;
+    }
+
     // Interpolate :id for single-selected
     const oneId = ids.length === 1 ? ids[0] : undefined;
     const url = oneId ? def.endpoint.replace(/:id\b/g, oneId) : def.endpoint;
@@ -35,7 +45,14 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
     }
 
     const res = await fetch(url, init);
-    if (res.ok) router.refresh();
+    if (res.ok) {
+      if (key === "deleteSelected") {
+        alert(`Successfully deleted ${ids.length} record(s)`);
+      }
+      router.refresh();
+    } else {
+      alert("Operation failed. Please try again.");
+    }
   }
 
   // Built-in shorthands using conventional keys
