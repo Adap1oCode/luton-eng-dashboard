@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+"use client";
+// cspell:words adjustmentId
+
+import React, { useState, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -6,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -19,22 +23,100 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
-import { formSchema, defaultValues, warehouses } from "./config";
+import {
+  formSchema,
+  defaultValues,
+  fetchWarehouses,
+  adjustmentTypeOptions,
+  statusOptions,
+  reasonOptions,
+} from "./config";
 
 export function NewStockAdjustmentForm() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [warehouses, setWarehouses] = useState<Array<{ value: string; label: string }>>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
-  const [cardUID] = useState("auto-generated-uuid");
+  // Mock readonly fields
+  const [adjustmentUID] = useState("auto-generated-uuid");
   const [hashdiff] = useState("auto-hash");
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log("Saving stock adjustment:", values);
-    router.push("/forms/stock-adjustments");
+  // Load warehouses on component mount
+  useEffect(() => {
+    const loadWarehouses = async () => {
+      try {
+        const warehouseData = await fetchWarehouses();
+        setWarehouses(warehouseData);
+      } catch (error) {
+        console.error("Failed to load warehouses:", error);
+        // Use fallback data
+        setWarehouses([
+          { value: "BP - WH 1", label: "BP - WH 1" },
+          { value: "BP - WH 2", label: "BP - WH 2" },
+          { value: "BDI - WH 1", label: "BDI - WH 1" },
+          { value: "AMC - WH 2", label: "AMC - WH 2" },
+          { value: "RTZ - WH 1", label: "RTZ - WH 1" },
+          { value: "CC - WH 1", label: "CC - WH 1" },
+        ]);
+      }
+    };
+
+    loadWarehouses();
+  }, []);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+
+    try {
+      // Prefer warehouseId; fallback to warehouse when not provided
+      const warehouseValue = values.warehouseId;
+      const selectedWh = warehouses.find((w) => w.value === warehouseValue);
+
+      // Calculate adjustment difference
+      const adjustmentDifference = values.adjustedQuantity - values.currentQuantity;
+
+      // Transform form data to match the API structure
+      const payload = {
+        adjustment_id: values.adjustmentId,
+        warehouse: selectedWh?.label ?? "",
+        item_number: values.itemNumber,
+        current_quantity: values.currentQuantity,
+        adjusted_quantity: values.adjustedQuantity,
+        adjustment_difference: adjustmentDifference,
+        adjustment_type: values.adjustmentType,
+        reason: values.reason,
+        notes: values.notes || "",
+        status: values.status,
+        owner: values.owner,
+      };
+
+      const response = await fetch("/api/stock_adjustments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create stock adjustment");
+      }
+
+      const result = await response.json();
+      toast.success("Stock adjustment created successfully!");
+      router.push("/forms/stock-adjustments");
+    } catch (error) {
+      console.error("Error creating stock adjustment:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create stock adjustment");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,8 +126,8 @@ export function NewStockAdjustmentForm() {
           <h2 className="mb-4 text-lg font-semibold">Details</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label>Card UID (Readonly)</Label>
-              <Input value={cardUID} disabled />
+              <Label>Adjustment UID (Readonly)</Label>
+              <Input value={adjustmentUID} disabled />
             </div>
             <div>
               <Label>Hash Diff (Readonly)</Label>
@@ -59,12 +141,12 @@ export function NewStockAdjustmentForm() {
           <div className="grid gap-6 md:grid-cols-2">
             <FormField
               control={form.control}
-              name="tallyCardNumber"
+              name="adjustmentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tally Card Number *</FormLabel>
+                  <FormLabel>Adjustment ID *</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., TC-001" {...field} />
+                    <Input placeholder="e.g., ADJ-001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -78,7 +160,7 @@ export function NewStockAdjustmentForm() {
                 <FormItem>
                   <FormLabel>Item Number *</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 12345" {...field} />
+                    <Input placeholder="e.g., 12345" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -87,20 +169,127 @@ export function NewStockAdjustmentForm() {
 
             <FormField
               control={form.control}
-              name="warehouse"
+              name="warehouseId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Warehouse *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 w-full">
                         <SelectValue placeholder="Select warehouse" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {warehouses.map((wh) => (
-                        <SelectItem key={wh.value} value={wh.value}>
-                          {wh.label}
+                      {warehouses.map((warehouse) => (
+                        <SelectItem key={warehouse.value} value={warehouse.value}>
+                          {warehouse.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="owner"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Owner *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <Separator className="my-6" />
+
+          <h2 className="mb-4 text-lg font-semibold">Quantity Information</h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="currentQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Quantity *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adjustedQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Adjusted Quantity *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adjustmentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Adjustment Type *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue placeholder="Select adjustment type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {adjustmentTypeOptions.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {reasonOptions.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -113,114 +302,66 @@ export function NewStockAdjustmentForm() {
 
           <Separator className="my-6" />
 
-          <h2 className="mb-4 text-lg font-semibold">Dates</h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            <FormField
-              control={form.control}
-              name="createdAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Created Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="updatedAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Updated Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="snapshotAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Snapshot Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator className="my-6" />
-
-          <h2 className="mb-4 text-lg font-semibold">Additional Information</h2>
+          <h2 className="mb-4 text-lg font-semibold">Status & Notes</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <FormField
               control={form.control}
-              name="note"
+              name="status"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Note</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Additional notes..." {...field} />
-                  </FormControl>
+                <FormItem>
+                  <FormLabel>Status *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="is-active"
-                checked={form.watch("isActive")}
-                onCheckedChange={(checked) => form.setValue("isActive", !!checked)}
-              />
-              <Label htmlFor="is-active">Active</Label>
-            </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.push("/forms/stock-adjustments")}>
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Additional notes about this stock adjustment..."
+                    className="min-h-[100px]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Separator className="my-6" />
+
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/forms/stock-adjustments")}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create Stock Adjustment"}
+            </Button>
           </div>
         </form>
       </Form>

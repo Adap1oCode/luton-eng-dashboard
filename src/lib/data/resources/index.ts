@@ -4,7 +4,7 @@ export * from "./users.config";
 export * from "./warehouses.config";
 export * from "./roles.config";
 export * from "./role_warehouse_rules.config";
-export * from "./tally_cards.config";
+export { default as tcm_tally_cards } from "./tally_cards.config";
 export * from "./tally_cards_current.config";
 export * from "./user_tally_card_entries.config";
 export {

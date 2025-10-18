@@ -28,7 +28,7 @@ function toRow(d: any) {
 
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
   const sp = await resolveSearchParams(props.searchParams);
-  const { page, pageSize } = parsePagination(sp, { defaultPage: 1, defaultPageSize: 50, max: 500 });
+  const { page, pageSize } = parsePagination(sp, { defaultPage: 1, defaultPageSize: 10, max: 500 });
 
   const { rows: domainRows, total } = await fetchResourcePage<any>({
     endpoint: "/api/v_tcm_user_tally_card_entries",

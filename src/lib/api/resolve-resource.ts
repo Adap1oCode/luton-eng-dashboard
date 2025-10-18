@@ -1,8 +1,11 @@
 // src/lib/api/resolve-resource.ts
 // Generic resource resolver — registry-based (flat or foldered configs)
 
-import resources from "@/lib/data/resources";
+import * as resourcesModule from "@/lib/data/resources";
 import type { ResourceConfig } from "@/lib/data/types";
+
+// Create resources object from named exports
+const resources = resourcesModule;
 
 /** Unified shape returned to API handlers */
 export type ResolvedResource<T = any> = {
@@ -36,21 +39,16 @@ export async function resolveResource(key: string): Promise<ResolvedResource> {
 
   if ("config" in config) {
     // ResourceEntry-style object (for orchestrations or complex resources)
-    resolvedConfig = (config as any).config;
-    toRow = (config as any).toRow;
-    allowRaw =
-      typeof (config as any).allowRaw === "boolean"
-        ? (config as any).allowRaw
-        : true;
+    resolvedConfig = config.config;
+    toRow = config.toRow;
+    allowRaw = typeof config.allowRaw === "boolean" ? config.allowRaw : true;
   } else {
     // Plain ResourceConfig (flat resource)
     resolvedConfig = config as ResourceConfig<any, any>;
   }
 
   if (!resolvedConfig?.table || !resolvedConfig?.select) {
-    throw new Error(
-      `Resource "${key}" has an invalid config. "table" and "select" are required.`
-    );
+    throw new Error(`Resource "${key}" has an invalid config. "table" and "select" are required.`);
   }
 
   return { key, config: resolvedConfig, toRow, allowRaw };

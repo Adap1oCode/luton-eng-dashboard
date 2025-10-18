@@ -10,8 +10,6 @@ import type { TallyCard, TallyCardInput } from "./types";
 export const tcmTallyCardsConfig = {
   table: "tcm_tally_cards",
   pk: "id",
-
-  // Supabase select string (kept as a single string for PostgREST/SDK parity)
   select:
     "id, tally_card_number, warehouse_id, warehouse, item_number, note, is_active, created_at, updated_at, status, owner, quantity",
 

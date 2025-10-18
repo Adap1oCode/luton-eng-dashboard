@@ -15,18 +15,10 @@ export async function DELETE(req: Request) {
 
     const supabase = await createSupabaseServerClient();
 
-    // Soft delete by setting is_active to false
-    const updateData: any = {
-      is_active: false,
-    };
-
-    // Only add updated_at if the table has this column
-    // For tcm_tally_cards, we don't have updated_at, so we skip it
-    // updateData.updated_at = new Date().toISOString();
-
+    // Hard delete the selected records
     const { data, error } = await supabase
       .from("tcm_tally_cards")
-      .update(updateData)
+      .delete()
       .in("id", ids)
       .select("id, tally_card_number");
 
