@@ -17,7 +17,6 @@ import Toolbar from "./toolbar/toolbar";
 import type { ToolbarButton, ToolbarConfig, ChipsConfig, ActionConfig } from "./toolbar/types";
 
 type PageShellProps = {
-  // Header
   title: string;
   count?: number;
 
@@ -66,7 +65,10 @@ type PageShellProps = {
   enableColumnResizing?: boolean;
   enableColumnReordering?: boolean;
 
-  // ✅ جديد: حِزمة خصائص تُمرَّر للـ AdvancedFilterBar لتوصيل الأعمدة والفرز والعروض
+  // ✅ New: showToolbarContainer property
+  showToolbarContainer?: boolean;
+
+  // ✅ جديد: حِزمة خصائص تُمرَّر للـ AdvancedFilterBar لتوصيل الأعمدة والفرز والعروض
   advancedFilterBarProps?: AdvancedFilterBarPropBag;
 };
 
@@ -148,6 +150,7 @@ export default function PageShell({
 
   // ✅ جديد
   advancedFilterBarProps,
+  showToolbarContainer = true, // جديد: القيمة الافتراضية
 }: PageShellProps) {
   // ---- Effective buttons & chips (config precedence; legacy fallback) ----
   const effectivePrimary = toolbarConfig?.primary ?? primaryButtons ?? [];
@@ -208,89 +211,92 @@ export default function PageShell({
         </div>
 
         {/* Toolbar + quick filters + table + footer card */}
+        {/* داخل JSX الخاص بمكون PageShell */}
         <div className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
           {/* Advanced Filter Bar */}
-          {toolbarSlot ? (
-            <div className="border-b border-gray-200 p-4 dark:border-gray-700">{toolbarSlot}</div>
-          ) : enableAdvancedFilters ? (
-            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-              <AdvancedFilterBar
-                // ✅ تمرير الـ slots لو متوفرة من الحِزمة وإلا استخدم props الحالية
-                toolbarLeft={advancedFilterBarProps?.toolbarLeft ?? toolbarLeft}
-                toolbarRight={advancedFilterBarProps?.toolbarRight ?? toolbarRight}
-                // ✅ تحكم إظهار الأزرار (حِزمة > props)
-                showViewsButton={advancedFilterBarProps?.showViewsButton ?? showViewsButton}
-                showColumnsButton={advancedFilterBarProps?.showColumnsButton ?? showColumnsButton}
-                showSortButton={advancedFilterBarProps?.showSortButton ?? showSortButton}
-                showMoreFiltersButton={advancedFilterBarProps?.showMoreFiltersButton ?? showMoreFiltersButton}
-                showExportButton={false} // ✅ إخفاء زر Export من الـ AdvancedFilterBar لمنع التكرار
-                showSaveViewButton={advancedFilterBarProps?.showSaveViewButton ?? showSaveViewButton}
-                // ✅ إمكانيات الأعمدة (حِزمة > props)
-                enableColumnResizing={advancedFilterBarProps?.enableColumnResizing ?? enableColumnResizing}
-                enableColumnReordering={advancedFilterBarProps?.enableColumnReordering ?? enableColumnReordering}
-                // ✅ إدارة الأعمدة
-                COLUMNS={advancedFilterBarProps?.COLUMNS}
-                visibleColumns={advancedFilterBarProps?.visibleColumns}
-                displayColumns={advancedFilterBarProps?.displayColumns}
-                isResizing={advancedFilterBarProps?.isResizing}
-                onColumnToggle={advancedFilterBarProps?.onColumnToggle}
-                onShowAllColumns={advancedFilterBarProps?.onShowAllColumns}
-                onHideAllColumns={advancedFilterBarProps?.onHideAllColumns}
-                onResetColumnOrder={advancedFilterBarProps?.onResetColumnOrder}
-                onDragStart={advancedFilterBarProps?.onDragStart}
-                onDragOver={advancedFilterBarProps?.onDragOver}
-                onDrop={advancedFilterBarProps?.onDrop}
-                // ✅ الفرز
-                sortConfig={advancedFilterBarProps?.sortConfig}
-                onSortFromDropdown={advancedFilterBarProps?.onSortFromDropdown}
-                onClearSorting={advancedFilterBarProps?.onClearSorting}
-                // ✅ العروض المحفوظة + الأكشنز
-                savedViews={advancedFilterBarProps?.savedViews}
-                currentViewId={advancedFilterBarProps?.currentViewId}
-                onApplyView={advancedFilterBarProps?.onApplyView}
-                onDeleteView={advancedFilterBarProps?.onDeleteView}
-                formatDateSafely={advancedFilterBarProps?.formatDateSafely}
-                onExportCSV={advancedFilterBarProps?.onExportCSV}
-                onSaveView={advancedFilterBarProps?.onSaveView}
-              />
-            </div>
-          ) : (
-            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {toolbarLeft ?? (
-                      <>
-                        <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="views">
-                          <Layout className="h-4 w-4" />
-                          Views
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="columns">
-                          <Settings className="h-4 w-4" />
-                          Columns
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="sort">
-                          <ArrowUpDown className="h-4 w-4" />
-                          Sort
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="moreFilters">
-                          <Filter className="h-4 w-4" />
-                          More Filters
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {toolbarRight ?? <RenderButtonCluster buttons={effectiveRight} />}
+          {showToolbarContainer ? (
+            toolbarSlot ? (
+              <div className="border-b border-gray-200 p-4 dark:border-gray-700">{toolbarSlot}</div>
+            ) : enableAdvancedFilters ? (
+              <div className="border-b border-gray-200 p-4 dark:border-gray-700">
+                <AdvancedFilterBar
+                  // ✅ تمرير الـ slots لو متوفرة من الحِزمة وإلا استخدم props الحالية
+                  toolbarLeft={advancedFilterBarProps?.toolbarLeft ?? toolbarLeft}
+                  toolbarRight={advancedFilterBarProps?.toolbarRight ?? toolbarRight}
+                  // ✅ تحكم إظهار الأزرار (حِزمة > props)
+                  showViewsButton={advancedFilterBarProps?.showViewsButton ?? showViewsButton}
+                  showColumnsButton={advancedFilterBarProps?.showColumnsButton ?? showColumnsButton}
+                  showSortButton={advancedFilterBarProps?.showSortButton ?? showSortButton}
+                  showMoreFiltersButton={advancedFilterBarProps?.showMoreFiltersButton ?? showMoreFiltersButton}
+                  showExportButton={false} // ✅ إخفاء زر Export من الـ AdvancedFilterBar لمنع التكرار
+                  showSaveViewButton={advancedFilterBarProps?.showSaveViewButton ?? showSaveViewButton}
+                  // ✅ إمكانيات الأعمدة (حِزمة > props)
+                  enableColumnResizing={advancedFilterBarProps?.enableColumnResizing ?? enableColumnResizing}
+                  enableColumnReordering={advancedFilterBarProps?.enableColumnReordering ?? enableColumnReordering}
+                  // ✅ إدارة الأعمدة
+                  COLUMNS={advancedFilterBarProps?.COLUMNS}
+                  visibleColumns={advancedFilterBarProps?.visibleColumns}
+                  displayColumns={advancedFilterBarProps?.displayColumns}
+                  isResizing={advancedFilterBarProps?.isResizing}
+                  onColumnToggle={advancedFilterBarProps?.onColumnToggle}
+                  onShowAllColumns={advancedFilterBarProps?.onShowAllColumns}
+                  onHideAllColumns={advancedFilterBarProps?.onHideAllColumns}
+                  onResetColumnOrder={advancedFilterBarProps?.onResetColumnOrder}
+                  onDragStart={advancedFilterBarProps?.onDragStart}
+                  onDragOver={advancedFilterBarProps?.onDragOver}
+                  onDrop={advancedFilterBarProps?.onDrop}
+                  // ✅ الفرز
+                  sortConfig={advancedFilterBarProps?.sortConfig}
+                  onSortFromDropdown={advancedFilterBarProps?.onSortFromDropdown}
+                  onClearSorting={advancedFilterBarProps?.onClearSorting}
+                  // ✅ العروض المحفوظة + الأكشنز
+                  savedViews={advancedFilterBarProps?.savedViews}
+                  currentViewId={advancedFilterBarProps?.currentViewId}
+                  onApplyView={advancedFilterBarProps?.onApplyView}
+                  onDeleteView={advancedFilterBarProps?.onDeleteView}
+                  formatDateSafely={advancedFilterBarProps?.formatDateSafely}
+                  onExportCSV={advancedFilterBarProps?.onExportCSV}
+                  onSaveView={advancedFilterBarProps?.onSaveView}
+                />
+              </div>
+            ) : (
+              <div className="border-b border-gray-200 p-4 dark:border-gray-700">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {toolbarLeft ?? (
+                        <>
+                          <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="views">
+                            <Layout className="h-4 w-4" />
+                            Views
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="columns">
+                            <Settings className="h-4 w-4" />
+                            Columns
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="sort">
+                            <ArrowUpDown className="h-4 w-4" />
+                            Sort
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="moreFilters">
+                            <Filter className="h-4 w-4" />
+                            More Filters
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {toolbarRight ?? <RenderButtonCluster buttons={effectiveRight} />}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          ) : null}
 
           {/* Optional quick filters lane */}
           {quickFiltersSlot ? (

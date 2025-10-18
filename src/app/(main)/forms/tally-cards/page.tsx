@@ -105,6 +105,7 @@ export default async function Page({ searchParams }: PageProps) {
       showSortButton={false}
       showExportButton={false}
       showMoreFiltersButton={false}
+      showToolbarContainer={false}
     >
       <ResourceTableClient<TallyCardRow>
         config={tallyCardsViewConfig}

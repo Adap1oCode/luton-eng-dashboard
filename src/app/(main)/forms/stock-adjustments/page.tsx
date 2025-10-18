@@ -47,6 +47,8 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       toolbarActions={stockAdjustmentsActions}
       chipConfig={stockAdjustmentsChips}
       enableAdvancedFilters={true}
+      showSaveViewButton={false}
+      showToolbarContainer={false}
     >
       <ResourceTableClient
         config={stockAdjustmentsViewConfig}
