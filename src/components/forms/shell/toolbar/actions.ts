@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 
+import { toast } from "sonner";
+
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+
+import { useOptimistic } from "../optimistic-context";
 import { useSelectionStore } from "../selection/selection-store";
 
 import type { ActionConfig } from "./types";
@@ -15,6 +20,8 @@ import type { ActionConfig } from "./types";
 export function useToolbarActions(actionConfig?: ActionConfig) {
   const router = useRouter();
   const selectedIds = useSelectionStore((s) => s.selectedIds);
+  const { confirm, ConfirmComponent } = useConfirmDialog();
+  const { markAsDeleted, clearOptimisticState } = useOptimistic();
 
   async function callEndpoint(key: string) {
     if (!actionConfig || !actionConfig[key]) return;
@@ -23,12 +30,55 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
 
     // Add confirmation for delete actions
     if (key === "deleteSelected" && ids.length > 0) {
-      const confirmed = window.confirm(
-        `Are you sure you want to delete ${ids.length} selected record(s)? This action cannot be undone.`,
-      );
-      if (!confirmed) return;
+      confirm({
+        title: "Delete Selected Items",
+        description: `Are you sure you want to delete ${ids.length} selected record(s)? This action cannot be undone.`,
+        confirmText: "Delete",
+        variant: "destructive",
+        onConfirm: async () => {
+          await performDelete(def, ids);
+        },
+      });
+      return;
     }
 
+    await performAction(def, ids);
+  }
+
+  async function performDelete(def: any, ids: string[]) {
+    // Interpolate :id for single-selected
+    const oneId = ids.length === 1 ? ids[0] : undefined;
+    const url = oneId ? def.endpoint.replace(/:id\b/g, oneId) : def.endpoint;
+
+    const init: RequestInit = { method: def.method, headers: {} };
+    if (def.method !== "GET") {
+      init.headers = { "content-type": "application/json" };
+      (init as any).body = JSON.stringify({ ids });
+    }
+
+    try {
+      // Optimistically mark as deleted
+      markAsDeleted(ids);
+
+      const res = await fetch(url, init);
+      if (res.ok) {
+        toast.success(`Successfully deleted ${ids.length} record(s)`);
+        // Clear optimistic state and refresh
+        clearOptimisticState();
+        router.refresh();
+      } else {
+        // Revert optimistic state on error
+        clearOptimisticState();
+        toast.error("Operation failed. Please try again.");
+      }
+    } catch (error) {
+      // Revert optimistic state on error
+      clearOptimisticState();
+      toast.error("Operation failed. Please try again.");
+    }
+  }
+
+  async function performAction(def: any, ids: string[]) {
     // Interpolate :id for single-selected
     const oneId = ids.length === 1 ? ids[0] : undefined;
     const url = oneId ? def.endpoint.replace(/:id\b/g, oneId) : def.endpoint;
@@ -46,12 +96,9 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
 
     const res = await fetch(url, init);
     if (res.ok) {
-      if (key === "deleteSelected") {
-        alert(`Successfully deleted ${ids.length} record(s)`);
-      }
       router.refresh();
     } else {
-      alert("Operation failed. Please try again.");
+      toast.error("Operation failed. Please try again.");
     }
   }
 
@@ -63,5 +110,6 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
     printReport: () => callEndpoint("printReport"),
     // generic
     run: callEndpoint,
+    ConfirmComponent,
   };
 }

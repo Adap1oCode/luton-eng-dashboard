@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
+
 import { useRouter } from "next/navigation";
+
+import RenderButton from "@/components/forms/shell/render-button-client";
+
 import { useSelectionStore } from "../selection/selection-store";
+
 import { useToolbarActions } from "./actions";
 import type { ToolbarButton, ToolbarConfig, ActionConfig } from "./types";
-import RenderButton from "@/components/forms/shell/render-button-client";
 
 function isEnabled(rule: ToolbarButton["enableWhen"], selectedCount: number) {
   const r = rule ?? "none";
@@ -15,7 +19,12 @@ function isEnabled(rule: ToolbarButton["enableWhen"], selectedCount: number) {
   return true;
 }
 
-function Row({ buttons, disabledByRule, onHref, onAction }: {
+function Row({
+  buttons,
+  disabledByRule,
+  onHref,
+  onAction,
+}: {
   buttons?: ToolbarButton[];
   disabledByRule: (b: ToolbarButton) => boolean;
   onHref: (href: string) => void;
@@ -31,34 +40,18 @@ function Row({ buttons, disabledByRule, onHref, onAction }: {
           if (b.href) onHref(b.href);
           else if (b.action) onAction(b.action);
         };
-        return (
-          <RenderButton
-            key={b.id}
-            button={b}
-            disabled={disabled}
-            onClick={onClick}
-          />
-        );
+        return <RenderButton key={b.id} button={b} disabled={disabled} onClick={onClick} />;
       })}
     </div>
   );
 }
 
-export default function ToolbarClient({
-  config,
-  actions,
-}: {
-  config?: ToolbarConfig;
-  actions?: ActionConfig;
-}) {
+export default function ToolbarClient({ config, actions }: { config?: ToolbarConfig; actions?: ActionConfig }) {
   const router = useRouter();
   const selectedCount = useSelectionStore((s) => s.selectedIds.length);
   const runner = useToolbarActions(actions);
 
-  const disabledByRule = useMemo(
-    () => (b: ToolbarButton) => !isEnabled(b.enableWhen, selectedCount),
-    [selectedCount]
-  );
+  const disabledByRule = useMemo(() => (b: ToolbarButton) => !isEnabled(b.enableWhen, selectedCount), [selectedCount]);
 
   const onHref = (href: string) => router.push(href);
   const onAction = (action: string) => {
@@ -73,6 +66,7 @@ export default function ToolbarClient({
         <Row buttons={config?.left} disabledByRule={disabledByRule} onHref={onHref} onAction={onAction} />
         <Row buttons={config?.right} disabledByRule={disabledByRule} onHref={onHref} onAction={onAction} />
       </div>
+      {runner.ConfirmComponent}
     </div>
   );
 }

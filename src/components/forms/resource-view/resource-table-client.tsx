@@ -53,6 +53,7 @@ import {
   SortDesc,
   Filter,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { ColumnsMenu } from "@/components/data-table/columns-menu";
 import { exportCSV } from "@/components/data-table/csv-export";
@@ -64,9 +65,11 @@ import { StatusCell } from "@/components/data-table/status-cell";
 import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type FilterMode = "contains" | "equals" | "startsWith" | "endsWith";
@@ -221,6 +224,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   enableColumnReordering = true,
   showInlineExportButton = true,
 }: ResourceTableClientProps<TRow>) {
+  const { confirm, ConfirmComponent } = useConfirmDialog();
+  const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
   const router = useRouter();
   const search = useSearchParams();
   const pathname = usePathname();
@@ -231,6 +236,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
+
+  // 🎯 NEW: Filter out optimistically deleted rows
+  const filteredRows = React.useMemo(() => {
+    return initialRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
+  }, [initialRows, isOptimisticallyDeleted, idField]);
 
   // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
   const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
@@ -462,7 +472,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   ]);
 
   const table = useReactTable<TRow>({
-    data: initialRows,
+    data: filteredRows,
     columns: enhancedColumns,
     meta: { viewConfig: config }, // ✅ expose view config (formsRouteSegment, idField) to cells
 
@@ -540,21 +550,35 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       (config as Record<string, unknown>)?.formsRouteSegment ?? String(resourceKey).replace(/_/g, "-");
 
     async function handleDelete(rowId: string) {
-      const confirmed = window.confirm("Are you sure you want to delete this item? This action cannot be undone.");
-      if (!confirmed) return;
+      confirm({
+        title: "Delete Item",
+        description: "Are you sure you want to delete this item? This action cannot be undone.",
+        confirmText: "Delete",
+        variant: "destructive",
+        onConfirm: async () => {
+          try {
+            // Optimistically mark as deleted
+            markAsDeleted([rowId]);
 
-      try {
-        const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
-        if (res.ok) {
-          alert("Item deleted successfully!");
-          router.refresh();
-        } else {
-          const errorData = await res.json();
-          alert(`Failed to delete item: ${errorData.error?.message || "Unknown error"}`);
-        }
-      } catch (error) {
-        alert("Failed to delete item. Please try again.");
-      }
+            const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
+            if (res.ok) {
+              toast("Item deleted successfully!");
+              // Clear optimistic state and refresh
+              clearOptimisticState();
+              router.refresh();
+            } else {
+              // Revert optimistic state on error
+              clearOptimisticState();
+              const errorData = await res.json();
+              toast.error(`Failed to delete item: ${errorData.error?.message || "Unknown error"}`);
+            }
+          } catch (error) {
+            // Revert optimistic state on error
+            clearOptimisticState();
+            toast.error("Failed to delete item. Please try again.");
+          }
+        },
+      });
     }
 
     async function handleEdit(rowId: string) {
@@ -584,7 +608,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, [config, router]);
+  }, [config, router, confirm, markAsDeleted, clearOptimisticState]);
 
   // 🔄 Keep URL in sync whenever the controlled pagination changes
   React.useEffect(() => {
@@ -914,6 +938,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           </div>
         ) : null}
       </DragOverlay>
+      {ConfirmComponent}
     </DndContext>
   );
 }

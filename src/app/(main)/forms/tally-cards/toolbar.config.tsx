@@ -20,7 +20,7 @@ export const tallyCardsToolbar: ToolbarConfig = {
 export const tallyCardsActions: ActionConfig = {
   deleteSelected: {
     method: "DELETE",
-    endpoint: "/api/tally_cards/bulk-delete",
+    endpoint: "/api/tcm_tally_cards/bulk",
   },
   exportCsv: {
     method: "GET",
