@@ -19,13 +19,17 @@ export type ResolvedResource<T = any> = {
  */
 export async function resolveResource(key: string): Promise<ResolvedResource> {
   if (!key || typeof key !== "string") {
+    console.log("[resolveResource] invalid key:", key);
     throw new Error("Invalid resource key.");
   }
+
+  console.log("[resolveResource] lookup key:", key);
 
   // --- Direct lookup from registry
   const config = (resources as any)[key];
   if (!config) {
     const known = Object.keys(resources).sort().join(", ") || "(none)";
+    console.log("[resolveResource] NOT FOUND:", key, "| known:", known);
     throw new Error(`Unknown resource "${key}". Known resources: ${known}`);
   }
 
@@ -42,16 +46,36 @@ export async function resolveResource(key: string): Promise<ResolvedResource> {
       typeof (config as any).allowRaw === "boolean"
         ? (config as any).allowRaw
         : true;
+    console.log("[resolveResource] entry-object:", {
+      table: resolvedConfig?.table,
+      pk: (resolvedConfig as any)?.pk,
+      allowRaw,
+    });
   } else {
     // Plain ResourceConfig (flat resource)
     resolvedConfig = config as ResourceConfig<any, any>;
+    console.log("[resolveResource] plain-config:", {
+      table: resolvedConfig?.table,
+      pk: (resolvedConfig as any)?.pk,
+    });
   }
 
   if (!resolvedConfig?.table || !resolvedConfig?.select) {
+    console.log("[resolveResource] INVALID CONFIG:", {
+      key,
+      table: resolvedConfig?.table,
+      select: resolvedConfig?.select,
+    });
     throw new Error(
       `Resource "${key}" has an invalid config. "table" and "select" are required.`
     );
   }
+
+  console.log("[resolveResource] OK:", {
+    key,
+    table: resolvedConfig.table,
+    pk: (resolvedConfig as any)?.pk,
+  });
 
   return { key, config: resolvedConfig, toRow, allowRaw };
 }
