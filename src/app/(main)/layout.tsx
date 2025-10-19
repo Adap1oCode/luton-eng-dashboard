@@ -1,11 +1,10 @@
 // src/app/(main)/layout.tsx
 import { ReactNode } from "react";
-
 import { cookies } from "next/headers";
-// import { redirect } from "next/navigation"; // ⬅️ removed (middleware owns auth)
 
 import { MoreHorizontal, Search } from "lucide-react";
 
+import { NoticeProvider } from "@/components/ui/notice";
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
 import { DataViewerButton } from "@/app/(main)/_components/sidebar/data-viewer-button";
 import { LayoutControls } from "@/app/(main)/_components/sidebar/layout-controls";
@@ -36,12 +35,19 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   } = await supabase.auth.getUser();
 
   // 🪪 Derive account info for sidebar (SSR → passed to client)
-  const displayName = (user?.user_metadata && (user.user_metadata.full_name as string)) || user?.email || "User";
+  const displayName =
+    ((user?.user_metadata && (user.user_metadata.full_name as string)) ||
+      user?.email ||
+      "User") ?? "User";
   const email = user?.email ?? "";
+
   // Best-effort role (Phase-1): prefer app_metadata.role, then user_metadata.role
   const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
   const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const role = (appMeta.role as string | undefined) ?? (userMeta.role as string | undefined) ?? undefined;
+  const role =
+    (appMeta.role as string | undefined) ??
+    (userMeta.role as string | undefined) ??
+    undefined;
 
   // 🧁 UI prefs
   const cookieStore = await cookies();
@@ -52,66 +58,73 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const contentLayout = await getContentLayout();
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar
-        variant={sidebarVariant}
-        collapsible={sidebarCollapsible}
-        account={{ name: displayName, email, role, avatar: "" }}
-      />
-      <SidebarInset
-        className={cn(
-          contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
-          "min-w-0 flex-1",
-          "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
-        )}
-      >
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
-            <div className="flex items-center gap-1 lg:gap-2">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
-              <div className="hidden sm:block">
-                <SearchDialog />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="hidden items-center gap-2 md:flex">
-                <LayoutControls
-                  contentLayout={contentLayout}
-                  variant={sidebarVariant}
-                  collapsible={sidebarCollapsible}
-                />
-                <ThemeSwitcher />
-              </div>
-              <div className="flex md:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <div className="flex items-center gap-2 p-2">
-                        <Search className="h-4 w-4" />
-                        <span>search</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <div className="p-2">
-                        <ThemeSwitcher />
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <DataViewerButton />
-            </div>
-          </div>
-        </header>
-        <div className="p-4 md:p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <html lang="en">
+      <body>
+        {/* Mount once so any client component can open the Notice dialog */}
+        <NoticeProvider>
+          <SidebarProvider defaultOpen={defaultOpen}>
+            <AppSidebar
+              variant={sidebarVariant}
+              collapsible={sidebarCollapsible}
+              account={{ name: displayName, email, role, avatar: "" }}
+            />
+            <SidebarInset
+              className={cn(
+                contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
+                "min-w-0 flex-1",
+                "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
+              )}
+            >
+              <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+                <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
+                    <div className="hidden sm:block">
+                      <SearchDialog />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="hidden items-center gap-2 md:flex">
+                      <LayoutControls
+                        contentLayout={contentLayout}
+                        variant={sidebarVariant}
+                        collapsible={sidebarCollapsible}
+                      />
+                      <ThemeSwitcher />
+                    </div>
+                    <div className="flex md:hidden">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <div className="flex items-center gap-2 p-2">
+                              <Search className="h-4 w-4" />
+                              <span>search</span>
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <div className="p-2">
+                              <ThemeSwitcher />
+                            </div>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <DataViewerButton />
+                  </div>
+                </div>
+              </header>
+              <div className="p-4 md:p-6">{children}</div>
+            </SidebarInset>
+          </SidebarProvider>
+        </NoticeProvider>
+      </body>
+    </html>
   );
 }

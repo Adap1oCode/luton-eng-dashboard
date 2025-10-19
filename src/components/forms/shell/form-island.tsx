@@ -1,9 +1,12 @@
+// src/components/forms/shell/form-island.tsx
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { FormConfig, ResolvedOptions } from "@/lib/forms/types";
 import { DynamicForm } from "@/components/forms/dynamic-form";
+import { useNotice } from "@/components/ui/notice";
+import { extractErrorMessage } from "@/lib/forms/extract-error";
 
 type EnhancedFormConfig = FormConfig & {
   submit?: (values: any) => Promise<any>;
@@ -28,15 +31,20 @@ export default function FormIsland({
   hideInternalActions?: boolean;
 }) {
   const router = useRouter();
+  const notice = useNotice();
+  const [submitting, setSubmitting] = React.useState(false);
 
   return (
     <DynamicForm
-      id={formId}                 // ✅ DynamicForm expects `id`, not `formId`
+      id={formId} // ✅ DynamicForm expects `id`, not `formId`
       config={config}
       defaults={defaults}
       options={options}
       hideInternalActions={hideInternalActions}
       onSubmit={async (values) => {
+        // Guard against accidental double submit without relying on a `disabled` prop
+        if (submitting) return;
+        setSubmitting(true);
         try {
           const result =
             typeof config.submit === "function"
@@ -51,19 +59,41 @@ export default function FormIsland({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(values),
                   });
-                  if (!res.ok) throw new Error(await res.text());
+
+                  if (!res.ok) {
+                    const msg = await extractErrorMessage(res);
+                    throw new Error(msg);
+                  }
+
                   return res.json().catch(() => ({}));
                 })();
 
-            const explicit =
-            typeof config.redirectTo === "function" ? config.redirectTo(result) : null;
-            const base = config.key ? `/forms/${config.key}` : `/forms`;
-            const inferred = result?.id ? `${base}/${result.id}/edit` : base;
-            router.push(explicit || inferred);
+          const explicit =
+            typeof config.redirectTo === "function"
+              ? config.redirectTo(result)
+              : null;
 
+          const base = config.key ? `/forms/${config.key}` : `/forms`;
+          const inferred =
+            (result as any)?.id ? `${base}/${(result as any).id}/edit` : base;
+
+          router.push(explicit || inferred);
         } catch (err) {
-          console.error("Form submit failed:", err);
-          alert("Error saving. Please try again.");
+          const message =
+            err instanceof Error
+              ? err.message
+              : typeof err === "string"
+              ? err
+              : "Error saving. Please review and try again.";
+
+          // 🔔 Reusable ShadCN alert dialog
+          notice.open({
+            variant: "error",
+            title: "Update failed",
+            message,
+          });
+        } finally {
+          setSubmitting(false);
         }
       }}
     />

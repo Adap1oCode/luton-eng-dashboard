@@ -38,9 +38,10 @@ export default async function EditStockAdjustmentPage({
 
   const transportConfig = {
     ...clientConfig,
-    method: prep?.method ?? "PATCH",
-    action: prep?.action ?? `/api/${resourceKey}/${id}`,
-    submitLabel: prep?.submitLabel ?? "Update",
+    // SCD2: call the custom RPC-backed endpoint
+    method: "POST",
+    action: `/api/${resourceKey}/${id}/actions/patch-scd2`,
+    submitLabel: "Update",
   };
 
   return (
