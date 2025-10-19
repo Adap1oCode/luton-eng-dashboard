@@ -58,6 +58,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
       label: "Tally Card #",
       kind: "text",
       required: true,
+      readOnly: true,
       placeholder: "e.g. TC-000123",
       width: "half",
     },

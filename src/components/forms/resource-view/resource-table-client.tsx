@@ -19,6 +19,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   DndContext,
   closestCorners,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -26,6 +27,7 @@ import {
   type DragEndEvent,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
+import { DragOverlay } from "@dnd-kit/core";
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -268,10 +270,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ NEW: State لإظهار/إخفاء قسم More Filters
   const [showMoreFilters, setShowMoreFilters] = React.useState(false);
 
+  // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
+  const tableRef = React.useRef<HTMLElement | null>(null);
+
   // Column widths state for resizing
-  const [columnWidths] = React.useState<Record<string, number>>({});
-  const tableRef = React.useRef<HTMLDivElement>(null);
-  const { isResizing, onMouseDownResize } = useColumnResize(columnWidths, tableRef);
+  const { widths: columnWidths, isResizing, onMouseDownResize } =
+  useColumnResize({}, tableRef);
+
+  // Track currently dragged column id to render an overlay ghost
+const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
 
   // Status editing state
   const [editingStatus, setEditingStatus] = React.useState<{ rowId: string; value: string } | null>(null);
@@ -294,6 +301,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         return arrayMove(items, oldIndex, newIndex);
       });
     }
+    setActiveColumnId(null);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const id = String(event.active.id ?? "");
+    // Only set overlay for column drags (ignore row drags)
+    if (columnOrder.includes(id)) setActiveColumnId(id);
   };
 
   // Status editing handlers
@@ -480,6 +494,20 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       return domId ?? (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`;
     },
   });
+
+    // ✅ Seed initial column order once the table is ready
+ React.useEffect(() => {
+    // Collect leaf column ids as strings, and exclude non-reorderables
+    const ids = table
+      .getAllLeafColumns()
+      .map((c) => String(c.id))
+      .filter((id) => id !== "actions" && id !== "__select" && id !== "select");
+
+    if (ids.length && initialOrderRef.current.length === 0) {
+      initialOrderRef.current = ids;
+      setColumnOrder(ids);
+    }
+  }, [table]);
 
   // ✅ SANITIZE: drop any filter keys that don't match actual columns (e.g., stale "id")
   React.useEffect(() => {
@@ -809,7 +837,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <DndContext
+       sensors={sensors}
+       collisionDetection={closestCorners}
+       onDragStart={handleDragStart}
+       onDragEnd={handleDragEnd}
+    >
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
         {/* ✅ NEW: Toolbar مع زر More Filters وزر Export */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
@@ -856,6 +889,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         />
         {footer}
       </SortableContext>
+
+      {/* Floating header ghost while dragging a column */}
+      <DragOverlay>
+        {activeColumnId ? (
+          <div className="pointer-events-none select-none rounded-md border bg-white px-3 py-2 text-sm shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            {activeColumnId}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

@@ -6,7 +6,6 @@ import React, { useState, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCorners,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -20,8 +19,6 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   arrayMove,
-  useSortable,
-  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { flexRender, type Table as TanStackTable } from "@tanstack/react-table";
 import { GripVertical, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
@@ -33,7 +30,9 @@ import { cn } from "@/lib/utils";
 import { DataTableFilters, type FilterColumn, type ColumnFilterState } from "./data-table-filters";
 import { useColumnResize } from "./use-column-resize";
 
-// Legacy interface for custom data table
+// -----------------------------------------------------------------------------
+// Legacy interfaces (kept for backwards compatibility)
+// -----------------------------------------------------------------------------
 interface ColumnDef {
   id: string;
   label: string;
@@ -41,7 +40,6 @@ interface ColumnDef {
   type: "text" | "date" | "status" | "number";
 }
 
-// Legacy props interface
 interface DataTableProps<T extends Record<string, unknown>> {
   data: T[];
   columns: ColumnDef[];
@@ -64,7 +62,9 @@ interface DataTableProps<T extends Record<string, unknown>> {
   selectedRows?: number[];
 }
 
-// TanStack props interface
+// -----------------------------------------------------------------------------
+// TanStack props
+// -----------------------------------------------------------------------------
 interface TanStackDataTableProps<T = Record<string, unknown>> {
   dndEnabled: boolean;
   table: TanStackTable<T>;
@@ -94,94 +94,103 @@ function isTanStackProps<T = Record<string, unknown>>(
   return "table" in props && "dndEnabled" in props;
 }
 
-// TanStack React Table component
+// -----------------------------------------------------------------------------
+// TanStack React Table component (NO local DndContext; relies on parent)
+// -----------------------------------------------------------------------------
 function TanStackDataTable<T = Record<string, unknown>>({
   table,
   dataIds,
-  handleDragEnd,
-  sensors,
+  // handleDragEnd,  // handled by parent DndContext
+  // sensors,        // provided by parent DndContext
   renderExpanded,
   columnWidthsPct,
   tableContainerRef,
   filtersConfig,
 }: TanStackDataTableProps<T>) {
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-      <SortableContext items={dataIds}>
-        <div ref={tableContainerRef as any} className="overflow-x-auto">
-          <Table className="min-w-full">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className="p-3"
-                      style={
-                        columnWidthsPct?.[header.column.id]
-                          ? { width: `${columnWidthsPct[header.column.id]}%` }
-                          : undefined
-                      }
-                    >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-              {filtersConfig ? (
-                <DataTableFilters
-                  columns={filtersConfig.columns}
-                  columnWidthsPct={filtersConfig.columnWidthsPct}
-                  show={filtersConfig.show ?? true}
-                  search={filtersConfig.search}
-                  onSearchChange={filtersConfig.onSearchChange}
-                  filters={filtersConfig.filters}
-                  onChange={filtersConfig.onChange}
-                />
-              ) : null}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <React.Fragment key={row.id}>
-                    <TableRow data-state={row.getIsSelected() && "selected"}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className="p-3"
-                          style={
-                            columnWidthsPct?.[cell.column.id]
-                              ? { width: `${columnWidthsPct[cell.column.id]}%` }
-                              : undefined
-                          }
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
+    // Only SortableContext for rows; the surrounding DndContext lives in parent
+    <SortableContext items={dataIds}>
+      <div ref={tableContainerRef as any} className="overflow-x-auto">
+        <Table className="min-w-full">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="p-3"
+                    style={
+                      columnWidthsPct?.[header.column.id]
+                        ? { width: `${columnWidthsPct[header.column.id]}%` }
+                        : undefined
+                    }
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+            {filtersConfig ? (
+              <DataTableFilters
+                columns={filtersConfig.columns}
+                columnWidthsPct={filtersConfig.columnWidthsPct}
+                show={filtersConfig.show ?? true}
+                search={filtersConfig.search}
+                onSearchChange={filtersConfig.onSearchChange}
+                filters={filtersConfig.filters}
+                onChange={filtersConfig.onChange}
+              />
+            ) : null}
+          </TableHeader>
+
+          <TableBody>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <React.Fragment key={row.id}>
+                  <TableRow data-state={row.getIsSelected() && "selected"}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className="p-3"
+                        style={
+                          columnWidthsPct?.[cell.column.id]
+                            ? { width: `${columnWidthsPct[cell.column.id]}%` }
+                            : undefined
+                        }
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+
+                  {renderExpanded ? (
+                    <TableRow>
+                      <TableCell colSpan={row.getVisibleCells().length}>
+                        {renderExpanded(row)}
+                      </TableCell>
                     </TableRow>
-                    {renderExpanded ? (
-                      <TableRow>
-                        <TableCell colSpan={row.getVisibleCells().length}>{renderExpanded(row)}</TableCell>
-                      </TableRow>
-                    ) : null}
-                  </React.Fragment>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center">
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </SortableContext>
-    </DndContext>
+                  ) : null}
+                </React.Fragment>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </SortableContext>
   );
 }
 
-// DraggableRow component
+// -----------------------------------------------------------------------------
+// DraggableRow (legacy path)
+// -----------------------------------------------------------------------------
 interface DraggableRowProps<T> {
   id: string;
   item: T;
@@ -230,6 +239,7 @@ function DraggableRow<T extends Record<string, unknown>>({
             <ChevronRight className="h-3 w-3" />
           </button>
         </TableCell>
+
         {columns.map((colId) => {
           if (!visibleColumns.includes(colId)) return null;
           return (
@@ -238,8 +248,10 @@ function DraggableRow<T extends Record<string, unknown>>({
             </TableCell>
           );
         })}
+
         <TableCell className="w-24 p-3">{renderActions()}</TableCell>
       </TableRow>
+
       {isExpanded && (
         <TableRow>
           <TableCell colSpan={columns.length + 3} className="bg-gray-50 p-4 dark:bg-gray-800">
@@ -251,7 +263,9 @@ function DraggableRow<T extends Record<string, unknown>>({
   );
 }
 
-// Legacy custom data table component
+// -----------------------------------------------------------------------------
+// Legacy custom data table (kept intact for compatibility)
+// -----------------------------------------------------------------------------
 function LegacyDataTable<T extends Record<string, unknown>>({
   data,
   columns,
@@ -272,7 +286,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
   onRowSelect,
   selectedRows = [],
 }: DataTableProps<T>) {
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  // resize is handled locally in legacy path
   const tableRef = useRef<HTMLTableElement | null>(null);
   const { isResizing, onMouseDownResize } = useColumnResize(columnWidths, tableRef);
 
@@ -305,7 +319,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
     Object.entries(columnFilters).forEach(([columnId, value]) => {
       if (value) {
         filtered = filtered.filter((item) => {
-          const cellValue = item[columnId];
+          const cellValue = (item as any)[columnId];
           return cellValue != null ? cellValue.toString().toLowerCase().includes(value.toLowerCase()) : false;
         });
       }
@@ -320,12 +334,10 @@ function LegacyDataTable<T extends Record<string, unknown>>({
       const aValue = a[key];
       const bValue = b[key];
 
-      // Handle null/undefined values
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return sortConfig.direction === "asc" ? -1 : 1;
       if (bValue == null) return sortConfig.direction === "asc" ? 1 : -1;
 
-      // Compare values
       if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -351,6 +363,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
               ))}
               <col style={{ width: "100px" }} /> {/* Actions */}
             </colgroup>
+
             <TableHeader>
               <TableRow className="border-b border-gray-200 dark:border-gray-700">
                 <TableHead className="w-10 p-3">
@@ -388,6 +401,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                           </button>
                         </div>
                       </div>
+
                       {!isResizing && (
                         <div
                           className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-500"
@@ -400,6 +414,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                 <TableHead className="w-24 p-3">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {sortedData.map((item, index) => (
                 <DraggableRow
@@ -420,9 +435,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                   visibleColumns={visibleColumns}
                   renderCell={(columnId: string) => renderCell(item, columnId)}
                   renderExpandedContent={() => renderExpandedContent(item)}
-                  renderActions={() => (
-                    <div className="flex justify-center gap-2">{/* Add generic action buttons here */}</div>
-                  )}
+                  renderActions={() => <div className="flex justify-center gap-2">{/* actions slot */}</div>}
                 />
               ))}
             </TableBody>
@@ -433,12 +446,14 @@ function LegacyDataTable<T extends Record<string, unknown>>({
   );
 }
 
-// Main component that handles both legacy and TanStack props
+// -----------------------------------------------------------------------------
+// Main switch
+// -----------------------------------------------------------------------------
 export function DataTable<T = Record<string, unknown>>(
   props: DataTableProps<Record<string, unknown>> | TanStackDataTableProps<T>,
 ) {
   if (isTanStackProps(props)) {
     return <TanStackDataTable {...props} />;
   }
-  return <LegacyDataTable {...props} />;
+  return <LegacyDataTable {...(props as DataTableProps<Record<string, unknown>>)} />;
 }
