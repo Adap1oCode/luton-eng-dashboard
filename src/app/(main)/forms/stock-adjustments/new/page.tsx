@@ -1,19 +1,60 @@
 import React from "react";
 
-import { NewStockAdjustmentPageHeader, NewStockAdjustmentToolbar } from "./components";
-import { NewStockAdjustmentForm } from "./form-component";
+import FormIsland from "@/components/forms/shell/form-island";
+import FormShell from "@/components/forms/shell/form-shell";
+import { ensureSections, getAllFields } from "@/lib/forms/config-normalize";
+import { buildDefaults } from "@/lib/forms/schema";
 
-export default function NewStockAdjustmentPage() {
+import { stockAdjustmentCreateConfig } from "./form.config";
+
+export default async function NewStockAdjustmentPage() {
+  const cfg = ensureSections(stockAdjustmentCreateConfig);
+  const defaults = buildDefaults({ ...cfg, fields: getAllFields(cfg) } as any);
+
+  // Strip non-serializable functions before passing to the client
+  const { submit: _submit, redirectTo: _redirectTo, ...clientConfig } = cfg as any;
+
+  // Provide explicit transport so the client never needs functions
+  const transportConfig = {
+    ...clientConfig,
+    method: "POST" as const,
+    action: `/api/forms/${clientConfig.key}`,
+  };
+
+  const formId = "stock-adjustment-form";
+  const options = {};
+
+  // Return server-rendered shell with client form island
+  // Note: in Next.js App Router, this async component can directly return JSX
   return (
-    <div className="min-h-screen rounded-2xl border bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="mx-auto w-full space-y-8 p-6">
-        {/* Page Header */}
-        <NewStockAdjustmentPageHeader />
-        {/* Toolbar */}
-        <NewStockAdjustmentToolbar />
-        {/* Main Form */}
-        <NewStockAdjustmentForm />
-      </div>
-    </div>
+    <FormShell
+      title={cfg.title}
+      headerTitle={cfg.title}
+      headerDescription={cfg.subtitle}
+      actions={{
+        secondaryLeft: (
+          <button type="button" className="inline-flex items-center rounded-md border px-4 py-2 text-sm">
+            Cancel
+          </button>
+        ),
+        primary: (
+          <button
+            form={formId}
+            type="submit"
+            className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
+          >
+            {cfg.submitLabel ?? "Save"}
+          </button>
+        ),
+      }}
+    >
+      <FormIsland
+        formId={formId}
+        config={transportConfig}
+        defaults={defaults}
+        options={options as any}
+        // hideInternalActions defaults to true in FormIsland — including it here is optional
+      />
+    </FormShell>
   );
 }

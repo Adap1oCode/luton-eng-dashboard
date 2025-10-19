@@ -1,14 +1,11 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
-import { makeActionsColumn, type BaseViewConfig } from "@/components/data-table/view-defaults";
+import { makeActionsColumn, type BaseViewConfig, type TColumnDef } from "@/components/data-table/view-defaults";
 
 // Keep this local and minimal to avoid cross-file type coupling.
 // If you later add a Zod schema, you can infer this type from it.
 export type StockAdjustmentRow = {
-  id: string; // ensure client has a stable id for actions/selection
-  user_id: string;
+  id: string; // routing/selection id (from API/view)
   full_name: string;
   warehouse: string;
   tally_card_number?: string | null;
@@ -16,10 +13,23 @@ export type StockAdjustmentRow = {
   location?: string | null;
   note?: string | null;
   updated_at?: string | null; // server may return ISO string
+  updated_at_pretty?: string | null; // human-friendly
 };
 
-function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
+function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
   return [
+    // Hidden routing-only id — never displayed, never filtered/sorted
+    {
+      id: "id",
+      accessorKey: "id",
+      header: () => null,
+      cell: () => null,
+      enableHiding: true,
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 0,
+      meta: { routingOnly: true },
+    },
     {
       id: "full_name",
       accessorKey: "full_name",
@@ -30,7 +40,7 @@ function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
     {
       id: "warehouse",
       accessorKey: "warehouse",
-      header: "warehouse",
+      header: "Warehouse",
       enableSorting: true,
       size: 160,
     },
@@ -45,8 +55,9 @@ function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
       id: "qty",
       accessorKey: "qty",
       header: "Qty",
-      // meta-only hints are fine (no functions)
-      meta: { align: "right" },
+      meta: {
+        /* align handled by cell/renderer if needed */
+      },
       enableSorting: true,
       size: 90,
     },
@@ -71,19 +82,22 @@ function buildColumns(): ColumnDef<StockAdjustmentRow>[] {
       enableSorting: true,
       size: 180,
     },
-    // Actions column (event delegation reads data-row-id from Dropdown items)
+
+    // Actions (⋯) menu
     makeActionsColumn<StockAdjustmentRow>(),
   ];
 }
 
 export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   resourceKeyForDelete: "tcm_user_tally_card_entries",
+  formsRouteSegment: "stock-adjustments", // used to build /forms/stock-adjustments/[id]/edit
+  idField: "id", // explicit domain id for actions + row keys
   toolbar: { left: undefined, right: [] },
   quickFilters: [],
   features: {
     rowSelection: true,
     pagination: true,
+    // other features rely on global defaults; override here if needed
   },
-  formsRouteSegment: "stock-adjustments",
-  buildColumns, // only referenced by the client table
+  buildColumns: () => buildColumns(),
 };

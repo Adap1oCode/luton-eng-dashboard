@@ -1,178 +1,70 @@
 // src/app/api/[resource]/[id]/route.ts
-// Generic single-record route: GET / PATCH / DELETE
-// Mirrors the list/create pattern from src/app/api/[resource]/route.ts
+// Thin wrapper delegates to shared item handlers
 
-import { NextResponse } from "next/server";
-
-import { resolveResource } from "@/lib/api/resolve-resource";
-import { createClient as createSupabaseServerClient } from "@/lib/supabase-server";
+import { getOneHandler, updateHandler, deleteHandler } from "@/lib/api/handle-item";
+import { awaitParams, type AwaitableParams } from "@/lib/next/server-helpers";
 
 export const dynamic = "force-dynamic";
 
-// Shared guard for resource and id params
-function validateParams(resource: unknown, id: unknown) {
-  if (!resource || typeof resource !== "string" || resource.length > 64) {
-    return NextResponse.json({ error: { message: "Invalid resource parameter" } }, { status: 400 });
-  }
-  if (!id || typeof id !== "string" || id.length > 128) {
-    return NextResponse.json({ error: { message: "Invalid id parameter" } }, { status: 400 });
-  }
-  return null;
+/** Normalize and validate the id coming from the URL segment. */
+function normalizeId(raw: string): string {
+  // Trim and decode URI-encoded values (e.g., %7C)
+  const decoded = decodeURIComponent(String(raw ?? "").trim());
+  return decoded;
 }
 
-// Conditionally set timestamps if projection suggests they exist
-function maybeApplyAppTimestamps(row: Record<string, any>, select: string | undefined) {
-  const s = String(select || "");
-  const hasUpdated = /\bupdated_at\b/.test(s);
-  if (hasUpdated) row.updated_at = new Date().toISOString();
+/** Return a standard JSON Response for 400 errors. */
+function badRequest(message: string): Response {
+  return new Response(JSON.stringify({ error: { message } }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
-/**
- * GET /api/[resource]/[id]
- * Fetch a single record by primary key.
- */
-export async function GET(req: Request, ctx: { params: { resource: string; id: string } }) {
-  const invalid = validateParams(ctx?.params?.resource, ctx?.params?.id);
-  if (invalid) return invalid;
+export async function GET(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+  const { resource, id } = await awaitParams(ctx);
+  const normalizedId = normalizeId(id);
 
-  const resource = ctx.params.resource;
-  const id = ctx.params.id;
-
-  let config: any;
-  try {
-    const resolved = await resolveResource(resource);
-    config = resolved?.config ?? resolved;
-    if (!config?.table || !config?.pk) throw new Error("Invalid resource config");
-  } catch {
-    return NextResponse.json({ error: { message: "Unknown resource" }, resource }, { status: 404 });
+  // Guard against accidental composite ids ("uuid|...").
+  if (normalizedId.includes("|")) {
+    return badRequest("Invalid id format. Expected a single id (e.g., a UUID), not a composite value.");
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await (supabase as any)
-    .from(config.table)
-    .select(config.select || "*")
-    .eq(config.pk, id)
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ error: { message: error.message } }, { status: 400 });
-  }
-
-  if (!data) {
-    return NextResponse.json({ error: { message: "Not found" } }, { status: 404 });
-  }
-
-  const domain = typeof config.toDomain === "function" ? config.toDomain(data) : data;
-
-  return NextResponse.json({ row: domain }, { status: 200 });
+  return getOneHandler(req, resource, normalizedId);
 }
 
-/**
- * PATCH /api/[resource]/[id]
- * Update a record by primary key.
- */
-export async function PATCH(req: Request, ctx: { params: { resource: string; id: string } }) {
-  const invalid = validateParams(ctx?.params?.resource, ctx?.params?.id);
-  if (invalid) return invalid;
+export async function PATCH(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+  const { resource, id } = await awaitParams(ctx);
+  const normalizedId = normalizeId(id);
 
-  const resource = ctx.params.resource;
-  const id = ctx.params.id;
-
-  let config: any;
-  try {
-    const resolved = await resolveResource(resource);
-    config = resolved?.config ?? resolved;
-    if (!config?.table || !config?.pk) throw new Error("Invalid resource config");
-  } catch {
-    return NextResponse.json({ error: { message: "Unknown resource" }, resource }, { status: 404 });
+  if (normalizedId.includes("|")) {
+    return badRequest("Invalid id format. Expected a single id (e.g., a UUID), not a composite value.");
   }
 
-  let payload: any;
-  try {
-    payload = await req.json();
-  } catch {
-    return NextResponse.json({ error: { message: "Invalid JSON body" } }, { status: 400 });
+  // Prevent writes to SQL views explicitly (safety & clearer errors).
+  if (resource?.startsWith("v_")) {
+    return badRequest(
+      "Writes are not allowed for view resources. Use the base table resource instead (e.g., 'tcm_user_tally_card_entries').",
+    );
   }
 
-  // Normalize via config.fromInput if available
-  const rowToUpdate = typeof config.fromInput === "function" ? config.fromInput(payload) : payload;
-
-  // Apply updated_at if relevant
-  maybeApplyAppTimestamps(rowToUpdate, config.select);
-
-  const supabase = await createSupabaseServerClient();
-
-  // Cast supabase to any to avoid "Type instantiation is excessively deep" error
-  const { data, error } = await (supabase as any)
-    .from(config.table)
-    .update(rowToUpdate)
-    .eq(config.pk, id)
-    .select(config.select || "*")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: { message: error.message } }, { status: 400 });
-  }
-
-  const domain = typeof config.toDomain === "function" ? config.toDomain(data) : data;
-
-  return NextResponse.json({ row: domain }, { status: 200 });
+  return updateHandler(req, resource, normalizedId);
 }
 
-/**
- * DELETE /api/[resource]/[id]
- * Hard delete by default; soft delete if config.activeFlag exists.
- */
-export async function DELETE(req: Request, ctx: { params: { resource: string; id: string } }) {
-  const invalid = validateParams(ctx?.params?.resource, ctx?.params?.id);
-  if (invalid) return invalid;
+export async function DELETE(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+  const { resource, id } = await awaitParams(ctx);
+  const normalizedId = normalizeId(id);
 
-  const resource = ctx.params.resource;
-  const id = ctx.params.id;
-
-  let config: any;
-  try {
-    const resolved = await resolveResource(resource);
-    config = resolved?.config ?? resolved;
-    if (!config?.table || !config?.pk) throw new Error("Invalid resource config");
-  } catch {
-    return NextResponse.json({ error: { message: "Unknown resource" }, resource }, { status: 404 });
+  if (normalizedId.includes("|")) {
+    return badRequest("Invalid id format. Expected a single id (e.g., a UUID), not a composite value.");
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  // Soft delete if activeFlag is defined
-  if (config.activeFlag) {
-    const updateData: any = {
-      [config.activeFlag]: false,
-    };
-
-    // Only add updated_at if it exists in the schema
-    if (config.schema?.fields?.updated_at) {
-      updateData.updated_at = new Date().toISOString();
-    }
-
-    const { data, error } = await (supabase as any)
-      .from(config.table)
-      .update(updateData)
-      .eq(config.pk, id)
-      .select(config.select || "*")
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: { message: error.message } }, { status: 400 });
-    }
-
-    const domain = typeof config.toDomain === "function" ? config.toDomain(data) : data;
-    return NextResponse.json({ row: domain }, { status: 200 });
+  // Prevent writes to SQL views explicitly (safety & clearer errors).
+  if (resource?.startsWith("v_")) {
+    return badRequest(
+      "Writes are not allowed for view resources. Use the base table resource instead (e.g., 'tcm_user_tally_card_entries').",
+    );
   }
 
-  // Hard delete fallback
-  const { error } = await (supabase as any).from(config.table).delete().eq(config.pk, id);
-  if (error) {
-    return NextResponse.json({ error: { message: error.message } }, { status: 400 });
-  }
-
-  return NextResponse.json({ success: true }, { status: 200 });
+  return deleteHandler(req, resource, normalizedId);
 }

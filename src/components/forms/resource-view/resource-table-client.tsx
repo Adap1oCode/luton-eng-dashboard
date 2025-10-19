@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// FILE: src/components/forms/resource-view/ResourceTableClient.tsx
+// FILE: src/components/forms/resource-view/resource-table-client.tsx
 // TYPE: Client Component
 // PURPOSE: Generic client island for "View All <Resource>" screens.
 //          - Uses SSR-materialised columns (config.columns) as canonical.
@@ -19,12 +19,14 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   DndContext,
   closestCorners,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type UniqueIdentifier,
+  DragOverlay,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -184,16 +186,23 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   onSave,
   onCancel,
 }: StatusCellWrapperProps<TRow>) => {
-  const status = String(row.getValue("status") ?? "");
+  const rawStatus = row.getValue("status");
+
+  // Safer coercion:
+  // - Preserve strings as-is
+  // - Map null/undefined to ""
+  // - String() for everything else
+  const statusString = typeof rawStatus === "string" ? rawStatus : rawStatus == null ? "" : String(rawStatus);
   const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
 
   return (
     <StatusCell
-      status={status}
+      status={statusString}
       isEditing={isEditing}
-      editingStatus={editingStatus?.value || status}
+      // Use ?? to preserve intentional empty strings
+      editingStatus={editingStatus?.value ?? statusString}
       statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, status)}
+      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
       onEditChange={onEditChange}
       onSave={onSave}
       onCancel={onCancel}
@@ -215,6 +224,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const router = useRouter();
   const search = useSearchParams();
   const pathname = usePathname();
+
+  // 🔑 NEW: Support configurable ID field from view config (e.g., "id" or "entry_id")
+  // Moved ABOVE any state initializers that reference it (fixes TS2448/TS2454)
+  const idField = (config as unknown as { idField?: string })?.idField ?? "id";
 
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
@@ -239,6 +252,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     item_number: true,
     is_active: true,
     warehouse: true,
+    // make sure routing id is hidden from the start
+    [idField]: false,
   });
 
   // ✅ Filters state tied to DataTableFilters
@@ -256,10 +271,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ NEW: State لإظهار/إخفاء قسم More Filters
   const [showMoreFilters, setShowMoreFilters] = React.useState(false);
 
+  // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
+  const tableRef = React.useRef<HTMLElement | null>(null);
+
   // Column widths state for resizing
-  const [columnWidths] = React.useState<Record<string, number>>({});
-  const tableRef = React.useRef<HTMLDivElement>(null);
-  const { isResizing, onMouseDownResize } = useColumnResize(columnWidths, tableRef);
+  const { widths: columnWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
+
+  // Track currently dragged column id to render an overlay ghost
+  const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
 
   // Status editing state
   const [editingStatus, setEditingStatus] = React.useState<{ rowId: string; value: string } | null>(null);
@@ -267,7 +286,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // DnD setup for column reordering
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(() => initialRows.map((row) => row.id), [initialRows]);
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => initialRows.map((row) => ((row as any)[idField] as string) ?? (row as any).id),
+    [initialRows, idField],
+  );
 
   // Handle column reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -279,6 +301,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         return arrayMove(items, oldIndex, newIndex);
       });
     }
+    setActiveColumnId(null);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const id = String(event.active.id ?? "");
+    // Only set overlay for column drags (ignore row drags)
+    if (columnOrder.includes(id)) setActiveColumnId(id);
   };
 
   // Status editing handlers
@@ -435,6 +464,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const table = useReactTable<TRow>({
     data: initialRows,
     columns: enhancedColumns,
+    meta: { viewConfig: config }, // ✅ expose view config (formsRouteSegment, idField) to cells
+
     state: {
       sorting,
       rowSelection,
@@ -458,15 +489,49 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     columnResizeMode: "onChange",
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
-    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) =>
-      (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`,
+    // ✅ use the same idField consistently for stable keys
+    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) => {
+      const domId = (row as any)[idField] as string | undefined;
+      return domId ?? (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`;
+    },
   });
+
+  // ✅ Seed initial column order once the table is ready
+  React.useEffect(() => {
+    // Collect leaf column ids as strings, and exclude non-reorderables
+    const ids = table
+      .getAllLeafColumns()
+      .map((c) => String(c.id))
+      .filter((id) => id !== "actions" && id !== "__select" && id !== "select");
+
+    if (ids.length && initialOrderRef.current.length === 0) {
+      initialOrderRef.current = ids;
+      setColumnOrder(ids);
+    }
+  }, [table]);
+
+  // ✅ SANITIZE: drop any filter keys that don't match actual columns (e.g., stale "id")
+  React.useEffect(() => {
+    const validIds = new Set(table.getAllLeafColumns().map((c) => String(c.id)));
+    setFilters((prev) => {
+      let changed = false;
+      const next: Record<string, ColumnFilterState> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (validIds.has(k)) next[k] = v;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [table, idField]);
 
   // Sync selected IDs with the store
   React.useEffect(() => {
-    const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
+    const ids = table.getSelectedRowModel().rows.map((r) => {
+      const anyRow = r.original as any;
+      return anyRow?.[idField] ?? anyRow?.id;
+    });
     setSelectedIds(ids);
-  }, [rowSelection, table, setSelectedIds]);
+  }, [rowSelection, table, setSelectedIds, idField]);
 
   // Listen for action from actions column via event delegation (includes nested Radix elements)
   React.useEffect(() => {
@@ -493,8 +558,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     }
 
     async function handleEdit(rowId: string) {
-      // Navigate to the correct forms route segment
-      router.push(`/forms/${routeSegment}/edit/${rowId}`);
+      // Navigate to /forms/<segment>/<id>/edit to match the filesystem route
+      router.push(`/forms/${routeSegment}/${rowId}/edit`);
     }
 
     const onClick = (ev: MouseEvent) => {
@@ -547,10 +612,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu + Export
   const ColumnsAndSortToolbar = React.useMemo(() => {
-    const leafColumns = table
-      .getAllLeafColumns()
-      .filter((c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select");
-
+    const leafColumns = table.getAllLeafColumns().filter(
+      (c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField, // ✅ exclude idField
+    );
     const labelFor = (id: string) => {
       switch (id) {
         case "tally_card_number":
@@ -697,7 +761,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         </DropdownMenu>
       </div>
     );
-  }, [table, isResizing, setColumnOrder, dragIdRef]);
+  }, [table, isResizing, setColumnOrder, dragIdRef, idField]);
 
   // ✅ NEW: More Filters Section
   const MoreFiltersSection = React.useMemo(() => {
@@ -746,19 +810,23 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
   const filterColumns: FilterColumn[] = React.useMemo(() => {
-    return table.getAllLeafColumns().map((c) => ({
-      id: String(c.id),
-      label:
-        c.id === "is_active"
-          ? "Status"
-          : c.id === "__select" || c.id === "select"
-            ? ""
-            : c.id === "actions"
+    // ✅ exclude idField from filter row to avoid "Column with id 'id' does not exist."
+    return table
+      .getAllLeafColumns()
+      .filter((c) => c.id !== idField && c.id !== "id")
+      .map((c) => ({
+        id: String(c.id),
+        label:
+          c.id === "is_active"
+            ? "Status"
+            : c.id === "__select" || c.id === "select"
               ? ""
-              : String(c.id),
-      disableInput: c.id === "actions" || c.id === "__select" || c.id === "select",
-    }));
-  }, [table]);
+              : c.id === "actions"
+                ? ""
+                : String(c.id),
+        disableInput: c.id === "actions" || c.id === "__select" || c.id === "select",
+      }));
+  }, [table, idField]);
 
   // استمع لأي ضغطة على زر التولبار العلوي الذي يحمل data-onclick-id="exportCsv"
   React.useEffect(() => {
@@ -783,7 +851,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
         {/* ✅ Toolbar مع More Filters */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
@@ -832,6 +905,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         />
         {footer}
       </SortableContext>
+
+      {/* Floating header ghost while dragging a column */}
+      <DragOverlay>
+        {activeColumnId ? (
+          <div className="pointer-events-none rounded-md border bg-white px-3 py-2 text-sm shadow-lg select-none dark:border-gray-700 dark:bg-gray-800">
+            {activeColumnId}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

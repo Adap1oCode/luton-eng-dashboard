@@ -1,164 +1,67 @@
 // src/app/api/[resource]/route.ts
-// Minimal delegator: build once → route is a thin passthrough.
+// Collection route: LIST (GET) and CREATE (POST)
 
 import { NextResponse } from "next/server";
+
 import { listHandler } from "@/lib/api/handle-list";
 import { resolveResource } from "@/lib/api/resolve-resource";
-// SSR helper exported as createClient from supabase-server.ts
-import { createClient as createSupabaseServerClient } from "@/lib/supabase-server";
+import { awaitParams, type AwaitableParams } from "@/lib/next/server-helpers";
+import { createSupabaseServerProvider } from "@/lib/supabase/factory";
 
 export const dynamic = "force-dynamic";
 
-/** Local, generic view of what we need from a resource config */
-type ResourceShape = {
-  table: string;
-  pk?: string;
-  select?: string;
-  fromInput?: (x: any) => any;
-  toDomain?: (x: any) => any;
-};
-
-/** Accept both return shapes: plain config or { config } */
-function unwrapConfig(resolved: any): ResourceShape {
-  const cfg = (resolved?.config ?? resolved) as Partial<ResourceShape>;
-  if (!cfg || typeof cfg !== "object" || !cfg.table) {
-    throw Object.assign(new Error("Invalid resource config"), {
-      code: "INVALID_RESOURCE_CONFIG",
-    });
-  }
-  return cfg as ResourceShape;
+function json(body: any, init?: number | ResponseInit): NextResponse {
+  const base: ResponseInit = typeof init === "number" ? { status: init } : (init ?? {});
+  base.headers = { ...(base.headers ?? {}), "Cache-Control": "no-store" };
+  return NextResponse.json(body, base);
 }
 
-/** Shared guard for resource param. */
-function validateResourceParam(resource: unknown) {
-  if (!resource || typeof resource !== "string" || resource.length > 64) {
-    return NextResponse.json(
-      { error: { message: "Invalid resource parameter" } },
-      { status: 400 }
-    );
-  }
-  return null;
-}
-
-/** Conditionally set timestamps only if projection suggests they exist. */
-function maybeApplyAppTimestamps(
-  row: Record<string, any>,
-  select: string | undefined
-) {
-  const s = String(select || "");
-  const hasCreated = /\bcreated_at\b/.test(s);
-  const hasUpdated = /\bupdated_at\b/.test(s);
-  const now = new Date().toISOString();
-
-  if (hasCreated && row.created_at === undefined) row.created_at = now;
-  if (hasUpdated) row.updated_at = now;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTE: Next 15 requires awaiting ctx.params before using its properties
-// ─────────────────────────────────────────────────────────────────────────────
-
-export async function GET(
-  req: Request,
-  ctx: { params: Promise<{ resource: string }> }
-) {
-  const { resource } = await ctx.params;
-  const invalid = validateResourceParam(resource);
-  if (invalid) return invalid;
-
-  // Preflight: verify the resource is known → 404 if not
-  try {
-    await resolveResource(resource);
-  } catch (err: any) {
-    const msg = String(err?.message ?? "");
-    if (
-      err?.code === "RESOURCE_NOT_FOUND" ||
-      /unknown resource|invalid resource|not found|no config/i.test(msg)
-    ) {
-      return NextResponse.json(
-        { error: { message: "Unknown resource" }, resource },
-        { status: 404 }
-      );
-    }
-    // For other errors, let listHandler handle/mask consistently
-  }
-
-  // Delegate to the shared list handler (it already maps errors -> JSON)
+// GET /api/[resource] → { rows, total, ... }
+export async function GET(req: Request, ctx: AwaitableParams<{ resource: string }>) {
+  const { resource } = await awaitParams(ctx);
   return listHandler(req, resource);
 }
 
-/**
- * Create: POST /api/[resource]
- * - Uses ResourceConfig.fromInput (if present) for normalization
- * - Conditionally sets created_at / updated_at when those fields are part of select
- * - Returns { row } with the domain-mapped record
- */
-export async function POST(
-  req: Request,
-  ctx: { params: Promise<{ resource: string }> }
-) {
-  const { resource } = await ctx.params;
-  const invalid = validateResourceParam(resource);
-  if (invalid) return invalid;
-
-  // Resolve the resource config; if unknown → 404
-  let config: ResourceShape;
-  try {
-    const resolved = await resolveResource(resource);
-    config = unwrapConfig(resolved);
-  } catch (err: any) {
-    const msg = String(err?.message ?? "");
-    if (
-      err?.code === "RESOURCE_NOT_FOUND" ||
-      /unknown resource|invalid resource|not found|no config/i.test(msg)
-    ) {
-      return NextResponse.json(
-        { error: { message: "Unknown resource" }, resource },
-        { status: 404 }
-      );
-    }
-    // Any other failure here is an internal config error
-    return NextResponse.json(
-      { error: { message: "Failed to resolve resource config" } },
-      { status: 500 }
-    );
-  }
+// POST /api/[resource] → { row } (created)
+export async function POST(req: Request, ctx: AwaitableParams<{ resource: string }>) {
+  const { resource } = await awaitParams(ctx);
 
   let payload: any;
   try {
     payload = await req.json();
   } catch {
-    return NextResponse.json(
-      { error: { message: "Invalid JSON body" } },
-      { status: 400 }
-    );
+    return json({ error: { message: "Invalid JSON body" } }, 400);
   }
 
-  // Normalize input via resource config (if provided)
-  const rowToInsert =
-    typeof config.fromInput === "function" ? config.fromInput(payload) : payload;
+  try {
+    const entry = await resolveResource(resource);
+    const provider = createSupabaseServerProvider(entry.config as any);
 
-  // Apply app-managed timestamps if the select suggests these columns exist
-  maybeApplyAppTimestamps(rowToInsert, config.select);
+    // Create returns the new id
+    const id = await provider.create(payload);
 
-  // ✅ Await the SSR client factory
-  const supabase = await createSupabaseServerClient();
+    // Fetch the created record so we return a consistent envelope
+    const row = await provider.get(id);
+    if (!row) {
+      // Created but not visible (e.g., scoping)? Return id as fallback.
+      return json({ id }, 201);
+    }
 
-  const { data, error } = await supabase
-    .from(config.table)
-    .insert(rowToInsert)
-    .select(config.select || "*")
-    .single();
-
-  if (error) {
-    return NextResponse.json(
-      { error: { message: error.message } },
-      { status: 400 }
-    );
+    return json({ row }, 201);
+  } catch (err: any) {
+    const msg = String(err?.message ?? err ?? "");
+    if (/unknown resource|invalid resource|no config|not found/i.test(msg)) {
+      return json({ error: { message: "Unknown resource" }, resource }, 404);
+    }
+    // RLS/policy/permission
+    if (/permission|rls|policy/i.test(msg)) {
+      return json({ error: { message: msg } }, 403);
+    }
+    // Validation-ish client errors
+    if (/invalid|bad request|payload|column|type/i.test(msg)) {
+      return json({ error: { message: msg } }, 400);
+    }
+    console.error("[POST collection]", resource, err);
+    return json({ error: { message: "Internal server error" } }, 500);
   }
-
-  const domain =
-    typeof config.toDomain === "function" ? config.toDomain(data) : data;
-
-  return NextResponse.json({ row: domain }, { status: 201 });
 }

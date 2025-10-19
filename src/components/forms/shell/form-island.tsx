@@ -6,11 +6,17 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { DynamicForm } from "@/components/forms/dynamic-form";
+import { useNotice } from "@/components/ui/notice";
+import { extractErrorMessage } from "@/lib/forms/extract-error";
 import type { FormConfig, ResolvedOptions } from "@/lib/forms/types";
 
 type EnhancedFormConfig = FormConfig & {
   submit?: (values: any) => Promise<any>;
   redirectTo?: (result: any) => string | null | undefined;
+  /** Optional explicit HTTP method to use when submit is not a function */
+  method?: "POST" | "PATCH";
+  /** Optional explicit endpoint to use when submit is not a function */
+  action?: string;
 };
 
 export default function FormIsland({
@@ -18,41 +24,74 @@ export default function FormIsland({
   defaults,
   options,
   formId,
+  hideInternalActions = true, // Shell owns footer; hide internal buttons by default
 }: {
   config: EnhancedFormConfig;
   defaults: Record<string, any>;
   options: ResolvedOptions;
   formId: string;
+  hideInternalActions?: boolean;
 }) {
   const router = useRouter();
+  const notice = useNotice();
+  const [submitting, setSubmitting] = React.useState(false);
 
   return (
     <DynamicForm
-      id={formId} // ensure DynamicForm forwards this to <form id={id}>
+      id={formId} // ✅ DynamicForm expects `id`, not `formId`
       config={config}
       defaults={defaults}
       options={options}
+      hideInternalActions={hideInternalActions}
       onSubmit={async (values) => {
+        // Guard against accidental double submit without relying on a `disabled` prop
+        if (submitting) return;
+        setSubmitting(true);
         try {
           const result =
             typeof config.submit === "function"
               ? await config.submit(values)
               : await (async () => {
-                  const res = await fetch(`/api/forms/${config.key}`, {
-                    method: "POST",
+                  // Prefer explicit transport from server; fallback to generic POST /api/forms/:key
+                  const method = config.method ?? "POST";
+                  const action = config.action ?? `/api/forms/${config.key}`;
+
+                  const res = await fetch(action, {
+                    method,
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(values),
                   });
-                  if (!res.ok) throw new Error(await res.text());
+
+                  if (!res.ok) {
+                    const msg = await extractErrorMessage(res);
+                    throw new Error(msg);
+                  }
+
                   return res.json().catch(() => ({}));
                 })();
 
-          const next = (typeof config.redirectTo === "function" && config.redirectTo(result)) || `/forms/${config.key}`;
+          const explicit = typeof config.redirectTo === "function" ? config.redirectTo(result) : null;
 
-          router.push(next);
+          const base = config.key ? `/forms/${config.key}` : `/forms`;
+          const inferred = result?.id ? `${base}/${result.id}/edit` : base;
+
+          router.push(explicit || inferred);
         } catch (err) {
-          console.error("Form submit failed:", err);
-          alert("Error saving. Please try again.");
+          const message =
+            err instanceof Error
+              ? err.message
+              : typeof err === "string"
+                ? err
+                : "Error saving. Please review and try again.";
+
+          // 🔔 Reusable ShadCN alert dialog
+          notice.open({
+            variant: "error",
+            title: "Update failed",
+            message,
+          });
+        } finally {
+          setSubmitting(false);
         }
       }}
     />

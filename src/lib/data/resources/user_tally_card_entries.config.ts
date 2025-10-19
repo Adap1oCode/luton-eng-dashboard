@@ -7,6 +7,7 @@ import type { ResourceConfig, TcmUserEntry, UUID } from "../types";
  */
 
 export type TallyCardEntryInput = {
+  id: UUID;
   user_id: UUID;
   tally_card_number?: string;
   card_uid?: UUID | null;
@@ -15,13 +16,10 @@ export type TallyCardEntryInput = {
   note?: string | null;
 };
 
-const tcm_user_tally_card_entries: ResourceConfig<
-  TcmUserEntry,
-  TallyCardEntryInput
-> = {
+const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryInput> = {
   table: "tcm_user_tally_card_entries",
-  pk: "user_id", // single-column pk per current layer constraints
-  select: "user_id, tally_card_number, card_uid, qty, location, note, updated_at",
+  pk: "id", // single-column pk per current layer constraints
+  select: "id, user_id, tally_card_number, card_uid, qty, location, note, updated_at",
   search: ["tally_card_number", "location", "note"],
   defaultSort: { column: "updated_at", desc: true },
 
@@ -29,8 +27,7 @@ const tcm_user_tally_card_entries: ResourceConfig<
     user_id: input.user_id,
     tally_card_number: input.tally_card_number ?? undefined,
     card_uid: input.card_uid ?? null,
-    qty:
-      input.qty === undefined || input.qty === null ? null : Number(input.qty),
+    qty: input.qty === undefined || input.qty === null ? null : Number(input.qty),
     location: input.location ?? null,
     note: input.note ?? null,
   }),
@@ -39,7 +36,8 @@ const tcm_user_tally_card_entries: ResourceConfig<
 
   schema: {
     fields: {
-      user_id: { type: "uuid", write: true },
+      id: { type: "uuid", readonly: true },
+      user_id: { type: "uuid", write: false },
       tally_card_number: { type: "text", write: true },
       card_uid: { type: "uuid", nullable: true, write: true },
       qty: { type: "int", nullable: true, write: true },

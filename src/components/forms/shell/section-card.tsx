@@ -2,32 +2,39 @@
 
 import * as React from "react";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 type SectionCardProps = {
   title: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  headerRight?: React.ReactNode;
 };
 
-export default function SectionCard({ title, defaultOpen = true, children }: SectionCardProps) {
+/**
+ * Collapsible white card with exact header + body padding.
+ * This matches the Requisition section card structure/classes.
+ */
+export default function SectionCard({ title, defaultOpen = true, children, headerRight }: SectionCardProps) {
   const [open, setOpen] = React.useState(defaultOpen);
 
   return (
-    <div className="bg-card mb-6 rounded-2xl border shadow-sm">
-      <div className="flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((s) => !s)}
-          className="text-muted-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md"
-        >
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+    <div className="mb-6 rounded-lg bg-white shadow-sm dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <div className="flex items-center gap-2">
+          {headerRight}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="p-1 text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+            aria-label={open ? "Collapse section" : "Expand section"}
+          >
+            {open ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
-
-      {open && <div className="p-6 lg:p-8">{children}</div>}
+      {open ? <div className="p-6">{children}</div> : null}
     </div>
   );
 }

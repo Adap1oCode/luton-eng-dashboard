@@ -18,6 +18,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // -----------------------------------------------------------------------------
+// Column meta & compatible ColumnDef alias (non-breaking)
+// -----------------------------------------------------------------------------
+export type ColumnMeta = {
+  /** When true, this column exists only for routing/keys and should not be shown/filtered/sorted. */
+  routingOnly?: boolean;
+  // extend with more meta as needed (alignment, formatters, etc.)
+};
+
+/**
+ * A ColumnDef that optionally carries our ColumnMeta.
+ * This is fully compatible with existing ColumnDef usage.
+ */
+export type TColumnDef<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
+  meta?: ColumnMeta;
+};
+
+// -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 export type TableFeatures = {
@@ -126,7 +143,6 @@ export function makeDefaultViewState(columns: ColumnLike[]) {
   return {
     columnOrder: order,
     visibleColumns: order,
-    // ✅ return the computed maps (don’t overwrite with `{}`)
     columnWidths,
     columnFilters,
     sorts: [] as Array<any>,
@@ -144,18 +160,23 @@ export function makeActionsColumn<TRow extends { id: string }>(
     id: "actions",
     header: () => null,
     enableSorting: false,
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
+      const cfg = table?.options?.meta?.viewConfig;
+      const idField = (cfg?.idField as string) ?? "id";
+      const domainId = getDomainId(row, idField);
+
       const mk = (a: RowAction) => (
         <DropdownMenuItem
           key={a.id}
           data-action-id={a.id}
-          data-row-id={row.original.id}
+          data-row-id={domainId}
           className={a.id === "delete" ? "text-red-600 focus:text-red-600 dark:text-red-400" : ""}
         >
           {a.icon ? <a.icon className="mr-2 h-4 w-4" /> : null}
           {a.label}
         </DropdownMenuItem>
       );
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -207,11 +228,24 @@ export type BaseViewConfig<TRow> = {
   toolbar: ToolbarConfig;
   quickFilters: any[]; // intentionally flexible; views define their own
   buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
-  // مفتاح المورد المطلوب لطلبات الحذف الفردي عبر /api/[resource]/[id]
+  /** Resource key for single-record DELETE calls (/api/[resource]/[id]) */
   resourceKeyForDelete?: string;
-  // Route segment for forms pages (e.g., 'tally-cards')
+  /** Route segment for forms pages (e.g., 'tally-cards') */
   formsRouteSegment?: string;
+  /**
+   * Explicit domain id field for routing/selection.
+   * Optional for backward-compatibility; newer views should set it.
+   */
+  idField?: keyof TRow | string;
 };
+
+// -------- id helper (once) ----------
+function getDomainId(row: any, idField: string = "id"): string {
+  const fromOriginal = row?.original?.[idField];
+  const fromCell = typeof row?.getValue === "function" ? row.getValue(idField) : undefined;
+  const fallback = row?.original?.id ?? row?.id;
+  return String(fromOriginal ?? fromCell ?? fallback ?? "").split("|")[0];
+}
 
 export function createViewConfig<TRow>(opts: {
   resourceLabel: string;
@@ -232,4 +266,13 @@ export function createViewConfig<TRow>(opts: {
     quickFilters,
     buildColumns: opts.buildColumns,
   };
+}
+
+// -----------------------------------------------------------------------------
+// Type augmentation: let TanStack's TableMeta carry our viewConfig (typing only)
+// -----------------------------------------------------------------------------
+declare module "@tanstack/react-table" {
+  interface TableMeta<TData> {
+    viewConfig?: BaseViewConfig<TData>;
+  }
 }

@@ -1,14 +1,41 @@
 // src/lib/data/resources/index.ts
+// Import each config once, then export both named and default registry to avoid duplicate-import lint errors.
+import role_warehouse_rules from "./role_warehouse_rules.config.ts";
+import roles from "./roles.config.ts";
+import tcm_tally_cards from "./tally_cards.config.ts";
+import tcm_tally_cards_current from "./tally_cards_current.config.ts";
+import tcm_user_tally_card_entries from "./user_tally_card_entries.config.ts";
+import users from "./users.config.ts";
+import v_tcm_tally_card_entry_compare from "./v_tcm_tally_card_entry_compare.config.ts";
+import v_tcm_user_tally_card_entries from "./v_tcm_user_tally_card_entries.config.ts";
+import warehouses from "./warehouses.config.ts";
 
-export * from "./users.config";
-export * from "./warehouses.config";
-export * from "./roles.config";
-export * from "./role_warehouse_rules.config";
-export { default as tcm_tally_cards } from "./tally_cards.config";
-export * from "./tally_cards_current.config";
-export * from "./user_tally_card_entries.config";
+const resources = {
+  users,
+  warehouses,
+  roles,
+  role_warehouse_rules,
+  tcm_tally_cards,
+  tcm_tally_cards_current,
+  tcm_user_tally_card_entries,
+  v_tcm_user_tally_card_entries,
+  v_tcm_tally_card_entry_compare,
+
+  // ✅ Friendly aliases for business-facing routes
+  "stock-adjustments": tcm_user_tally_card_entries,
+};
+
+export default resources;
+
+// Also provide named exports for convenience
 export {
-  default as v_tcm_user_tally_card_entries,
-  type TallyCardEntryInput as VTcmTallyCardEntryInput,
-} from "./v_tcm_user_tally_card_entries.config";
-export * from "./v_tcm_tally_card_entry_compare.config";
+  users,
+  warehouses,
+  roles,
+  role_warehouse_rules,
+  tcm_tally_cards,
+  tcm_tally_cards_current,
+  tcm_user_tally_card_entries,
+  v_tcm_user_tally_card_entries,
+  v_tcm_tally_card_entry_compare,
+};
