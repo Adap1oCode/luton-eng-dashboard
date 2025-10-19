@@ -222,6 +222,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const search = useSearchParams();
   const pathname = usePathname();
 
+  // 🔑 NEW: Support configurable ID field from view config (e.g., "id" or "entry_id")
+  // Moved ABOVE any state initializers that reference it (fixes TS2448/TS2454)
+  const idField = (config as unknown as { idField?: string })?.idField ?? "id";
+
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
 
@@ -245,6 +249,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     item_number: true,
     is_active: true,
     warehouse: true,
+    // make sure routing id is hidden from the start
+    [idField]: false,
   });
 
   // ✅ Filters state tied to DataTableFilters
@@ -273,7 +279,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // DnD setup for column reordering
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(() => initialRows.map((row) => row.id), [initialRows]);
+  const dataIds = React.useMemo<UniqueIdentifier[]>(
+    () => initialRows.map((row) => ((row as any)[idField] as string) ?? (row as any).id),
+    [initialRows, idField],
+  );
 
   // Handle column reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -440,6 +449,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const table = useReactTable<TRow>({
     data: initialRows,
     columns: enhancedColumns,
+    meta: { viewConfig: config }, // ✅ expose view config (formsRouteSegment, idField) to cells
+
     state: {
       sorting,
       rowSelection,
@@ -463,15 +474,35 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     columnResizeMode: "onChange",
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
-    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) =>
-      (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`,
+    // ✅ use the same idField consistently for stable keys
+    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) => {
+      const domId = (row as any)[idField] as string | undefined;
+      return domId ?? (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`;
+    },
   });
+
+  // ✅ SANITIZE: drop any filter keys that don't match actual columns (e.g., stale "id")
+  React.useEffect(() => {
+    const validIds = new Set(table.getAllLeafColumns().map((c) => String(c.id)));
+    setFilters((prev) => {
+      let changed = false;
+      const next: Record<string, ColumnFilterState> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (validIds.has(k)) next[k] = v;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [table, idField]);
 
   // Sync selected IDs with the store
   React.useEffect(() => {
-    const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
+    const ids = table.getSelectedRowModel().rows.map((r) => {
+      const anyRow = r.original as any;
+      return anyRow?.[idField] ?? anyRow?.id;
+    });
     setSelectedIds(ids);
-  }, [rowSelection, table, setSelectedIds]);
+  }, [rowSelection, table, setSelectedIds, idField]);
 
   // Listen for action from actions column via event delegation (includes nested Radix elements)
   React.useEffect(() => {
@@ -497,10 +528,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       }
     }
 
-    async function handleEdit(rowId: string) {
-      // Navigate to the correct forms route segment
-      router.push(`/forms/${routeSegment}/edit/${rowId}`);
-    }
+      async function handleEdit(rowId: string) {
+       // Navigate to /forms/<segment>/<id>/edit to match the filesystem route
+       router.push(`/forms/${routeSegment}/${rowId}/edit`);
+}
 
     const onClick = (ev: MouseEvent) => {
       const target = ev.target as Element | null;
@@ -554,8 +585,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const ColumnsAndSortToolbar = React.useMemo(() => {
     const leafColumns = table
       .getAllLeafColumns()
-      .filter((c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select");
-
+      .filter(
+        (c) =>
+          c.getCanHide() &&
+          c.id !== "actions" &&
+          c.id !== "__select" &&
+          c.id !== "select" &&
+          c.id !== idField, // ✅ exclude idField
+      );
     const labelFor = (id: string) => {
       switch (id) {
         case "tally_card_number":
@@ -702,7 +739,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         </DropdownMenu>
       </div>
     );
-  }, [table, isResizing, setColumnOrder, dragIdRef]);
+  }, [table, isResizing, setColumnOrder, dragIdRef, idField]);
 
   // ✅ NEW: More Filters Section
   const MoreFiltersSection = React.useMemo(() => {
@@ -751,19 +788,23 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
   const filterColumns: FilterColumn[] = React.useMemo(() => {
-    return table.getAllLeafColumns().map((c) => ({
-      id: String(c.id),
-      label:
-        c.id === "is_active"
-          ? "Status"
-          : c.id === "__select" || c.id === "select"
-            ? ""
-            : c.id === "actions"
+    // ✅ exclude idField from filter row to avoid "Column with id 'id' does not exist."
+    return table
+      .getAllLeafColumns()
+      .filter((c) => c.id !== idField && c.id !== "id")
+      .map((c) => ({
+        id: String(c.id),
+        label:
+          c.id === "is_active"
+            ? "Status"
+            : c.id === "__select" || c.id === "select"
               ? ""
-              : String(c.id),
-      disableInput: c.id === "actions" || c.id === "__select" || c.id === "select",
-    }));
-  }, [table]);
+              : c.id === "actions"
+                ? ""
+                : String(c.id),
+        disableInput: c.id === "actions" || c.id === "__select" || c.id === "select",
+      }));
+  }, [table, idField]);
 
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 

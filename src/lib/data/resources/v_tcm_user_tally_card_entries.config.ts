@@ -3,6 +3,7 @@ import type { ResourceConfig, TcmUserEntry, UUID } from "../types";
 
 /** Write/input model stays the same */
 export type TallyCardEntryInput = {
+  id: UUID;
   user_id: UUID;
   tally_card_number?: string;
   card_uid?: UUID | null;
@@ -14,11 +15,11 @@ export type TallyCardEntryInput = {
 const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryInput> = {
   // ⬇️ point to the view that exposes warehouse_id/warehouse
   table: "v_tcm_user_tally_card_entries",
-  pk: "user_id", // current layer supports single-column pk
+  pk: "id", // ✅ UPDATED: use the entry's real PK now exposed by the view
 
   // ⬇️ include warehouse_id (UUID) and warehouse (code) for scoping & UI
   select:
-    "user_id, full_name, tally_card_number, card_uid, qty, location, note, updated_at, updated_at_pretty, warehouse_id, warehouse",
+    "id, user_id, full_name, tally_card_number, card_uid, qty, location, note, updated_at, updated_at_pretty, warehouse_id, warehouse",
 
   search: ["tally_card_number", "location", "note", "full_name"],
   defaultSort: { column: "updated_at", desc: true },
@@ -49,6 +50,7 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
 
   schema: {
     fields: {
+      id: { type: "uuid", readonly: true },
       user_id: { type: "uuid", write: true },
       full_name: { type: "text", readonly: true },
       tally_card_number: { type: "text", write: true },
