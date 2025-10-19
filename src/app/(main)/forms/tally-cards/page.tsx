@@ -115,6 +115,8 @@ export default async function Page({ searchParams }: PageProps) {
         pageSize={pageSize}
         enableColumnResizing={features.columnResizing}
         enableColumnReordering={features.columnReordering}
+        // أخفِ زر Export السفلي داخل الجدول لهذه الصفحة
+        showInlineExportButton={false}
       />
     </PageShell>
   );

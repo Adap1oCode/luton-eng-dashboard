@@ -78,6 +78,7 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   renderExpanded?: (row: TRow) => React.ReactNode;
   enableColumnResizing?: boolean;
   enableColumnReordering?: boolean;
+  showInlineExportButton?: boolean;
 };
 
 // ✅ FIX 1 & 2: Move DraggableHeaderCell outside component (fixes nested component + hook in callback)
@@ -183,7 +184,7 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   onSave,
   onCancel,
 }: StatusCellWrapperProps<TRow>) => {
-  const status = row.getValue("status");
+  const status = String(row.getValue("status") ?? "");
   const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
 
   return (
@@ -209,6 +210,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   renderExpanded,
   enableColumnResizing = true,
   enableColumnReordering = true,
+  showInlineExportButton = true,
 }: ResourceTableClientProps<TRow>) {
   const router = useRouter();
   const search = useSearchParams();
@@ -427,6 +429,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     handleStatusSave,
     handleStatusCancel,
     handleStatusEditStart,
+    baseColumns,
   ]);
 
   const table = useReactTable<TRow>({
@@ -451,7 +454,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(), // ✅ FIX 4: Use ES6 import instead of require
+    getFilteredRowModel: getFilteredRowModel(),
     columnResizeMode: "onChange",
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
@@ -757,12 +760,32 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     }));
   }, [table]);
 
+  // استمع لأي ضغطة على زر التولبار العلوي الذي يحمل data-onclick-id="exportCsv"
+  React.useEffect(() => {
+    const onToolbarClick = (ev: MouseEvent) => {
+      const target = ev.target as Element | null;
+      if (!target) return;
+      const btn = target.closest("[data-onclick-id]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-onclick-id") || "";
+      if (id !== "exportCsv") return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      // نفّذ نفس منطق التصدير المستعمل في زر الجدول السفلي
+      exportCSV(table as never, "tally_cards");
+    };
+    document.addEventListener("click", onToolbarClick, true);
+    return () => document.removeEventListener("click", onToolbarClick, true);
+  }, [table]);
+
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
-        {/* ✅ NEW: Toolbar مع زر More Filters وزر Export */}
+        {/* ✅ Toolbar مع More Filters */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -778,9 +801,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
               </Button>
             </div>
             {/* زر Export في أقصى اليمين */}
-            <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
-              Export CSV
-            </Button>
+            {showInlineExportButton && (
+              <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
+                Export CSV
+              </Button>
+            )}
           </div>
         </div>
 
