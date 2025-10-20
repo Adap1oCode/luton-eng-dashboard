@@ -3,6 +3,8 @@
 // TYPE: Server Component (thin wrapper)
 // PURPOSE: Declare endpoint + columns; generic SSR wrapper does the rest.
 // -----------------------------------------------------------------------------
+import type { Metadata } from "next";
+
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
@@ -11,9 +13,14 @@ import { resolveSearchParams, parsePagination, type SPRecord } from "@/lib/next/
 import { stockAdjustmentsToolbar, stockAdjustmentsChips, stockAdjustmentsActions } from "./toolbar.config";
 import { stockAdjustmentsViewConfig } from "./view.config";
 
+// 🧾 Browser tab title for this screen (pairs with root layout title template)
+export const metadata: Metadata = {
+  title: "Stock Adjustments",
+};
+
 function toRow(d: any) {
   return {
-    id: String(d?.user_id ?? d?.id ?? ""),
+    id: String(d?.id ?? ""),
     user_id: String(d?.user_id ?? ""),
     full_name: String(d?.full_name ?? ""), // added
     warehouse: String(d?.warehouse ?? ""), // added

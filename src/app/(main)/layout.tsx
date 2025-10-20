@@ -2,7 +2,6 @@
 import { ReactNode } from "react";
 
 import { cookies } from "next/headers";
-
 import { MoreHorizontal, Search } from "lucide-react";
 
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
@@ -54,7 +53,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const contentLayout = await getContentLayout();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         {/* Mount once so any client component can open the Notice dialog */}
         <NoticeProvider>
@@ -80,6 +79,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                       <SearchDialog />
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1 sm:gap-2">
                     <div className="hidden items-center gap-2 md:flex">
                       <LayoutControls
@@ -89,10 +89,11 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                       />
                       <ThemeSwitcher />
                     </div>
+
                     <div className="flex md:hidden">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" aria-label="More">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -100,7 +101,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                           <DropdownMenuItem asChild>
                             <div className="flex items-center gap-2 p-2">
                               <Search className="h-4 w-4" />
-                              <span>search</span>
+                              <span>Search</span>
                             </div>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -112,10 +113,12 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+
                     <DataViewerButton />
                   </div>
                 </div>
               </header>
+
               <div className="p-4 md:p-6">{children}</div>
             </SidebarInset>
           </SidebarProvider>
