@@ -508,11 +508,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // ✅ Seed initial column order once the table is ready
   React.useEffect(() => {
-    // Collect leaf column ids as strings, and exclude non-reorderables
-    const ids = table
-      .getAllLeafColumns()
-      .map((c) => String(c.id))
-      .filter((id) => id !== "actions" && id !== "__select" && id !== "select");
+    // Collect leaf column ids as strings, put __select first, then other columns, actions last
+    const allIds = table.getAllLeafColumns().map((c) => String(c.id));
+    const selectId = allIds.find((id) => id === "__select");
+    const actionsId = allIds.find((id) => id === "actions");
+    const otherIds = allIds.filter((id) => id !== "actions" && id !== "__select" && id !== "select");
+
+    // Build order: __select first, then other columns, actions excluded from order (stays at end)
+    const ids = selectId ? [selectId, ...otherIds] : otherIds;
 
     if (ids.length && initialOrderRef.current.length === 0) {
       initialOrderRef.current = ids;

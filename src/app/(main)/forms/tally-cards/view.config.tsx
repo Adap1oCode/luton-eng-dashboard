@@ -7,6 +7,7 @@ import { SortAsc, SortDesc, ArrowUpDown } from "lucide-react";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { makeDefaultToolbar, type BaseViewConfig, makeActionsColumn } from "@/components/data-table/view-defaults";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
 export type TableFeatures = {
@@ -111,7 +112,18 @@ export type QuickFilter = {
 
 export function buildColumns(): ColumnDef<TallyCardRow>[] {
   return [
-    // تم حذف عمود select لتجنّب التكرار مع عمود الاختيار في العميل
+    // Hidden id column for row identification and actions
+    {
+      id: "id",
+      accessorKey: "id",
+      header: () => null,
+      cell: () => null,
+      enableHiding: true,
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 0,
+      meta: { routingOnly: true },
+    },
 
     {
       accessorKey: "tally_card_number",
@@ -149,8 +161,15 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
         return <div>{row.getValue("warehouse")}</div>;
       },
     },
-    // عمود الإجراءات
-    makeActionsColumn<TallyCardRow>(),
+    // عمود الإجراءات - دايماً في الآخر
+    {
+      ...makeActionsColumn<TallyCardRow>(),
+      enableHiding: false,
+      enableResizing: false,
+      enableSorting: false,
+      enableColumnFilter: false,
+      meta: { pinned: "right" },
+    },
   ];
 }
 

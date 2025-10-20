@@ -20,7 +20,7 @@ export const tallyCardsToolbar: ToolbarConfig = {
 export const tallyCardsActions: ActionConfig = {
   deleteSelected: {
     method: "DELETE",
-    endpoint: "/api/tcm_tally_cards/bulk",
+    endpoint: "/api/tally_cards/bulk-delete",
   },
   exportCsv: {
     method: "GET",
@@ -32,7 +32,7 @@ export const tallyCardsActions: ActionConfig = {
 export const tallyCardsChips: ChipsConfig | undefined = undefined;
 
 export const tallyCardsActionMenu = [
-  { id: "edit", label: "Edit", herf: "/forms/tally-cards/new" },
+  { id: "edit", label: "Edit", href: "/forms/tally-cards/new" },
   { id: "copy", label: "Copy" },
   { id: "favorite", label: "Favorite" },
   { id: "delete", label: "Delete" },
