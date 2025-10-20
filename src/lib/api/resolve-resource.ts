@@ -1,11 +1,9 @@
 // src/lib/api/resolve-resource.ts
 // Generic resource resolver — registry-based (flat or foldered configs)
 
-import * as resourcesModule from "@/lib/data/resources";
+import registry from "@/lib/data/resources";
 import type { ResourceConfig } from "@/lib/data/types";
 
-// Create resources object from named exports
-const resources = resourcesModule;
 
 /** Unified shape returned to API handlers */
 export type ResolvedResource<T = any> = {
@@ -29,9 +27,10 @@ export async function resolveResource(key: string): Promise<ResolvedResource> {
   console.log("[resolveResource] lookup key:", key);
 
   // --- Direct lookup from registry
-  const config = (resources as any)[key];
+  const config = (registry as any)[key];
+
   if (!config) {
-    const known = Object.keys(resources).sort().join(", ") || "(none)";
+    const known = Object.keys(registry).sort().join(", ") || "(none)";
     console.log("[resolveResource] NOT FOUND:", key, "| known:", known);
     throw new Error(`Unknown resource "${key}". Known resources: ${known}`);
   }

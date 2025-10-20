@@ -5,13 +5,26 @@
 // -----------------------------------------------------------------------------
 
 import React from "react";
+import type { Metadata } from "next";
 
 import { EditStockAdjustmentPageHeader, EditStockAdjustmentToolbar } from "./components";
 import { EditStockAdjustmentForm } from "./form-component";
+import { titleFor } from "@/lib/metadata-title";
 
 type EditStockAdjustmentPageProps = {
   params: Promise<{ id: string }> | { id: string };
 };
+
+// 🧾 Browser tab title (dynamic)
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> | { id: string } }
+): Promise<Metadata> {
+  const { id } = await Promise.resolve(params);
+  const short = (id ?? "").slice(0, 8) || "…";
+  return {
+    title: titleFor.edit("Stock Adjustment", short),
+  };
+}
 
 export default async function EditStockAdjustmentPage({ params }: EditStockAdjustmentPageProps) {
   const resolvedParams = await Promise.resolve(params);

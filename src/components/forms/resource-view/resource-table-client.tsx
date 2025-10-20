@@ -136,7 +136,7 @@ const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
       </div>
       {/* Resize handle on the right edge */}
       <div
-        className="absolute top-0 right-0 h-full w-1 cursor-col-resize select-none"
+        className="absolute top-0 right-0 z-10 h-full w-2 cursor-col-resize select-none"
         onMouseDown={(e) => onMouseDownResize(e as React.MouseEvent<HTMLDivElement>, columnId)}
       />
     </div>
@@ -315,6 +315,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isResizing) return; // ignore DnD while resizing
     const id = String(event.active.id ?? "");
     // Only set overlay for column drags (ignore row drags)
     if (columnOrder.includes(id)) setActiveColumnId(id);

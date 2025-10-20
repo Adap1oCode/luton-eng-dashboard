@@ -107,19 +107,23 @@ function TanStackDataTable<T = Record<string, unknown>>({
     // Only SortableContext for rows; the surrounding DndContext lives in parent
     <SortableContext items={dataIds}>
       <div ref={tableContainerRef as any} className="overflow-x-auto">
-        <Table className="min-w-full">
+      {/* table-fixed makes width styles on th/td actually apply */}
+        <Table className="min-w-full table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="p-3"
-                    style={
-                      columnWidthsPct?.[header.column.id]
-                        ? { width: `${columnWidthsPct[header.column.id]}%` }
-                        : undefined
-                    }
+                      className="p-3"
+                      style={
+                        columnWidthsPct?.[header.column.id] != null
+                          ? {
+                              width: `${columnWidthsPct[header.column.id]}%`,
+                              maxWidth: `${columnWidthsPct[header.column.id]}%`,
+                            }
+                          : undefined
+                      }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -147,12 +151,15 @@ function TanStackDataTable<T = Record<string, unknown>>({
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className="p-3"
-                        style={
-                          columnWidthsPct?.[cell.column.id]
-                            ? { width: `${columnWidthsPct[cell.column.id]}%` }
-                            : undefined
-                        }
+                          className="p-3"
+                          style={
+                            columnWidthsPct?.[cell.column.id] != null
+                              ? {
+                                  width: `${columnWidthsPct[cell.column.id]}%`,
+                                  maxWidth: `${columnWidthsPct[cell.column.id]}%`,
+                                }
+                              : undefined
+                          }
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
