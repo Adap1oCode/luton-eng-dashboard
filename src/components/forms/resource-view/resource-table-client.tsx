@@ -60,6 +60,7 @@ import { exportCSV } from "@/components/data-table/csv-export";
 import { DataTable } from "@/components/data-table/data-table";
 import { type FilterColumn, type ColumnFilterState } from "@/components/data-table/data-table-filters";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
 import { SortMenu } from "@/components/data-table/sort-menu";
 import { StatusCell } from "@/components/data-table/status-cell";
 import { stringPredicate } from "@/components/data-table/table-utils";
@@ -213,6 +214,45 @@ const StatusCellWrapper = <TRow extends { id: string }>({
   );
 };
 
+// ✅ Generic InlineEditCellWrapper component for configurable inline editing
+interface InlineEditCellWrapperProps<TRow> {
+  row: Row<TRow>;
+  columnId: string;
+  editingCell: { rowId: string; columnId: string; value: any } | null;
+  config: InlineEditConfig;
+  onEditStart: (rowId: string, columnId: string, value: any) => void;
+  onEditChange: (value: any) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+const InlineEditCellWrapper = <TRow extends { id: string }>({
+  row,
+  columnId,
+  editingCell,
+  config,
+  onEditStart,
+  onEditChange,
+  onSave,
+  onCancel,
+}: InlineEditCellWrapperProps<TRow>) => {
+  const rawValue = row.getValue(columnId);
+  const isEditing = editingCell?.rowId === (row.original as { id: string }).id && editingCell?.columnId === columnId;
+
+  return (
+    <InlineEditCell
+      value={rawValue}
+      isEditing={isEditing}
+      editingValue={editingCell?.value ?? rawValue}
+      config={config}
+      onEditStart={() => onEditStart((row.original as { id: string }).id, columnId, rawValue)}
+      onEditChange={onEditChange}
+      onSave={onSave}
+      onCancel={onCancel}
+    />
+  );
+};
+
 export default function ResourceTableClient<TRow extends { id: string }>({
   config,
   initialRows,
@@ -320,7 +360,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     if (columnOrder.includes(id)) setActiveColumnId(id);
   };
 
-  // Status editing handlers
+  // Generic inline editing handlers
+  const [editingCell, setEditingCell] = React.useState<{ rowId: string; columnId: string; value: any } | null>(null);
+
   const handleStatusEditStart = React.useCallback((rowId: string, currentStatus: string) => {
     setEditingStatus({ rowId, value: currentStatus });
   }, []);
@@ -348,6 +390,41 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   }, [editingStatus, config, router]);
 
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
+
+  // Generic inline editing handlers
+  const handleInlineEditStart = React.useCallback((rowId: string, columnId: string, currentValue: any) => {
+    setEditingCell({ rowId, columnId, value: currentValue });
+  }, []);
+
+  const handleInlineEditChange = React.useCallback((value: any) => {
+    setEditingCell((prev) => (prev ? { ...prev, value } : null));
+  }, []);
+
+  const handleInlineEditSave = React.useCallback(async () => {
+    if (!editingCell) return;
+    try {
+      const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+      const updateData = { [editingCell.columnId]: editingCell.value };
+
+      const res = await fetch(`/api/${resourceKey}/${editingCell.rowId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      if (res.ok) {
+        router.refresh();
+      } else {
+        alert(`Failed to update ${editingCell.columnId}`);
+      }
+    } catch {
+      alert(`Error updating ${editingCell.columnId}`);
+    } finally {
+      setEditingCell(null);
+    }
+  }, [editingCell, config, router]);
+
+  const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
   // ✅ Client-only "select" column (header + per-row checkboxes)
   const selectionColumn: ColumnDef<TRow, unknown> = React.useMemo(
@@ -438,8 +515,25 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         return stringPredicate(strVal, filter?.value ?? "", mode);
       };
 
-      // Inline Status editing where id === "status" if present
-      if (c.id === "status") {
+      // Check if this column has inline editing configuration
+      const inlineEditConfig = (c.meta as any)?.inlineEdit as InlineEditConfig | undefined;
+
+      if (inlineEditConfig) {
+        // Use generic inline editing
+        c.cell = (cellProps) => (
+          <InlineEditCellWrapper
+            row={cellProps.row}
+            columnId={c.id || (c as any).accessorKey}
+            editingCell={editingCell}
+            config={inlineEditConfig}
+            onEditStart={handleInlineEditStart}
+            onEditChange={handleInlineEditChange}
+            onSave={handleInlineEditSave}
+            onCancel={handleInlineEditCancel}
+          />
+        );
+      } else if (c.id === "status") {
+        // Legacy status editing for backward compatibility
         c.cell = (cellProps) => (
           <StatusCellWrapper
             row={cellProps.row}
@@ -451,6 +545,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           />
         );
       }
+
       return c;
     });
 
@@ -463,11 +558,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   }, [
     columnsWithHeaders,
     editingStatus,
+    editingCell,
     selectionColumn,
     handleStatusEditChange,
     handleStatusSave,
     handleStatusCancel,
     handleStatusEditStart,
+    handleInlineEditStart,
+    handleInlineEditChange,
+    handleInlineEditSave,
+    handleInlineEditCancel,
     baseColumns,
   ]);
 

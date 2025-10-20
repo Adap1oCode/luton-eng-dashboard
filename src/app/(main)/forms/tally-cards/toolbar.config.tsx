@@ -11,7 +11,6 @@ export const tallyCardsToolbar: ToolbarConfig = {
       action: "deleteSelected",
       enableWhen: "anySelected",
     },
-    // كان يستخدم action: "exportCsv" لاستدعاء API؛ نحوله لـ onClickId ليعمل محليًا مع الجدول
     { id: "exportCsv", label: "Export CSV", icon: "Download", variant: "outline", onClickId: "exportCsv" },
   ],
   right: [],

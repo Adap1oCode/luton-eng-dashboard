@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { SortAsc, SortDesc, ArrowUpDown } from "lucide-react";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
 import { makeDefaultToolbar, type BaseViewConfig, makeActionsColumn } from "@/components/data-table/view-defaults";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +23,7 @@ export type TableFeatures = {
   columnResizing?: boolean;
   columnReordering?: boolean;
   advancedFilters?: boolean;
+  inlineEditing?: boolean;
 };
 
 // cspell:disable-next-line
@@ -39,6 +41,36 @@ export type ColumnConfig = {
     value: SortDirection;
     icon: React.ComponentType<{ className?: string }>;
   }>;
+};
+
+// Inline editing configurations for different fields
+export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
+  is_active: {
+    fieldType: "boolean",
+    options: [
+      {
+        value: true,
+        label: "Active",
+        variant: "default",
+        className: "bg-orange-500 hover:bg-orange-600 text-white",
+      },
+      {
+        value: false,
+        label: "Inactive",
+        variant: "secondary",
+        className: "bg-gray-500 hover:bg-gray-600 text-white",
+      },
+    ],
+  },
+  status: {
+    fieldType: "select",
+    options: [
+      { value: "Active", label: "Active", variant: "default" },
+      { value: "Inactive", label: "Inactive", variant: "secondary" },
+      { value: "Pending", label: "Pending", variant: "outline" },
+      { value: "Completed", label: "Completed", variant: "default" },
+    ],
+  },
 };
 
 export const STATUS_OPTIONS = ["Active", "Inactive"];
@@ -141,6 +173,7 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
     },
     {
       accessorKey: "is_active",
+      id: "is_active",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const isActive = row.getValue("is_active");
@@ -152,6 +185,9 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
             {isActive ? "Active" : "Inactive"}
           </Badge>
         );
+      },
+      meta: {
+        inlineEdit: INLINE_EDIT_CONFIGS.is_active,
       },
     },
     {
@@ -199,6 +235,7 @@ export const features: TableFeatures = {
   columnResizing: true,
   columnReordering: true,
   advancedFilters: true,
+  inlineEditing: true,
 };
 
 // NB: toolbar for DataTable must use icon components (not strings)
