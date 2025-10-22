@@ -23,6 +23,20 @@ import {
 export type ColumnMeta = {
   /** When true, this column exists only for routing/keys and should not be shown/filtered/sorted. */
   routingOnly?: boolean;
+  /** Inline editing configuration for this column */
+  inlineEdit?: {
+    fieldType: "text" | "select" | "boolean";
+    options?: Array<{
+      value: string | boolean;
+      label: string;
+      variant?: "default" | "secondary" | "destructive" | "outline";
+      className?: string;
+    }>;
+    placeholder?: string;
+    validation?: (value: any) => boolean;
+    formatDisplay?: (value: any) => React.ReactNode;
+    parseValue?: (value: string) => any;
+  };
   // extend with more meta as needed (alignment, formatters, etc.)
 };
 

@@ -51,10 +51,13 @@ export default function ToolbarClient({ config, actions }: { config?: ToolbarCon
   const selectedCount = useSelectionStore((s) => s.selectedIds.length);
   const runner = useToolbarActions(actions);
 
+  console.log("ToolbarClient render:", { config, rightButtons: config?.right });
+
   const disabledByRule = useMemo(() => (b: ToolbarButton) => !isEnabled(b.enableWhen, selectedCount), [selectedCount]);
 
   const onHref = (href: string) => router.push(href);
   const onAction = (action: string) => {
+    console.log("Toolbar action clicked:", action);
     // try built-ins/generic via `run`
     runner.run(action);
   };
