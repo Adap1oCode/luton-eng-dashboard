@@ -879,21 +879,22 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return () => document.removeEventListener("click", onToolbarClick, true);
   }, [table]);
 
-// ✅ Auto-assign smart percentage widths from data (ensure select/actions have space)
+// ✅ Auto-assign smart percentage widths from data (safe when `config` is undefined)
 const autoColumnWidthsPct = React.useMemo(() => {
-  const defaultOverrides = {
-    __select: 3,  // tiny checkbox column
-    actions: 8,   // room for ⋯ menu
-  };
+  const defaultOverrides = { __select: 3, actions: 8 };
+  const cfg = (config ?? {}) as any;               // ← guard `config`
+  const overrides = { ...defaultOverrides, ...(cfg.columnWidthsPct ?? {}) };
+
   return computeAutoColumnPercents(baseColumns as any[], filteredRows as any[], {
     sampleRows: 50,
     // do NOT ignore __select so it participates in layout
     ignoreIds: ["id", "__expander", "__actions"],
-    overrides: { ...defaultOverrides, ...((config as any).columnWidthsPct ?? {}) },
+    overrides,
     floorPct: 8,
     capPct: 28,
   });
 }, [baseColumns, filteredRows, config]);
+
 
 
 
@@ -945,16 +946,18 @@ const autoColumnWidthsPct = React.useMemo(() => {
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
+          // ✅ Back-compat: pass both percent and pixel widths
           columnWidthsPct={autoColumnWidthsPct}
+          columnWidths={columnWidths}
           tableContainerRef={tableRef}
-filtersConfig={{
-  columns: filterColumns,
-  columnWidthsPct: autoColumnWidthsPct,
-  show: showMoreFilters,
-  filters,
-  onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
-}}
-
+          filtersConfig={{
+          columns: filterColumns,
+          // ✅ Back-compat here too
+          columnWidthsPct: autoColumnWidthsPct,
+          show: showMoreFilters,
+          filters,
+          onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
+          }}
         />
         {footer}
       </SortableContext>

@@ -14,7 +14,10 @@ import FormIsland from "@/components/forms/shell/form-island";
 import FormShell from "@/components/forms/shell/form-shell";
 
 // IMPORTANT: Align with what FormIsland expects.
-import type { EnhancedFormConfig, ResolvedOptions } from "@/lib/forms/types";
+// Derive types directly from FormIsland props so we never depend on where they're declared.
+type FormIslandProps = React.ComponentProps<typeof FormIsland>;
+type EnhancedFormConfig = FormIslandProps["config"];
+type ResolvedOptions = NonNullable<FormIslandProps["options"]>;
 // If your project exports these from a different module, change the import above
 // to the correct source. The goal is to match the types used in `FormIsland`.
 // (The error you pasted shows FormIsland wants `EnhancedFormConfig`.)
@@ -31,7 +34,7 @@ interface ResourceFormSSRPageProps {
 
   // Optional initial values and select options:
   defaults?: Record<string, any>;
-  options?: ResolvedOptions;
+  options?: ResolvedOptions; // optional to keep call sites unchanged
 
   // Standard UI controls
   cancelHref?: string;     // defaults to /forms/<formsRouteSegment|key>
@@ -62,7 +65,7 @@ export default function ResourceFormSSRPage({
   formId,
   config,
   defaults = {},
-  options,
+  options = {} as ResolvedOptions, // safe empty default
   cancelHref,
   primaryLabel,
   hideCancel = false,
@@ -99,7 +102,7 @@ export default function ResourceFormSSRPage({
         formId={formId}
         config={config}
         defaults={defaults}
-        options={options as ResolvedOptions | undefined}
+        options={options}
       />
     </FormShell>
   );
