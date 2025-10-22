@@ -56,6 +56,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       enableAdvancedFilters={true}
       showSaveViewButton={false}
       showToolbarContainer={false}
+      showExportButton={false}
     >
       <ResourceTableClient
         config={tallyCardsViewConfig}
@@ -63,6 +64,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
         initialTotal={total}
         page={page}
         pageSize={pageSize}
+        showInlineExportButton={false}
       />
     </PageShell>
   );

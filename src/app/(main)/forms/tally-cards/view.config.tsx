@@ -157,11 +157,21 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
       meta: { routingOnly: true },
     },
 
+    // ✅ Tally Card Number as hyperlink
     {
       accessorKey: "tally_card_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card Number" />,
       cell: ({ row }) => {
-        return <div className="font-medium">{row.getValue("tally_card_number")}</div>;
+        const id = row.original.id;
+        const number = row.getValue("tally_card_number");
+        return (
+          <a
+            href={`/forms/tally-cards/edit/${id}`}
+            className="font-medium text-blue-600 transition-colors duration-150 hover:text-blue-800 hover:underline"
+          >
+            {number}
+          </a>
+        );
       },
     },
     {

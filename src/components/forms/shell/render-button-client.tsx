@@ -30,7 +30,12 @@ export default function RenderButton({
   onClick?: () => void;
 }) {
   const Icon = typeof button.icon === "string" ? ICONS[button.icon as keyof typeof ICONS] : undefined;
-  const merged = [className].filter(Boolean).join(" ");
+
+  const destructiveHoverClass =
+    button.variant === "destructive" ? "hover:bg-red-700 hover:shadow-lg transition-all duration-200" : "";
+
+  const merged = [className, destructiveHoverClass].filter(Boolean).join(" ");
+
   const allowedVariants = ["default", "secondary", "destructive", "outline", "ghost", "link"] as const;
   type AllowedVariant = (typeof allowedVariants)[number];
   const desired = button.variant ?? "default";
