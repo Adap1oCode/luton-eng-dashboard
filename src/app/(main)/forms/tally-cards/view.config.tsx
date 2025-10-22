@@ -156,13 +156,13 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
       meta: { routingOnly: true },
     },
 
-    // ✅ Tally Card Number as hyperlink
+    // ✅ Tally Card Number as hyperlink (Fixed TypeScript error here)
     {
       accessorKey: "tally_card_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card Number" />,
       cell: ({ row }) => {
         const id = row.original.id;
-        const number = row.getValue("tally_card_number");
+        const number = row.getValue<string>("tally_card_number");
         return (
           <a
             href={`/forms/tally-cards/edit/${id}`}
@@ -177,7 +177,8 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
       accessorKey: "item_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Item Number" />,
       cell: ({ row }) => {
-        return <div>{row.getValue("item_number")}</div>;
+        const itemNumber = row.getValue<string>("item_number");
+        return <div>{itemNumber}</div>;
       },
     },
     {
@@ -185,7 +186,7 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
       id: "is_active",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
-        const isActive = row.getValue("is_active");
+        const isActive = row.getValue<boolean>("is_active");
         return (
           <Badge
             variant="secondary"
@@ -203,7 +204,8 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
       accessorKey: "warehouse",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Warehouse" />,
       cell: ({ row }) => {
-        return <div>{row.getValue("warehouse")}</div>;
+        const warehouse = row.getValue<string>("warehouse");
+        return <div>{warehouse}</div>;
       },
     },
     // عمود الإجراءات - دايماً في الآخر
