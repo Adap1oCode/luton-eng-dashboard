@@ -1,27 +1,52 @@
 "use client";
 
 import * as React from "react";
+
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Added role_name as optional for backward compatibility
 type UserLite = {
   id: string;
   full_name: string | null;
   email: string | null;
-  role_name?: string | null; // optional; UI falls back to email when absent
+  role_name?: string | null;
+  avatar_url?: string | null;
 };
 
-export function SwitchUserDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
+// Helper to get initials from name
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+}
+
+// Helper to generate consistent color from string
+function getAvatarColor(str: string): string {
+  const colors = [
+    "bg-blue-500",
+    "bg-green-500",
+    "bg-yellow-500",
+    "bg-red-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-indigo-500",
+    "bg-teal-500",
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+export function SwitchUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [users, setUsers] = React.useState<UserLite[]>([]);
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<string>("");
@@ -34,10 +59,11 @@ export function SwitchUserDialog({
     (async () => {
       try {
         const res = await fetch("/api/admin/users", { cache: "no-store" });
-        if (!res.ok) return;
         const data = (await res.json()) as UserLite[];
         if (active) setUsers(data);
-      } catch {}
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
     })();
     return () => {
       active = false;
@@ -47,10 +73,7 @@ export function SwitchUserDialog({
   const filtered = users.filter((u) => {
     const q = filter.trim().toLowerCase();
     if (!q) return true;
-    return (
-      (u.full_name ?? "").toLowerCase().includes(q) ||
-      (u.email ?? "").toLowerCase().includes(q)
-    );
+    return (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
   });
 
   const apply = async () => {
@@ -64,7 +87,7 @@ export function SwitchUserDialog({
       });
       if (res.ok) {
         onOpenChange(false);
-        router.refresh(); // reload SSR with effective context
+        router.refresh();
       }
     } finally {
       setLoading(false);
@@ -77,59 +100,72 @@ export function SwitchUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-w-full border-gray-200 bg-white sm:max-w-md dark:border-gray-800 dark:bg-[hsl(268_34%_6%)]">
         <DialogHeader>
-          <DialogTitle>Switch User</DialogTitle>
+          <DialogTitle className="text-xl font-normal">Switch User</DialogTitle>
         </DialogHeader>
 
         <Input
           placeholder="Search name or email…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          className="border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50"
         />
 
-        <ScrollArea className="max-h-64 rounded border">
-          <ul className="divide-y">
+        <ScrollArea className="-mx-6 max-h-[400px]">
+          <div className="px-2">
             {filtered.map((u) => {
-              const secondary = u.role_name ?? u.email ?? "";
+              const displayName = u.full_name ?? u.email ?? u.id;
+              const account = u.email ?? "";
+              const initials = u.full_name ? getInitials(u.full_name) : (u.email?.[0]?.toUpperCase() ?? "U");
+              const avatarColor = getAvatarColor(u.id);
+
               return (
-                <li key={u.id}>
-                  <label className="flex items-center gap-3 p-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="impersonate"
-                      value={u.id}
-                      checked={selected === u.id}
-                      onChange={() => setSelected(u.id)}
-                    />
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">
-                        {u.full_name ?? u.email ?? u.id}
+                <button
+                  key={u.id}
+                  onClick={() => setSelected(u.id)}
+                  className={`flex w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800/50 ${
+                    selected === u.id ? "bg-gray-100 dark:bg-gray-800/50" : ""
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {u.avatar_url ? (
+                      <Image
+                        src={u.avatar_url}
+                        alt={displayName}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full font-medium text-white ${avatarColor}`}
+                      >
+                        {initials}
                       </div>
-                      {secondary ? (
-                        <div className="text-xs text-muted-foreground truncate">
-                          {secondary}
-                        </div>
-                      ) : null}
-                    </div>
-                  </label>
-                </li>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="truncate font-medium text-gray-900 dark:text-gray-100">{displayName}</div>
+                    {account && <div className="truncate text-sm text-gray-600 dark:text-gray-400">{account}</div>}
+                  </div>
+                </button>
               );
             })}
             {!filtered.length && (
-              <li className="p-3 text-sm text-muted-foreground">No matches</li>
+              <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No matches found</div>
             )}
-          </ul>
+          </div>
         </ScrollArea>
 
-        <DialogFooter className="gap-2">
-          <Button onClick={cancel} variant="secondary" disabled={loading}>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button onClick={cancel} variant="ghost" disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={apply} disabled={!selected || loading}>
+          <Button onClick={apply} disabled={!selected || loading} className="bg-blue-600 text-white hover:bg-blue-700">
             Switch User
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

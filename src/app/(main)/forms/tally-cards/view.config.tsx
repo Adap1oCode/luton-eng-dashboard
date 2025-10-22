@@ -5,10 +5,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { SortAsc, SortDesc, ArrowUpDown } from "lucide-react";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
-import { makeDefaultToolbar, type BaseViewConfig, makeActionsColumn } from "@/components/data-table/view-defaults";
+import type { InlineEditConfig } from "@/components/data-table/inline-edit-cell";
+import { type BaseViewConfig, makeActionsColumn } from "@/components/data-table/view-defaults";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { TallyCardRow } from "@/lib/data/resources/tally_cards/types";
 
 export type TableFeatures = {
