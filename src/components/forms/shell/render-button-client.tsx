@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { ChevronDown, Plus, Download, Layout, Settings, ArrowUpDown, Filter, Trash2 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +17,7 @@ import type { ToolbarButton } from "./toolbar/types";
 
 const ICONS = { Plus, Download, Layout, Settings, ArrowUpDown, Filter, "Delete Selected": Trash2 } as const;
 
-// Small reusable button renderer (supports plain, link, and dropdown)
+// Small reusable button renderer (supports plain, link, dropdown, and badge chips)
 export default function RenderButton({
   button,
   className,
@@ -34,6 +35,25 @@ export default function RenderButton({
   type AllowedVariant = (typeof allowedVariants)[number];
   const desired = button.variant ?? "default";
   const safeVariant: AllowedVariant = allowedVariants.includes(desired) ? desired : "default";
+
+  // Special handling for chip-style buttons (applied sorting/filtering)
+  if (button.id === "appliedSorting" || button.id === "appliedFilters") {
+    const chipClassName =
+      button.id === "appliedSorting"
+        ? "bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-600"
+        : "bg-orange-100 text-orange-700 dark:bg-orange-700 dark:text-orange-100 cursor-pointer hover:bg-orange-200 dark:hover:bg-orange-600";
+
+    return (
+      <Badge
+        variant="secondary"
+        className={chipClassName}
+        onClick={onClick}
+        data-onclick-id={button.action || button.onClickId || button.id}
+      >
+        {button.label}
+      </Badge>
+    );
+  }
 
   // Optional dropdown menu support
   const menu = button.menu;

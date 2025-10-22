@@ -184,7 +184,7 @@ export default function PageShell({
           </div>
 
           {/* Actions + chips block (two rows) */}
-          <div className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
             {/* Row 1: primary buttons + chips */}
             <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
               <RenderButtonCluster buttons={effectivePrimary} />

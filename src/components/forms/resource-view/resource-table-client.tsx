@@ -85,6 +85,10 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   enableColumnResizing?: boolean;
   enableColumnReordering?: boolean;
   showInlineExportButton?: boolean;
+  onSortingChange?: (sorting: Array<{ id: string; desc: boolean }>) => void;
+  onFiltersChange?: (filters: Record<string, ColumnFilterState>) => void;
+  onClearSorting?: () => void;
+  onClearFilters?: () => void;
 };
 
 // ✅ FIX 1 & 2: Move DraggableHeaderCell outside component (fixes nested component + hook in callback)
@@ -263,6 +267,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   enableColumnResizing = true,
   enableColumnReordering = true,
   showInlineExportButton = true,
+  onSortingChange,
+  onFiltersChange,
+  onClearSorting,
+  onClearFilters,
 }: ResourceTableClientProps<TRow>) {
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
@@ -587,7 +595,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     },
     manualPagination: true,
     pageCount: Math.max(1, Math.ceil(initialTotal / Math.max(1, pagination.pageSize))),
-    onSortingChange: setSorting,
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      // Notify parent component about sorting changes
+      if (onSortingChange) {
+        const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+        onSortingChange(newSorting);
+      }
+    },
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
@@ -766,7 +781,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     const setSort = (columnId: string, dir: "asc" | "desc") => {
       table.setSorting([{ id: columnId, desc: dir === "desc" }]);
     };
-    const clearSorting = () => table.setSorting([]);
+    const clearSorting = () => {
+      table.setSorting([]);
+      if (onClearSorting) {
+        onClearSorting();
+      }
+    };
 
     const menuColumns = leafColumns.map((c) => ({
       id: String(c.id),
@@ -835,7 +855,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       }
       setSort(columnId, direction);
     };
-    const onClearAll = clearSorting;
+    const onClearAll = () => {
+      clearSorting();
+      if (onClearSorting) {
+        onClearSorting();
+      }
+    };
 
     return (
       <div className="flex items-center gap-2">
@@ -901,6 +926,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     // دالة مسح جميع الفلاتر
     const clearAllFilters = () => {
       setFilters({});
+      if (onClearFilters) {
+        onClearFilters();
+      }
     };
 
     return (
@@ -1028,7 +1056,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             columnWidthsPct: columnWidths,
             show: showMoreFilters, // ربط إظهار الفلاتر بحالة showMoreFilters
             filters,
-            onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
+            onChange: (id, next) => {
+              setFilters((prev) => {
+                const newFilters = { ...prev, [id]: next };
+                // Notify parent component about filter changes
+                if (onFiltersChange) {
+                  onFiltersChange(newFilters);
+                }
+                return newFilters;
+              });
+            },
           }}
         />
         {footer}

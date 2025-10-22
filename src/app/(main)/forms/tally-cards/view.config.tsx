@@ -245,8 +245,6 @@ export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> = {
   toolbar: { left: undefined, right: [] },
   quickFilters,
   buildColumns: () => buildColumns(),
-  // نحدد مورد الحذف الصحيح من الجدول الأصلي وليس الـ view
   resourceKeyForDelete: "tcm_tally_cards",
-  // Route segment for forms navigation
   formsRouteSegment: "tally-cards",
 };
