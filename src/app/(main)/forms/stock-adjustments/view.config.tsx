@@ -1,9 +1,24 @@
+// -----------------------------------------------------------------------------
+// FILE: src/app/(main)/forms/stock-adjustments/view.config.tsx
+// TYPE: Client config for the "Stock Adjustments" list view
+// PURPOSE: Columns + view config + bundled exports for minimal page usage
+// -----------------------------------------------------------------------------
+
 "use client";
 
-import { makeActionsColumn, type BaseViewConfig, type TColumnDef } from "@/components/data-table/view-defaults";
+import {
+  makeActionsColumn,
+  type BaseViewConfig,
+  type TColumnDef,
+} from "@/components/data-table/view-defaults";
 
-// Keep this local and minimal to avoid cross-file type coupling.
-// If you later add a Zod schema, you can infer this type from it.
+import {
+  stockAdjustmentsToolbar,
+  stockAdjustmentsChips,
+  stockAdjustmentsActions,
+} from "./toolbar.config";
+
+// If you later add a Zod schema, infer this type from it.
 export type StockAdjustmentRow = {
   id: string; // routing/selection id (from API/view)
   full_name: string;
@@ -12,7 +27,7 @@ export type StockAdjustmentRow = {
   qty?: number | null;
   location?: string | null;
   note?: string | null;
-  updated_at?: string | null; // server may return ISO string
+  updated_at?: string | null; // ISO string from server (fallback if pretty missing)
   updated_at_pretty?: string | null; // human-friendly
 };
 
@@ -75,23 +90,27 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       enableSorting: false,
       size: 280,
     },
+    // Safer "Updated" column: falls back to updated_at if pretty is absent
     {
       id: "updated_at_pretty",
-      accessorKey: "updated_at_pretty",
       header: "Updated",
+      accessorFn: (row) => row.updated_at_pretty ?? row.updated_at ?? null,
       enableSorting: true,
       size: 180,
     },
 
     // Actions (⋯) menu
+    // If your makeActionsColumn supports options, you can pass basePath:
+    // makeActionsColumn<StockAdjustmentRow>({ basePath: "/forms/stock-adjustments" }),
     makeActionsColumn<StockAdjustmentRow>(),
   ];
 }
 
 export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   resourceKeyForDelete: "tcm_user_tally_card_entries",
-  formsRouteSegment: "stock-adjustments", // used to build /forms/stock-adjustments/[id]/edit
-  idField: "id", // explicit domain id for actions + row keys
+  formsRouteSegment: "stock-adjustments", // builds /forms/stock-adjustments/[id]/edit
+  idField: "id", // domain id for actions + row keys
+  // Keep this minimal local toolbar to avoid regressions if consumers read from viewConfig
   toolbar: { left: undefined, right: [] },
   quickFilters: [],
   features: {
@@ -100,4 +119,16 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
     // other features rely on global defaults; override here if needed
   },
   buildColumns: () => buildColumns(),
+};
+
+// ---- Bundle export for ultra-minimal page.tsx usage --------------------------
+
+export const title = "Stock Adjustments";
+
+export const config = {
+  title,
+  viewConfig: stockAdjustmentsViewConfig,
+  toolbar: stockAdjustmentsToolbar,
+  chips: stockAdjustmentsChips,
+  actions: stockAdjustmentsActions,
 };

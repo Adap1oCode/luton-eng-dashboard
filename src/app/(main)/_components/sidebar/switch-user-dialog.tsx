@@ -7,11 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type UserLite = { id: string; full_name: string | null; email: string | null };
+// Added role_name as optional for backward compatibility
+type UserLite = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role_name?: string | null; // optional; UI falls back to email when absent
+};
 
 export function SwitchUserDialog({
-  open, onOpenChange,
-}: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const [users, setUsers] = React.useState<UserLite[]>([]);
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<string>("");
@@ -29,13 +39,18 @@ export function SwitchUserDialog({
         if (active) setUsers(data);
       } catch {}
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [open]);
 
-  const filtered = users.filter(u => {
+  const filtered = users.filter((u) => {
     const q = filter.trim().toLowerCase();
     if (!q) return true;
-    return (u.full_name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+    return (
+      (u.full_name ?? "").toLowerCase().includes(q) ||
+      (u.email ?? "").toLowerCase().includes(q)
+    );
   });
 
   const apply = async () => {
@@ -51,25 +66,20 @@ export function SwitchUserDialog({
         onOpenChange(false);
         router.refresh(); // reload SSR with effective context
       }
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clear = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/impersonate", { method: "DELETE" });
-      if (res.ok) {
-        onOpenChange(false);
-        router.refresh();
-      }
-    } finally { setLoading(false); }
+  const cancel = () => {
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>View as user</DialogTitle>
+          <DialogTitle>Switch User</DialogTitle>
         </DialogHeader>
 
         <Input
@@ -80,30 +90,45 @@ export function SwitchUserDialog({
 
         <ScrollArea className="max-h-64 rounded border">
           <ul className="divide-y">
-            {filtered.map(u => (
-              <li key={u.id}>
-                <label className="flex items-center gap-3 p-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="impersonate"
-                    value={u.id}
-                    checked={selected === u.id}
-                    onChange={() => setSelected(u.id)}
-                  />
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{u.full_name ?? u.email ?? u.id}</div>
-                    <div className="text-xs text-muted-foreground truncate">{u.email}</div>
-                  </div>
-                </label>
-              </li>
-            ))}
-            {!filtered.length && <li className="p-3 text-sm text-muted-foreground">No matches</li>}
+            {filtered.map((u) => {
+              const secondary = u.role_name ?? u.email ?? "";
+              return (
+                <li key={u.id}>
+                  <label className="flex items-center gap-3 p-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="impersonate"
+                      value={u.id}
+                      checked={selected === u.id}
+                      onChange={() => setSelected(u.id)}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">
+                        {u.full_name ?? u.email ?? u.id}
+                      </div>
+                      {secondary ? (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {secondary}
+                        </div>
+                      ) : null}
+                    </div>
+                  </label>
+                </li>
+              );
+            })}
+            {!filtered.length && (
+              <li className="p-3 text-sm text-muted-foreground">No matches</li>
+            )}
           </ul>
         </ScrollArea>
 
         <DialogFooter className="gap-2">
-          <Button onClick={clear} variant="secondary" disabled={loading}>Revert</Button>
-          <Button onClick={apply} disabled={!selected || loading}>View as</Button>
+          <Button onClick={cancel} variant="secondary" disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={apply} disabled={!selected || loading}>
+            Switch User
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

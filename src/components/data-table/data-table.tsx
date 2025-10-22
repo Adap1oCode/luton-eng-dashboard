@@ -21,6 +21,7 @@ import { GripVertical, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from "luc
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+
 import { cn } from "@/lib/utils";
 
 import { DataTableFilters, type FilterColumn, type ColumnFilterState } from "./data-table-filters";
@@ -83,7 +84,6 @@ interface TanStackDataTableProps<T = Record<string, unknown>> {
   };
 }
 
-// Type guard to check which props we're dealing with
 function isTanStackProps<T = Record<string, unknown>>(
   props: DataTableProps<Record<string, unknown>> | TanStackDataTableProps<T>,
 ): props is TanStackDataTableProps<T> {
@@ -96,18 +96,15 @@ function isTanStackProps<T = Record<string, unknown>>(
 function TanStackDataTable<T = Record<string, unknown>>({
   table,
   dataIds,
-  // handleDragEnd,  // handled by parent DndContext
-  // sensors,        // provided by parent DndContext
   renderExpanded,
   columnWidthsPct,
   tableContainerRef,
   filtersConfig,
 }: TanStackDataTableProps<T>) {
   return (
-    // Only SortableContext for rows; the surrounding DndContext lives in parent
     <SortableContext items={dataIds}>
       <div ref={tableContainerRef as any} className="overflow-x-auto">
-      {/* table-fixed makes width styles on th/td actually apply */}
+        {/* table-fixed makes width styles on th/td actually apply */}
         <Table className="min-w-full table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -115,15 +112,17 @@ function TanStackDataTable<T = Record<string, unknown>>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                      className="p-3"
-                      style={
-                        columnWidthsPct?.[header.column.id] != null
-                          ? {
-                              width: `${columnWidthsPct[header.column.id]}%`,
-                              maxWidth: `${columnWidthsPct[header.column.id]}%`,
-                            }
-                          : undefined
-                      }
+                    className="p-3"
+ style={
+   columnWidthsPct?.[header.column.id] != null
+     ? {
+         width: `${columnWidthsPct[header.column.id]}%`,
+         maxWidth: `${columnWidthsPct[header.column.id]}%`,
+         // NEW: never let headers collapse below a readable width
+         minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 96,
+       }
+     : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 96 }
+ }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -149,19 +148,24 @@ function TanStackDataTable<T = Record<string, unknown>>({
                 <React.Fragment key={row.id}>
                   <TableRow data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                          className="p-3"
-                          style={
-                            columnWidthsPct?.[cell.column.id] != null
-                              ? {
-                                  width: `${columnWidthsPct[cell.column.id]}%`,
-                                  maxWidth: `${columnWidthsPct[cell.column.id]}%`,
-                                }
-                              : undefined
-                          }
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+ <TableCell
+   key={cell.id}
+   className="p-3"
+   style={
+     columnWidthsPct?.[cell.column.id] != null
+       ? {
+           width: `${columnWidthsPct[cell.column.id]}%`,
+           maxWidth: `${columnWidthsPct[cell.column.id]}%`,
+           // NEW: keep body cells in sync with header min
+           minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 112,
+         }
+       : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 112 }
+   }
+ >
+                        {/* Pure truncation; no tooltip */}
+                        <div className="truncate w-full max-w-full overflow-hidden">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
                       </TableCell>
                     ))}
                   </TableRow>
@@ -243,7 +247,8 @@ function DraggableRow<T extends Record<string, unknown>>({
           if (!visibleColumns.includes(colId)) return null;
           return (
             <TableCell key={colId} className="p-3">
-              {renderCell(colId)}
+              {/* Pure truncation; no tooltip */}
+              <div className="truncate w-full max-w-full overflow-hidden">{renderCell(colId)}</div>
             </TableCell>
           );
         })}
@@ -285,7 +290,6 @@ function LegacyDataTable<T extends Record<string, unknown>>({
   onRowSelect,
   selectedRows = [],
 }: DataTableProps<T>) {
-  // resize is handled locally in legacy path
   const tableRef = useRef<HTMLTableElement | null>(null);
   const { isResizing, onMouseDownResize } = useColumnResize(columnWidths, tableRef);
 
@@ -337,8 +341,8 @@ function LegacyDataTable<T extends Record<string, unknown>>({
       if (aValue == null) return sortConfig.direction === "asc" ? -1 : 1;
       if (bValue == null) return sortConfig.direction === "asc" ? 1 : -1;
 
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      if ((aValue as any) < (bValue as any)) return sortConfig.direction === "asc" ? -1 : 1;
+      if ((aValue as any) > (bValue as any)) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredData, sortConfig]);

@@ -1,6 +1,5 @@
-// src/app/api/me/permissions/route.ts
-import { NextResponse } from "next/server";
-
+import { NextRequest, NextResponse } from "next/server";
+import { cookies, headers } from "next/headers";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic"; // avoid static caching
@@ -19,15 +18,51 @@ type MePermissionsRow = {
   roles: RoleRow | RoleRow[] | null;
 };
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   const supabase = await supabaseServer();
+
+  // Real auth user
   const {
-    data: { user },
+    data: { user: realAuth },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!realAuth) {
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
+  // Read impersonation (match /api/me/role)
+  const h = await headers();
+  const qImpersonate = null; // permissions route uses cookie/header only
+  const hImpersonate = h.get("x-impersonate-user-id");
+  const cImpersonate = (await cookies()).get("impersonate_user_id")?.value ?? null;
+  const requestedImpersonateId = (qImpersonate || hImpersonate || cImpersonate || "").trim() || null;
+
+  // Resolve the effective app user id (users.id)
+  let effectiveAppUserId: string | null = null;
+
+  if (requestedImpersonateId) {
+    // Use SECURITY DEFINER RPC (same approach as /api/me/role)
+    const { data: tRows, error: tErr } = await supabase.rpc("admin_get_user", {
+      p_user_id: requestedImpersonateId,
+    });
+    if (!tErr && tRows?.[0]?.id) {
+      effectiveAppUserId = tRows[0].id as string;
+    }
+  }
+
+  if (!effectiveAppUserId) {
+    // Fallback to real user’s app row
+    const { data: meRow, error: meErr } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_id", realAuth.id)
+      .maybeSingle<{ id: string }>();
+    if (meErr || !meRow) {
+      return NextResponse.json({ error: "profile_query_failed" }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    }
+    effectiveAppUserId = meRow.id;
+  }
+
+  // Compute permissions for the effective user
   const { data, error } = await supabase
     .from("users")
     .select(
@@ -40,15 +75,14 @@ export async function GET() {
       )
     `,
     )
-    .eq("auth_id", user.id)
+    .eq("id", effectiveAppUserId)
     .maybeSingle<MePermissionsRow>();
 
   if (error) {
-    return NextResponse.json({ error: "profile_query_failed" }, { status: 500 });
+    return NextResponse.json({ error: "profile_query_failed" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 
   const permSet = new Set<string>();
-
   const roles = data?.roles;
   const roleList: RoleRow[] = Array.isArray(roles) ? roles : roles ? [roles] : [];
 

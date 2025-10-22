@@ -1,7 +1,8 @@
+// src/app/(main)/_components/sidebar/nav-user.tsx
 "use client";
 
 import { useState } from "react";
-import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut } from "lucide-react";
+import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
 import { SwitchUserDialog } from "./switch-user-dialog";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +23,8 @@ export function NavUser({
 }: {
   readonly user: {
     readonly name: string;
-    readonly email: string;
+    readonly email?: string; // unused now; kept for future
+    readonly role?: string;
     readonly avatar: string;
   };
 }) {
@@ -44,7 +46,9 @@ export function NavUser({
               </Avatar>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                 <span className="truncate text-xs font-medium sm:text-sm">{user.name}</span>
-                <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+                {user.role ? (
+                  <span className="text-muted-foreground truncate text-xs">{user.role}</span>
+                ) : null}
               </div>
               <EllipsisVertical className="ml-auto size-3 shrink-0 sm:size-4" />
             </SidebarMenuButton>
@@ -64,7 +68,9 @@ export function NavUser({
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
-                  <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+                  {user.role ? (
+                    <span className="text-muted-foreground truncate text-xs">{user.role}</span>
+                  ) : null}
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -85,9 +91,10 @@ export function NavUser({
                 Notifications
               </DropdownMenuItem>
 
-              {/* NEW: open impersonation dialog */}
+              {/* Impersonation dialog */}
               <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
-                View as user…
+              <ArrowLeftRight />  
+                Switch User
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

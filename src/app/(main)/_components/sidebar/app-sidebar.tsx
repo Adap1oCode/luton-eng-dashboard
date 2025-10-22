@@ -46,6 +46,7 @@ export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Si
   const effectiveUser = {
     name: account?.name ?? rootUser.name,
     email: account?.email ?? rootUser.email,
+    role: account?.role ?? undefined,
     avatar: account?.avatar ?? rootUser.avatar,
   };
 
@@ -75,17 +76,10 @@ export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Si
         </div>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-2">
-        {/* Identity status line (SSR-fed via `account`) */}
-        <div className="text-muted-foreground px-1 pb-1 text-[11px] leading-4">
-          <span className="truncate">
-            {account?.name ?? "Guest"}
-            {account?.role ? <span>{` • ${account.role}`}</span> : null}
-          </span>
-        </div>
-
-        <NavUser user={effectiveUser} />
-      </SidebarFooter>
+<SidebarFooter className="border-t p-2">
+  {/* Removed redundant status line */}
+  <NavUser user={effectiveUser} />
+</SidebarFooter>
     </Sidebar>
   );
 }

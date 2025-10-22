@@ -1,7 +1,7 @@
 // src/app/(main)/layout.tsx
 import { ReactNode } from "react";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { MoreHorizontal, Search } from "lucide-react";
 
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
@@ -21,33 +21,45 @@ import { NoticeProvider } from "@/components/ui/notice";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
-import { supabaseServer } from "@/lib/supabase-server";
 import { cn } from "@/lib/utils";
 
 // ensure this runs on every request (no static cache)
 export const dynamic = "force-dynamic";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  // 🔐 Resolve current user on the server (auth is enforced globally via middleware)
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 🧠 Use effective session context (handles impersonation)
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const baseUrl = `${proto}://${host}`;
 
-  // 🪪 Derive account info for sidebar (SSR → passed to client)
-  const displayName =
-    ((user?.user_metadata && (user.user_metadata.full_name as string)) || user?.email || "User") ?? "User";
-  const email = user?.email ?? "";
+  // Forward the user's cookies to the API route
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
 
-  // Best-effort role (Phase-1): prefer app_metadata.role, then user_metadata.role
-  const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
-  const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const role = (appMeta.role as string | undefined) ?? (userMeta.role as string | undefined) ?? undefined;
+  const sessionRes = await fetch(`${baseUrl}/api/me/role`, {
+    cache: "no-store",
+    headers: { cookie: cookieHeader },
+  });
+
+  const session = sessionRes.ok
+    ? ((await sessionRes.json()) as {
+        fullName?: string | null;
+        email?: string | null;
+        roleName?: string | null;
+        avatarUrl?: string | null;
+      })
+    : {};
+
+  const displayName = session.fullName ?? session.email ?? "User";
+  const email = session.email ?? "";
+  const role = session.roleName ?? undefined;
 
   // 🧁 UI prefs
-  const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
-
   const sidebarVariant = await getSidebarVariant();
   const sidebarCollapsible = await getSidebarCollapsible();
   const contentLayout = await getContentLayout();
@@ -55,13 +67,12 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        {/* Mount once so any client component can open the Notice dialog */}
         <NoticeProvider>
           <SidebarProvider defaultOpen={defaultOpen}>
             <AppSidebar
               variant={sidebarVariant}
               collapsible={sidebarCollapsible}
-              account={{ name: displayName, email, role, avatar: "" }}
+              account={{ name: displayName, email, role, avatar: session.avatarUrl ?? "" }}
             />
             <SidebarInset
               className={cn(

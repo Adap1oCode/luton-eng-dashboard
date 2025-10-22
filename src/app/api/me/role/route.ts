@@ -27,14 +27,14 @@ type RolePermissionJoined =
   | { permission_key: string | null; permissions: PermissionObj[] };
 
 type WarehouseRuleRow = {
-  warehouse: string | null;   // code (e.g. "RTZ")
+  warehouse: string | null;    // code (e.g. "RTZ")
   warehouse_id: string | null; // uuid
 };
 
 /** Context we build for a user */
 type BuiltContext = {
   /** Keep as auth id at top-level for compatibility */
-  userId: string;         // Supabase auth user id
+  userId: string;         // Supabase auth user id (real auth when impersonating)
   appUserId: string;      // users.id (app user id)
 
   fullName: string | null;
@@ -67,7 +67,7 @@ async function buildContextForUserRow(
 ): Promise<BuiltContext> {
   const roleId = me.role_id;
 
-  // 1) Role
+  // 1) Role (by id if present)
   let role: RoleRow | null = null;
   if (roleId) {
     const { data: roleRow, error: roleErr } = await supabase
@@ -78,6 +78,25 @@ async function buildContextForUserRow(
     if (roleErr) throw new Error(`role_query_failed: ${roleErr.message}`);
     role = roleRow ?? null;
   }
+
+  // —— Derive final roleName / roleCode with safe fallbacks ——
+  // Prefer explicit role row, else fallback to user's stored role_code
+  let roleName: string | null = role?.role_name ?? null;
+  let roleCodeOut: string | null = role?.role_code ?? me.role_code ?? null;
+
+  // If role_id is null but we have a role_code, resolve a display name by code.
+  if (!roleName && roleCodeOut) {
+    const { data: byCode, error: byCodeErr } = await supabase
+      .from("roles")
+      .select("role_name, role_code")
+      .eq("role_code", roleCodeOut)
+      .maybeSingle<{ role_name: string | null; role_code: string | null }>();
+    if (!byCodeErr && byCode) {
+      roleName = byCode.role_name ?? roleName;
+      roleCodeOut = byCode.role_code ?? roleCodeOut;
+    }
+  }
+  // ————————————————————————————————————————————————————————————————
 
   // 2) Permissions (flatten)
   const permSet = new Set<string>();
@@ -125,16 +144,12 @@ async function buildContextForUserRow(
       .filter((id): id is string => !!id);
   }
 
-  const roleCode: string | null = role?.role_code ?? me.role_code ?? null;
-
   // Policy: if explicit rules absent, deny-by-default (no global). If your policy is different,
   // tweak this. Here we grant "global" only if a permission implies it.
-  const roleImpliesAll = false; // keep strict; we’ll use permissions below
-  // Global via explicit permissions
   const permList = Array.from(permSet);
+  const roleImpliesAll = false; // strict
   const hasGlobalPerm =
     permList.includes("entries:read:any") || permList.includes("admin:read:any");
-
   const canSeeAllWarehouses = hasGlobalPerm || roleImpliesAll;
 
   return {
@@ -142,8 +157,8 @@ async function buildContextForUserRow(
     appUserId: me.id,
     fullName: me.full_name ?? null,
     email: me.email ?? null,
-    roleName: role?.role_name ?? null,
-    roleCode,
+    roleName,
+    roleCode: roleCodeOut,
 
     permissions: permList,
     permissionDetails,

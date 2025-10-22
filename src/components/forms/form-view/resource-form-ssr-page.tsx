@@ -8,23 +8,48 @@
 // -----------------------------------------------------------------------------
 
 import React from "react";
+import Link from "next/link";
 
 import FormIsland from "@/components/forms/shell/form-island";
 import FormShell from "@/components/forms/shell/form-shell";
 
+// IMPORTANT: Align with what FormIsland expects.
+import type { EnhancedFormConfig, ResolvedOptions } from "@/lib/forms/types";
+// If your project exports these from a different module, change the import above
+// to the correct source. The goal is to match the types used in `FormIsland`.
+// (The error you pasted shows FormIsland wants `EnhancedFormConfig`.)
+
 interface ResourceFormSSRPageProps {
   title: string;
   headerDescription?: string | null;
+
+  // This must match the <form id="..."> rendered inside the client component
   formId: string;
 
-  // Transport-only config (no functions, all serializable)
-  config: any;
+  // EXACT shape required by FormIsland:
+  config: EnhancedFormConfig;
+
+  // Optional initial values and select options:
   defaults?: Record<string, any>;
-  options?: Record<string, any>;
+  options?: ResolvedOptions;
 
   // Standard UI controls
-  cancelHref?: string;
-  primaryLabel?: string;
+  cancelHref?: string;     // defaults to /forms/<formsRouteSegment|key>
+  primaryLabel?: string;   // defaults to config.submitLabel || "Save"
+
+  // Optional flags
+  hideCancel?: boolean;
+  hidePrimary?: boolean;
+}
+
+// Safely build a default cancel URL using common fields on EnhancedFormConfig.
+// Prefer `formsRouteSegment`; fall back to `key`; finally `/forms`.
+function resolveDefaultCancelHref(config: EnhancedFormConfig): string {
+  const segment =
+    (config as any)?.formsRouteSegment ??
+    (config as any)?.key ??
+    "";
+  return segment ? `/forms/${segment}` : "/forms";
 }
 
 /**
@@ -37,33 +62,45 @@ export default function ResourceFormSSRPage({
   formId,
   config,
   defaults = {},
-  options = {},
-  cancelHref = `/forms/${config?.key ?? ""}`,
-  primaryLabel = config?.submitLabel ?? "Save",
+  options,
+  cancelHref,
+  primaryLabel,
+  hideCancel = false,
+  hidePrimary = false,
 }: ResourceFormSSRPageProps) {
+  const computedCancelHref = cancelHref ?? resolveDefaultCancelHref(config);
+  const computedPrimaryLabel = primaryLabel ?? (config as any)?.submitLabel ?? "Save";
+
   return (
     <FormShell
       title={title}
       headerTitle={title}
       headerDescription={headerDescription ?? ""}
       actions={{
-        secondaryLeft: cancelHref ? (
-          <a href={cancelHref} className="inline-flex items-center rounded-md border px-4 py-2 text-sm">
-            Cancel
-          </a>
-        ) : null,
-        primary: (
+        secondaryLeft:
+          hideCancel ? null : (
+            <Link href={computedCancelHref} className="inline-flex items-center rounded-md border px-4 py-2 text-sm">
+              Cancel
+            </Link>
+          ),
+        primary: hidePrimary ? null : (
           <button
             form={formId}
             type="submit"
             className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
           >
-            {primaryLabel}
+            {computedPrimaryLabel}
           </button>
         ),
       }}
     >
-      <FormIsland formId={formId} config={config} defaults={defaults} options={options as any} />
+      {/* FormIsland is a client component; pass exactly what it expects */}
+      <FormIsland
+        formId={formId}
+        config={config}
+        defaults={defaults}
+        options={options as ResolvedOptions | undefined}
+      />
     </FormShell>
   );
 }

@@ -71,6 +71,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { computeAutoColumnPercents } from "@/components/data-table/auto-column-widths";
+
 
 type FilterMode = "contains" | "equals" | "startsWith" | "endsWith";
 
@@ -120,7 +122,7 @@ const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
             {...(isReorderable ? attributes : {})}
             {...(isReorderable ? listeners : {})}
           />
-          <span className="mr-2 truncate">{label}</span>
+          <span className="mr-2 truncate whitespace-nowrap">{label}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Button variant="outline" size="sm" onClick={onToggleSort} className="has-[>svg]:px-3">
@@ -377,6 +379,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         </div>
       ),
       size: 42,
+      meta: { widthPct: 3, minPct: 2, maxPct: 5, minPx: 44 },
       enableHiding: false,
       enableResizing: false,
       enableSorting: false,
@@ -876,6 +879,24 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return () => document.removeEventListener("click", onToolbarClick, true);
   }, [table]);
 
+// ✅ Auto-assign smart percentage widths from data (ensure select/actions have space)
+const autoColumnWidthsPct = React.useMemo(() => {
+  const defaultOverrides = {
+    __select: 3,  // tiny checkbox column
+    actions: 8,   // room for ⋯ menu
+  };
+  return computeAutoColumnPercents(baseColumns as any[], filteredRows as any[], {
+    sampleRows: 50,
+    // do NOT ignore __select so it participates in layout
+    ignoreIds: ["id", "__expander", "__actions"],
+    overrides: { ...defaultOverrides, ...((config as any).columnWidthsPct ?? {}) },
+    floorPct: 8,
+    capPct: 28,
+  });
+}, [baseColumns, filteredRows, config]);
+
+
+
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
@@ -913,6 +934,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         {/* ✅ NEW: قسم More Filters */}
         {MoreFiltersSection}
 
+        
+
+
         <DataTable
           dndEnabled={enableColumnReordering}
           table={table as never}
@@ -921,15 +945,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
-          columnWidthsPct={columnWidths}
+          columnWidthsPct={autoColumnWidthsPct}
           tableContainerRef={tableRef}
-          filtersConfig={{
-            columns: filterColumns,
-            columnWidthsPct: columnWidths,
-            show: showMoreFilters, // ربط إظهار الفلاتر بحالة showMoreFilters
-            filters,
-            onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
-          }}
+filtersConfig={{
+  columns: filterColumns,
+  columnWidthsPct: autoColumnWidthsPct,
+  show: showMoreFilters,
+  filters,
+  onChange: (id, next) => setFilters((prev) => ({ ...prev, [id]: next })),
+}}
+
         />
         {footer}
       </SortableContext>
