@@ -6,6 +6,7 @@ import { createContext, useContext } from "react";
 interface OptimisticState {
   deletedIds: Set<string>;
   optimisticTotal: number | null;
+  loading: boolean;
 }
 
 interface OptimisticContextValue {
@@ -22,12 +23,14 @@ export function OptimisticProvider({ children }: { children: React.ReactNode }) 
   const [state, setState] = React.useState<OptimisticState>({
     deletedIds: new Set(),
     optimisticTotal: null,
+    loading: false,
   });
 
   const markAsDeleted = React.useCallback((ids: string[]) => {
     setState((prev) => ({
       ...prev,
       deletedIds: new Set([...prev.deletedIds, ...ids]),
+      loading: true, // ← اجعلها true أثناء التنفيذ
     }));
   }, []);
 
@@ -35,6 +38,7 @@ export function OptimisticProvider({ children }: { children: React.ReactNode }) 
     setState({
       deletedIds: new Set(),
       optimisticTotal: null,
+      loading: false, // ← ارجعها false بعد انتهاء الطلب
     });
   }, []);
 

@@ -281,7 +281,27 @@ export function createSupabaseProvider<T, TInput>(
     async update(id: Id, patch: TInput) {
       if (isBrowser) throw new Error("update() not allowed in browser mode");
       const sb = await getClient(mode);
-      const payload = cfg.fromInput ? cfg.fromInput(patch) : (patch as any);
+
+      // Build base payload via config mapping if present
+      const base = cfg.fromInput ? (cfg.fromInput(patch) as any) : (patch as any);
+
+      // Respect schema: only send fields explicitly marked writeable
+      const fields = (cfg as any).schema?.fields ?? {};
+      const hasSchema = fields && Object.keys(fields).length > 0;
+
+      let payload = base;
+      if (hasSchema) {
+        const writableKeys = new Set(
+          Object.entries(fields)
+            .filter(([, spec]) => (spec as any)?.write === true && !(spec as any)?.readonly)
+            .map(([k]) => k),
+        );
+        payload = Object.fromEntries(Object.entries(base).filter(([k]) => writableKeys.has(k)));
+      }
+
+      // If payload ends up empty under strict filtering, safely no-op
+      if (!payload || Object.keys(payload).length === 0) return;
+
       const { error } = await sb.from(cfg.table).update(payload).eq(cfg.pk, id);
       if (error) throw error;
     },

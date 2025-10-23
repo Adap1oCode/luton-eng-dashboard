@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
+import InitialLoadGate from "@/components/common/initial-load-gate";
+import RouteTransitionOverlay from "@/components/common/route-transition-overlay";
 import { APP_CONFIG } from "@/config/app-config";
 
 export const metadata: Metadata = {
@@ -18,7 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
+          <RouteTransitionOverlay />
+          <InitialLoadGate>{children}</InitialLoadGate>
         </ThemeProvider>
       </body>
     </html>
