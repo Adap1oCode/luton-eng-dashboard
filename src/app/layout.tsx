@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 import { ThemeProvider } from "next-themes";
+import { Analytics } from '@vercel/analytics/react';
 
 import "./globals.css";
 import InitialLoadGate from "@/components/common/initial-load-gate";
 import RouteTransitionOverlay from "@/components/common/route-transition-overlay";
 import { APP_CONFIG } from "@/config/app-config";
-import { Analytics } from '@vercel/analytics/react';
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export const metadata: Metadata = {
