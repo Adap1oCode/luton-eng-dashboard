@@ -159,10 +159,10 @@ export function SwitchUserDialog({ open, onOpenChange }: { open: boolean; onOpen
         </ScrollArea>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button onClick={cancel} variant="ghost" disabled={loading}>
+          <Button onClick={cancel} variant="outline" disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={apply} disabled={!selected || loading} className="bg-blue-600 text-white hover:bg-blue-700">
+          <Button onClick={apply} disabled={!selected || loading} variant="default">
             Switch User
           </Button>
         </div>
