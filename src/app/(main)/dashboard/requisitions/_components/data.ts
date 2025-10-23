@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export type Requisition = {
   [key: string]: any;
@@ -17,6 +17,7 @@ export async function getRequisitions(
   _from?: string,
   _to?: string,
 ): Promise<Requisition[]> {
+  const supabase = await supabaseServer();
   const { data, error } = await supabase.from("requisitions").select("*"); // ✅ No filtering — always get full dataset
 
   if (error ?? !data) return [];

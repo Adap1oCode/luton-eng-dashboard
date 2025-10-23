@@ -33,6 +33,11 @@ export default async function GenericDashboardPage({ config }: Props) {
       ? await config.fetchRecords(range)
       : await config.fetchRecords(range, from, to)
 
+  // Extract total count from the first record if available, otherwise use records length
+  const totalCount = Array.isArray(records) && records.length > 0 && records[0]._totalCount 
+    ? records[0]._totalCount 
+    : Array.isArray(records) ? records.length : 0;
+
   const { fetchMetrics, fetchRecords, ...clientConfig } = config
 
   return (
@@ -40,6 +45,7 @@ export default async function GenericDashboardPage({ config }: Props) {
       config={{ ...clientConfig, range, from, to } as ClientDashboardConfig}
       metrics={metrics}
       records={records}
+      totalCount={totalCount}
       from={from}
       to={to}
     />

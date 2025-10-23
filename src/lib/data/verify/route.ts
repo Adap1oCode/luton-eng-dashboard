@@ -2,7 +2,9 @@
 // Internal entrypoint for verifying a resource config.
 
 import { verifyResource } from "./verify-resource";
-import { resourceConfigs, type ResourceKey } from "../resources";
+import resources from "../resources";
+
+type ResourceKey = keyof typeof resources;
 
 /**
  * Run a verification report for a given resource.
@@ -14,14 +16,14 @@ import { resourceConfigs, type ResourceKey } from "../resources";
 export async function runVerification(resource: string) {
   const key = resource.trim() as ResourceKey;
 
-  if (!key || !(key in resourceConfigs)) {
+  if (!key || !(key in resources)) {
     return {
       error: `Unknown resource "${resource}"`,
-      available: Object.keys(resourceConfigs),
+      available: Object.keys(resources),
     };
   }
 
-  const cfg = resourceConfigs[key];
+  const cfg = resources[key];
   const report = await verifyResource(key, cfg as any);
   return report;
 }

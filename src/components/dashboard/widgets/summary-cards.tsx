@@ -46,7 +46,18 @@ export default function SummaryCards({ config, onClickFilter }: Props) {
       {config.map((tile) => {
         const value = tile.value ?? "—";
         const status = typeof value === "number" ? getStatus(value, tile.thresholds) : undefined;
-        const isInteractive = !!tile.onClick;
+        const isInteractive = !!(tile.onClick || tile.onClickFilter);
+        
+        // Debug logging for tile click handlers
+        if (tile.key === 'outOfStockCount') {
+          console.log(`[SummaryCard] ${tile.key} click handlers:`, {
+            onClick: !!tile.onClick,
+            onClickFilter: !!tile.onClickFilter,
+            isInteractive,
+            rpcName: tile.rpcName,
+            clickable: tile.clickable
+          });
+        }
 
         if (tile.debug) {
           console.log(`[SummaryCard] ${tile.key}`, {
@@ -60,7 +71,15 @@ export default function SummaryCards({ config, onClickFilter }: Props) {
           <Card
             key={tile.key}
             role={isInteractive ? "button" : undefined}
-            onClick={isInteractive ? tile.onClick : undefined}
+            onClick={isInteractive ? (() => {
+              if (tile.onClickFilter) {
+                // Create a default filter for the tile
+                const defaultFilter = { column: tile.key, equals: tile.value ?? undefined };
+                tile.onClickFilter(defaultFilter);
+              } else if (tile.onClick) {
+                tile.onClick();
+              }
+            }) : undefined}
             className={`@container/card relative ${isInteractive ? "hover:bg-muted/50 cursor-pointer transition-colors" : ""}`}
           >
             <CardHeader>

@@ -25,6 +25,8 @@ export type ToolbarButton = {
   onClickId?: string;
   enableWhen?: EnableRule; // default 'none'
   menu?: MenuConfig; // optional dropdown menu
+  requiredAny?: string[]; // require ANY of these permissions
+  requiredAll?: string[]; // require ALL of these permissions
 };
 
 export type ToolbarConfig = {

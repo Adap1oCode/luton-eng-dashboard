@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { Filter as FilterIcon, ChevronLeft, ChevronRight, ChevronDown, Search, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
-import * as dataAPI from "@/app/(main)/dashboard/inventory/_components/data";
+// Removed dataAPI import to prevent server-side code from being bundled in client
 import { applyDataFilters, Filter } from "@/components/dashboard/client/data-filters";
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from "@/components/dashboard/types";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 
-export function useDataViewer({ config, records }: { config: ClientDashboardConfig; records: unknown[] }) {
+export function useDataViewer({ config, records, totalCount }: { config: ClientDashboardConfig; records: unknown[]; totalCount?: number }) {
   const [filters, setFilters] = useState<Filter[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -46,87 +46,157 @@ export function useDataViewer({ config, records }: { config: ClientDashboardConf
   }, [filters, rpcData, filteredData]);
 
   const handleClickWidget = async (widget: DashboardWidget | DashboardTile) => {
-    // ── keep your original logs ──
+    // ── COMPREHENSIVE DEBUG LOGGING ──
+    console.log("🚨 ===== TILE CLICK DEBUG START =====");
     console.log("🖱️ Widget clicked:", widget.key);
+    console.log("🔎 Raw widget object:", JSON.stringify(widget, null, 2));
     console.log("🔎 Raw widget.filter tree:", (widget as any).filter);
-    console.log("[TRACE] Widget clicked. key=", widget.key, "rpcName=", (widget as any).rpcName);
+    console.log("🔎 Raw widget.rpcName:", (widget as any).rpcName);
+    console.log("🔎 Raw widget.distinct:", (widget as any).distinct);
+    console.log("🚨 CLICK HANDLER CALLED - This should show in browser console!");
 
     const filterTree = (widget as any).filter;
     const rpcName = (widget as any).rpcName;
     const distinct = (widget as any).distinct ?? false;
+    
+    console.log("🔍 Parsed values:");
+    console.log("  - filterTree:", filterTree);
+    console.log("  - rpcName:", rpcName);
+    console.log("  - distinct:", distinct);
 
-    if (rpcName) {
-      // 1) Try a JS‐side fetcher first
-      const fetcher = (dataAPI as any)[rpcName];
-      if (typeof fetcher === "function") {
-        console.log("[TRACE] Using view fetcher:", rpcName, "for warehouse=", widget.key);
-        setFilters([]);
-        setRpcData(null);
-        setLoading(true);
-        try {
-          const limit = config.tableLimit ?? 50;
-          const rows = await fetcher(widget.key, limit);
-          console.log("[TRACE] view fetcher returned", rows.length, "rows");
-          setRpcData(rows);
-          setDrawerOpen(true);
-        } catch (e) {
-          console.error("[ERROR] view fetcher", rpcName, "failed:", e);
-        } finally {
-          setLoading(false);
+        if (rpcName) {
+          // Use RPC function for filtering
+          console.log("🔧 ===== RPC FUNCTION CALL DEBUG =====");
+          console.log("🔧 RPC Name:", rpcName);
+          console.log("🔧 Original filterTree:", filterTree);
+          console.log("🔧 Distinct:", distinct);
+          
+          setFilters([]);
+          setRpcData(null);
+          setLoading(true);
+
+          try {
+            // Build RPC parameters
+            const rpcParams: any = {
+              _distinct: distinct || false,
+              _range_from: 0,
+              _range_to: 999 // Get more records for now until we implement proper pagination
+            };
+
+            // Add filter if present - convert to RPC format
+            if (filterTree) {
+              console.log("🔧 Processing filterTree:", filterTree);
+              
+              if (filterTree.column && filterTree.equals !== undefined) {
+                // Convert equals filter to RPC format
+                rpcParams._filter = {
+                  column: filterTree.column,
+                  op: "=",
+                  value: filterTree.equals.toString()
+                };
+                console.log("🔧 Converted to equals filter:", rpcParams._filter);
+                
+                // Special handling for warehouse clicks - add missing cost filter
+                if (filterTree.column === "warehouse") {
+                  console.log("🔧 Warehouse filter detected - adding missing cost filter");
+                  // For warehouse clicks on missing cost chart, we need to add both filters:
+                  // 1. warehouse = selected warehouse
+                  // 2. item_cost = 0 OR item_cost IS NULL
+                  
+                  // We'll use a custom filter that combines both conditions
+                  // The RPC function will need to handle this special case
+                  rpcParams._filter = {
+                    column: "warehouse_and_missing_cost",
+                    op: "=",
+                    value: filterTree.equals.toString()
+                  };
+                  
+                  console.log("🔧 Using combined warehouse + missing cost filter:", rpcParams._filter);
+                }
+              } else if (filterTree.column && filterTree.isNotNull) {
+                // Convert isNotNull filter to RPC format
+                rpcParams._filter = {
+                  column: filterTree.column,
+                  op: "IS NOT NULL"
+                };
+                console.log("🔧 Converted to isNotNull filter:", rpcParams._filter);
+              } else {
+                console.log("🔧 No filter conversion applied - filterTree doesn't match expected format");
+                console.log("🔧 FilterTree structure:", JSON.stringify(filterTree, null, 2));
+              }
+            } else {
+              console.log("🔧 No filterTree provided");
+            }
+
+            console.log("🔧 Final RPC parameters:", JSON.stringify(rpcParams, null, 2));
+
+            // Call the RPC function via Supabase
+            console.log("🔧 Calling supabase.rpc with:", rpcName, rpcParams);
+            const { data, error } = await supabase.rpc(rpcName, rpcParams);
+            
+            if (error) {
+              console.error("❌ RPC call failed:", error);
+              throw error;
+            }
+            
+            console.log("✅ RPC call successful!");
+            console.log("✅ RPC returned", data?.length ?? 0, "rows");
+            console.log("✅ Sample data:", data?.slice(0, 3));
+            
+            // For now, use the data length as the total count
+            // TODO: Implement proper total count fetching
+            const dataWithCount = data || [];
+            if (dataWithCount.length > 0) {
+              dataWithCount[0]._totalCount = dataWithCount.length;
+            }
+            
+            setRpcData(dataWithCount);
+            setDrawerOpen(true);
+          } catch (e) {
+            console.error("❌ RPC call failed:", e);
+          } finally {
+            setLoading(false);
+          }
+          console.log("🔧 ===== RPC FUNCTION CALL DEBUG END =====");
+          return;
         }
-        return;
-      }
 
-      // 2) Fallback to your old Supabase RPC
-      console.log("[TRACE] Falling back to supabase.rpc:", rpcName);
-
-      // build the same rpcFilter you had before
-      const rpcFilter: Record<string, any> = {};
-      if (filterTree?.and && Array.isArray(filterTree.and)) {
-        const [warehouseClause, costClause] = filterTree.and;
-        rpcFilter.column = warehouseClause.column;
-        rpcFilter.op = "=";
-        rpcFilter.value = warehouseClause.equals;
-        if (costClause.or && Array.isArray(costClause.or)) {
-          const parts = costClause.or.map((c: any) => {
-            if (c.isNull) return `${c.column} IS NULL`;
-            if (c.equals !== undefined) return `${c.column} = ${c.equals}`;
-            return "";
-          });
-          rpcFilter.sql = `(${parts.join(" OR ")})`;
-        }
-      } else if (filterTree) {
-        // fallback simple filter
-        if ("op" in filterTree && "value" in filterTree) {
-          Object.assign(rpcFilter, filterTree);
-        }
-      }
-
+    // 3) No RPC, fetch filtered data from API
+    if (filterTree) {
+      console.log("[TRACE] Fetching filtered data from API");
       setFilters([]);
       setRpcData(null);
       setLoading(true);
 
       try {
-        const { data, error } = await supabase.rpc(rpcName, rpcFilter);
-        if (error) throw error;
-        console.log("[TRACE] supabase.rpc returned", data?.length ?? 0, "rows");
-        setRpcData(data ?? []);
+        // Build API query parameters from filter
+        const params = new URLSearchParams({
+          page: '1',
+          pageSize: '1000', // Get more records for tile clicks
+        });
+
+        // Add distinct parameter if needed
+        if (distinct) {
+          params.set('distinct', 'true');
+        }
+
+        // Determine the API endpoint based on the config
+        const apiEndpoint = config.id === 'inventory' ? '/api/inventory-details' : `/api/${config.id}`;
+        const url = `${apiEndpoint}?${params.toString()}`;
+        
+        console.log("[TRACE] Calling API:", url);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+        
+        const data = await response.json();
+        console.log("[TRACE] API returned", data.rows?.length ?? 0, "rows, total:", data.total);
+        setRpcData(data.rows ?? []);
         setDrawerOpen(true);
       } catch (e) {
-        console.error("[ERROR] supabase.rpc", rpcName, "failed:", e);
+        console.error("[ERROR] API call failed:", e);
       } finally {
         setLoading(false);
       }
-      return;
-    }
-
-    // 3) No RPC, use client-side filtering
-    if (filterTree) {
-      console.log("[TRACE] Using client-side filtering");
-      setRpcData(null);
-      // Use filterTree directly - it's already a valid Filter
-      setFilters([filterTree]);
-      setDrawerOpen(true);
     } else {
       console.warn("[WARN] Widget has no filter or rpcName:", widget);
     }
@@ -140,6 +210,10 @@ export function useDataViewer({ config, records }: { config: ClientDashboardConf
     };
   };
 
+  // Use the total count from the API response, or fall back to filtered data length
+  // When RPC data is present, use the filtered data length instead of the original totalCount
+  const finalTotalCount = rpcData !== null ? filteredData.length : (totalCount ?? filteredData.length);
+
   return {
     filters,
     setFilters,
@@ -149,6 +223,7 @@ export function useDataViewer({ config, records }: { config: ClientDashboardConf
     loading,
     handleClickWidget,
     handleFilter,
+    totalCount: finalTotalCount,
   };
 }
 
@@ -172,6 +247,15 @@ export function DataViewer({
     filteredData.length,
     filteredData[0],
   );
+
+  // DEBUG: Add temporary debug info to the DataViewer
+  const debugInfo = {
+    drawerOpen,
+    filteredDataLength: filteredData.length,
+    firstRow: filteredData[0],
+    filters,
+    configId: config.id
+  };
 
   // map filteredData to ensure each row has a numeric `id` field
   const mappedData = useMemo(() => {
@@ -346,6 +430,21 @@ export function DataViewer({
                     View and manage your data with advanced filtering and pagination capabilities.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* DEBUG INFO - TEMPORARY */}
+            <div className="rounded-lg bg-red-100 border border-red-400 text-red-800 p-4 shadow-sm">
+              <h3 className="font-bold text-lg">🔍 DATA VIEWER DEBUG INFO</h3>
+              <div className="text-sm space-y-2">
+                <p><strong>Drawer Open:</strong> {debugInfo.drawerOpen ? 'Yes' : 'No'}</p>
+                <p><strong>Filtered Data Length:</strong> {debugInfo.filteredDataLength}</p>
+                <p><strong>Config ID:</strong> {debugInfo.configId}</p>
+                <p><strong>Filters:</strong> {JSON.stringify(debugInfo.filters)}</p>
+                <p><strong>First Row Sample:</strong></p>
+                <pre className="bg-white p-2 rounded text-xs overflow-auto max-h-32">
+                  {JSON.stringify(debugInfo.firstRow, null, 2)}
+                </pre>
               </div>
             </div>
 

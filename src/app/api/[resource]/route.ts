@@ -1,11 +1,12 @@
 // src/app/api/[resource]/route.ts
 // Collection route: LIST (GET) and CREATE (POST)
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { listHandler } from "@/lib/api/handle-list";
 import { resolveResource } from "@/lib/api/resolve-resource";
 import { awaitParams, type AwaitableParams } from "@/lib/next/server-helpers";
+import { withLogging } from "@/lib/obs/with-logging";
 import { createSupabaseServerProvider } from "@/lib/supabase/factory";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export async function GET(req: Request, ctx: AwaitableParams<{ resource: string 
 }
 
 // POST /api/[resource] → { row } (created)
-export async function POST(req: Request, ctx: AwaitableParams<{ resource: string }>) {
+export const POST = withLogging(async (req: NextRequest, ctx: AwaitableParams<{ resource: string }>) => {
   const { resource } = await awaitParams(ctx);
 
   let payload: any;
@@ -61,7 +62,7 @@ export async function POST(req: Request, ctx: AwaitableParams<{ resource: string
     if (/invalid|bad request|payload|column|type/i.test(msg)) {
       return json({ error: { message: msg } }, 400);
     }
-    console.error("[POST collection]", resource, err);
-    return json({ error: { message: "Internal server error" } }, 500);
+    // Let withLogging handle the error logging and 500 response
+    throw err;
   }
-}
+});

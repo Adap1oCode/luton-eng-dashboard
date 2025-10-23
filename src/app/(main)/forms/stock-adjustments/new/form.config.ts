@@ -1,5 +1,75 @@
 // src/app/(main)/forms/stock-adjustments/new/form.config.ts
+import { z } from "zod";
 import type { FormConfig } from "@/lib/forms/types";
+
+// Form schema for validation
+export const formSchema = z.object({
+  tally_card_number: z.string().min(1, "Tally Card Number is required"),
+  qty: z.number().min(-999999).max(999999, "Quantity must be reasonable"),
+  location: z.string().optional(),
+  note: z.string().optional(),
+  user_id: z.string().optional(),
+  card_uid: z.string().optional(),
+  warehouseId: z.string().optional(),
+  adjustedQuantity: z.number().optional(),
+  currentQuantity: z.number().optional(),
+  adjustmentId: z.string().optional(),
+  itemNumber: z.string().optional(),
+  adjustmentType: z.string().optional(),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.string().optional(),
+  owner: z.string().optional(),
+});
+
+// Default values for the form
+export const defaultValues = {
+  tally_card_number: "",
+  qty: 0,
+  location: "",
+  note: "",
+  user_id: "",
+  card_uid: "",
+  warehouseId: "",
+  adjustedQuantity: 0,
+  currentQuantity: 0,
+  adjustmentId: "",
+  itemNumber: "",
+  adjustmentType: "",
+  reason: "",
+  notes: "",
+  status: "",
+  owner: "",
+};
+
+// Mock data functions and options
+export const fetchWarehouses = async () => {
+  // TODO: Implement actual warehouse fetching
+  return [
+    { value: "wh1", label: "Warehouse 1" },
+    { value: "wh2", label: "Warehouse 2" },
+  ];
+};
+
+export const adjustmentTypeOptions = [
+  { value: "increase", label: "Increase" },
+  { value: "decrease", label: "Decrease" },
+  { value: "correction", label: "Correction" },
+];
+
+export const statusOptions = [
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+];
+
+export const reasonOptions = [
+  { value: "damage", label: "Damage" },
+  { value: "theft", label: "Theft" },
+  { value: "expired", label: "Expired" },
+  { value: "correction", label: "Correction" },
+  { value: "other", label: "Other" },
+];
 
 /**
  * Pattern:
@@ -40,7 +110,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
   key: "stock-adjustments",
   title: "New Stock Adjustment",
   subtitle: "Record a quick adjustment against a Tally Card",
-  permissionKey: "resource:user_tally_card_entries:create",
+  permissionKey: "resource:tcm_user_tally_card_entries:create",
   resource: "tcm_user_tally_card_entries",
   submitLabel: "Save Adjustment",
 

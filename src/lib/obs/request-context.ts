@@ -6,6 +6,10 @@ type Ctx = {
   tenant?: string | null;
   route?: string;
   method?: string;
+  user_email?: string | null;
+  user_role?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
 };
 
 export const requestContext = new AsyncLocalStorage<Ctx>();

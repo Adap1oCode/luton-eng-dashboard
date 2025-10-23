@@ -152,4 +152,20 @@ export const rolesConfig: ResourceConfig<Role, RoleInput> = {
         has_warehouse_restrictions: warehouses_scope === "RESTRICTED",
       };
     }),
+
+  // Required schema property
+  schema: {
+    fields: {
+      id: { type: "uuid" },
+      role_code: { type: "text" },
+      role_name: { type: "text" },
+      description: { type: "text", nullable: true },
+      is_active: { type: "bool" },
+      can_manage_roles: { type: "bool" },
+      can_manage_cards: { type: "bool" },
+      can_manage_entries: { type: "bool" },
+      created_at: { type: "timestamp", nullable: true },
+      updated_at: { type: "timestamp", nullable: true },
+    },
+  },
 };

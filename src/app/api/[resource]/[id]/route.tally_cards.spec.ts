@@ -4,10 +4,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock dependencies
 vi.mock("@/lib/api/resolve-resource");
 vi.mock("@/lib/supabase-server");
+vi.mock("@/lib/supabase", () => ({
+  createSupabaseServerClient: vi.fn(),
+}));
 
 // Import mocked modules properly
 import { resolveResource } from "@/lib/api/resolve-resource";
 import { createClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient } from "@/lib/supabase";
 
 import { PATCH, DELETE } from "./route";
 
@@ -21,7 +25,17 @@ const mockSupabaseClient = {
       })),
     })),
     delete: vi.fn(() => ({
-      eq: vi.fn(),
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn(),
+        })),
+      })),
+    })),
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        single: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
     })),
   })),
 };
@@ -48,13 +62,13 @@ interface TallyCardRow {
   updated_at?: string;
 }
 
-describe("PATCH /api/tally_cards/{id}", () => {
+describe("PATCH /api/tcm_tally_cards/{id}", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Mock resolve-resource with proper typing
     vi.mocked(resolveResource).mockResolvedValue({
-      key: "tally_cards",
+      key: "tcm_tally_cards",
       allowRaw: false,
       config: {
         table: "tcm_tally_cards",
@@ -76,6 +90,11 @@ describe("PATCH /api/tally_cards/{id}", () => {
     vi.mocked(createClient).mockResolvedValue(
       mockSupabaseClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
+    
+    // Mock createSupabaseServerClient for DELETE handler
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(
+      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    );
   });
 
   it("should update tally card successfully", async () => {
@@ -92,12 +111,24 @@ describe("PATCH /api/tally_cards/{id}", () => {
       updated_at: "2025-10-15T14:00:00Z",
     };
 
+    // Override the default maybeSingle mock for this test
+    const mockQuery = {
+      eq: vi.fn(() => ({
+        single: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: mockUpdatedCard,
+          error: null,
+        }),
+      })),
+    };
+    mockSupabaseClient.from().select.mockReturnValue(mockQuery);
+    
     mockSupabaseClient.from().update().eq().select().single.mockResolvedValue({
       data: mockUpdatedCard,
       error: null,
     });
 
-    const request = new Request("http://localhost/api/tally_cards/7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -109,7 +140,7 @@ describe("PATCH /api/tally_cards/{id}", () => {
     });
 
     const response = await PATCH(request, {
-      params: { resource: "tally_cards", id: "7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22" },
+      params: { resource: "tcm_tally_cards", id: "7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22" },
     });
 
     expect(response.status).toBe(200);
@@ -118,14 +149,14 @@ describe("PATCH /api/tally_cards/{id}", () => {
   });
 
   it("should return 400 for invalid JSON", async () => {
-    const request = new Request("http://localhost/api/tally_cards/test-id", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/test-id", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: "invalid json",
     });
 
     const response = await PATCH(request, {
-      params: { resource: "tally_cards", id: "test-id" },
+      params: { resource: "tcm_tally_cards", id: "test-id" },
     });
 
     expect(response.status).toBe(400);
@@ -134,6 +165,18 @@ describe("PATCH /api/tally_cards/{id}", () => {
   });
 
   it("should return 404 for non-existent tally card", async () => {
+    // Override the default maybeSingle mock for this test
+    const mockQuery = {
+      eq: vi.fn(() => ({
+        single: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: "No rows found" },
+        }),
+      })),
+    };
+    mockSupabaseClient.from().select.mockReturnValue(mockQuery);
+    
     mockSupabaseClient
       .from()
       .update()
@@ -144,27 +187,27 @@ describe("PATCH /api/tally_cards/{id}", () => {
         error: { message: "No rows found" },
       });
 
-    const request = new Request("http://localhost/api/tally_cards/non-existent-id", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/non-existent-id", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
 
     const response = await PATCH(request, {
-      params: { resource: "tally_cards", id: "non-existent-id" },
+      params: { resource: "tcm_tally_cards", id: "non-existent-id" },
     });
 
     expect(response.status).toBe(400);
   });
 });
 
-describe("DELETE /api/tally_cards/{id}", () => {
+describe("DELETE /api/tcm_tally_cards/{id}", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Mock resolve-resource with proper typing
     vi.mocked(resolveResource).mockResolvedValue({
-      key: "tally_cards",
+      key: "tcm_tally_cards",
       allowRaw: false,
       config: {
         table: "tcm_tally_cards",
@@ -185,6 +228,11 @@ describe("DELETE /api/tally_cards/{id}", () => {
     vi.mocked(createClient).mockResolvedValue(
       mockSupabaseClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
+    
+    // Mock createSupabaseServerClient for DELETE handler
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(
+      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    );
   });
 
   it("should soft delete tally card successfully", async () => {
@@ -195,17 +243,37 @@ describe("DELETE /api/tally_cards/{id}", () => {
       updated_at: "2025-10-15T14:00:00Z",
     };
 
-    mockSupabaseClient.from().update().eq().select().single.mockResolvedValue({
-      data: mockDeletedCard,
-      error: null,
-    });
+    // Override the default maybeSingle mock for this test
+    const mockQuery = {
+      eq: vi.fn(() => ({
+        single: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: mockDeletedCard,
+          error: null,
+        }),
+      })),
+    };
+    mockSupabaseClient.from().select.mockReturnValue(mockQuery);
+    
+    // Mock the DELETE handler's Supabase chain
+    const mockUpdateChain = {
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: mockDeletedCard,
+            error: null,
+          }),
+        })),
+      })),
+    };
+    mockSupabaseClient.from().update.mockReturnValue(mockUpdateChain);
 
-    const request = new Request("http://localhost/api/tally_cards/7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22", {
       method: "DELETE",
     });
 
     const response = await DELETE(request, {
-      params: { resource: "tally_cards", id: "7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22" },
+      params: { resource: "tcm_tally_cards", id: "7e3d7b2b-6b3e-4e1f-8c7f-1f2a9d0c1a22" },
     });
 
     expect(response.status).toBe(200);
@@ -214,22 +282,37 @@ describe("DELETE /api/tally_cards/{id}", () => {
   });
 
   it("should return 400 for database error", async () => {
-    mockSupabaseClient
-      .from()
-      .update()
-      .eq()
-      .select()
-      .single.mockResolvedValue({
-        data: null,
-        error: { message: "Database error" },
-      });
+    // Override the default maybeSingle mock for this test
+    const mockQuery = {
+      eq: vi.fn(() => ({
+        single: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: "Database error" },
+        }),
+      })),
+    };
+    mockSupabaseClient.from().select.mockReturnValue(mockQuery);
+    
+    // Mock the DELETE handler's Supabase chain for error case
+    const mockUpdateChain = {
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: "Database error" },
+          }),
+        })),
+      })),
+    };
+    mockSupabaseClient.from().update.mockReturnValue(mockUpdateChain);
 
-    const request = new Request("http://localhost/api/tally_cards/test-id", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/test-id", {
       method: "DELETE",
     });
 
     const response = await DELETE(request, {
-      params: { resource: "tally_cards", id: "test-id" },
+      params: { resource: "tcm_tally_cards", id: "test-id" },
     });
 
     expect(response.status).toBe(400);
@@ -252,12 +335,12 @@ describe("DELETE /api/tally_cards/{id}", () => {
   });
 
   it("should return 400 for invalid id parameter", async () => {
-    const request = new Request("http://localhost/api/tally_cards/", {
+    const request = new Request("http://localhost/api/tcm_tally_cards/", {
       method: "DELETE",
     });
 
     const response = await DELETE(request, {
-      params: { resource: "tally_cards", id: "" },
+      params: { resource: "tcm_tally_cards", id: "" },
     });
 
     expect(response.status).toBe(400);

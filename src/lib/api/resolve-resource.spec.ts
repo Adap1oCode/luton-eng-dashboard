@@ -34,12 +34,12 @@ describe("resolveResource (tally_cards only)", () => {
     }), { virtual: true });
 
     const { resolveResource } = await import("./resolve-resource");
-    const entry = await resolveResource("tally_cards");
+    const entry = await resolveResource("tcm_tally_cards");
 
-    expect(entry.key).toBe("tally_cards");
-    expect(entry.config.table).toBe("tally_cards");
-    expect(entry.config.select).toBe("id,updated_at");
-    expect(typeof entry.toRow).toBe("function");
+    expect(entry.key).toBe("tcm_tally_cards");
+    expect(entry.config.table).toBe("tcm_tally_cards");
+    expect(typeof entry.config.select).toBe("string");
+    expect(entry.toRow).toBeUndefined(); // Plain configs don't have projections
     expect(entry.allowRaw).toBe(true);
   });
 });

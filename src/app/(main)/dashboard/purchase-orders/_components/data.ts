@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export type PurchaseOrder = {
   po_number: string;
@@ -17,6 +17,7 @@ export async function getPurchaseOrders(
   _from?: string,
   _to?: string,
 ): Promise<PurchaseOrder[]> {
+  const supabase = await supabaseServer();
   const { data, error } = await supabase.from("purchaseorders").select("*");
 
   if (error ?? !data) return [];

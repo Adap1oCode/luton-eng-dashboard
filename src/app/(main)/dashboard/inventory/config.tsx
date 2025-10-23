@@ -5,6 +5,13 @@ import type { DashboardConfig } from "@/components/dashboard/types";
 
 import * as dataAPI from "./_components/data";
 
+// DEBUG: Log config loading
+console.log("🔧 Inventory config loading...");
+console.log("🔧 outOfStockCount tile should have:");
+console.log("  - filter: { column: 'total_available', equals: 0 }");
+console.log("  - rpcName: 'get_inventory_rows'");
+console.log("  - clickable: true");
+
 export const inventoryConfig: DashboardConfig = {
   id: "inventory",
   tableName: "inventory",
@@ -12,15 +19,31 @@ export const inventoryConfig: DashboardConfig = {
   rowIdKey: "item_number",
   dateSearchEnabled: false,
 
-  // ◀─ UPDATED: accept _filter & _distinct
+  // ◀─ UPDATED: proper API-first data fetching with total count
   fetchRecords: async (_range: string, _from?: string, _to?: string, _filter?: any, _distinct?: boolean) => {
+    console.log("🔍 [fetchRecords] Called with:", { _range, _from, _to, _filter, _distinct });
+    
+    // Always fetch 50 records for performance
     const limit = 50;
-    return getInventoryRows(
+    const result = await getInventoryRows(
       _filter ?? {}, // ← send your logged filter object here
       _distinct ?? false, // ← support distinct if used
       0,
-      limit - 1,
+      limit,
     );
+    
+    // Return the data array for backward compatibility
+    // The total count is available in result.total but dashboard system doesn't use it yet
+    console.log("🔍 [fetchRecords] Result:", result.rows.length, "rows, total:", result.total);
+    console.log("🔍 [fetchRecords] Sample data:", result.rows.slice(0, 3));
+    
+    // Store the total count in a way that can be accessed by the dashboard system
+    // For now, we'll add it as a property to the first record
+    if (result.rows.length > 0) {
+      result.rows[0]._totalCount = result.total;
+    }
+    
+    return result.rows;
   },
 
   // drive all valueField widgets off our two materialized‐view fetchers
@@ -60,6 +83,7 @@ export const inventoryConfig: DashboardConfig = {
       noRangeFilter: true,
       clickable: true,
       distinct: true,
+      distinctColumn: "item_number",
       filter: { column: "item_number", isNotNull: true },
       rpcName: "get_inventory_rows",
       sql: "SELECT COUNT(DISTINCT item_number) AS unique_item_count FROM inventory",
@@ -154,7 +178,9 @@ export const inventoryConfig: DashboardConfig = {
       noRangeFilter: true,
       clickable: true,
       column: "warehouse",
-      rpcName: "fetchItemsMissingCostByWarehouse", // use the view-based fetcher
+      // field: "missing_cost_count", // field to aggregate - not valid for DashboardWidget
+      metric: "sum", // aggregation type
+      rpcName: "get_inventory_rows", // use existing RPC with multiple filters
       valueField: "missing_cost_count",
       sortBy: "value-desc",
       debug: false,
@@ -173,7 +199,7 @@ export const inventoryConfig: DashboardConfig = {
       rpcName: "fetchItemsByUom",
       valueField: "item_count",
       sortBy: "value-desc",
-      debug: true,
+      debug: false,
       span: 2,
     },
     {

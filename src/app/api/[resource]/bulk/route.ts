@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resolveResource } from "@/lib/api/resolve-resource";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export async function DELETE(req: Request, { params }: { params: { resource: str
 
     const entry = await resolveResource(resource);
     const cfg = entry.config as any;
-    const supabase = await createSupabaseServerClient();
+    const supabase = await supabaseServer();
 
     // Soft delete path if activeFlag is configured
     if (cfg.activeFlag) {
@@ -37,7 +37,7 @@ export async function DELETE(req: Request, { params }: { params: { resource: str
         updateData.updated_at = new Date().toISOString();
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from(cfg.table)
         .update(updateData)
         .in(cfg.pk, ids)
@@ -60,7 +60,7 @@ export async function DELETE(req: Request, { params }: { params: { resource: str
     }
 
     // Hard delete fallback
-    const { data, error } = await supabase.from(cfg.table).delete().in(cfg.pk, ids).select(cfg.pk);
+    const { data, error } = await (supabase as any).from(cfg.table).delete().in(cfg.pk, ids).select(cfg.pk);
 
     if (error) {
       const msg = String(error.message || "");

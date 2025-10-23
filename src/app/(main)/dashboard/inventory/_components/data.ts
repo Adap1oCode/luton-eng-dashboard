@@ -1,51 +1,8 @@
 // src/app/(main)/dashboard/inventory/_components/data.ts
+"use server"
 
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 
-// ──────────────────────────────────────────────────────────────
-// ─── Types
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Represents a single inventory row
- */
-export type Inventory = {
-  item_number: number;
-  type: string;
-  description: string;
-  total_available: number | null;
-  total_checked_out: number | null;
-  total_in_house: number | null;
-  on_order: number | null;
-  committed: number | null;
-  tax_code: string | null;
-  item_cost: string;
-  cost_method: string;
-  item_list_price: string;
-  item_sale_price: string;
-  lot: string | null;
-  date_code: string | null;
-  manufacturer: string | null;
-  category: string | null;
-  unit_of_measure: string | null;
-  alt_item_number: string | null;
-  serial_number: string | null;
-  checkout_length: number | null;
-  attachment: boolean | null;
-  location: string | null;
-  warehouse: string | null;
-  height: string;
-  width: string;
-  depth: string;
-  weight: string;
-  max_volume: string;
-  event_type: string | null;
-  is_deleted: boolean;
-};
-
-/**
- * Summary of overall inventory counts and values
- */
 export type InventorySummary = {
   total_inventory_records: number;
   unique_item_count: number;
@@ -58,9 +15,20 @@ export type InventorySummary = {
   total_committed_value: number;
 };
 
-/**
- * Per-warehouse aggregated metrics (pre-calculated)
- */
+export type InventoryRow = {
+  item_number: number;
+  description: string;
+  warehouse: string;
+  total_available: number;
+  on_order: number;
+  committed: number;
+  item_cost: string;
+  uom: string;
+  status: string;
+  created_by: string;
+  _totalCount?: number; // Added for temporary total count passing
+};
+
 export type WarehouseInventoryMetrics = {
   warehouse: string;
   total_available_stock: number;
@@ -73,126 +41,152 @@ export type WarehouseInventoryMetrics = {
   missing_cost_count: number;
 };
 
-// ──────────────────────────────────────────────────────────────
-// ─── Summary Fetchers
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Fetch the pre-computed summary row from our materialized view
- */
-export async function getInventorySummary(): Promise<InventorySummary> {
-  const { data, error } = await supabase.from("vw_dashboard_inventory_summary").select("*").single<InventorySummary>();
-
-  if (error ?? !data) {
-    console.error("Error fetching inventory summary:", error);
-    throw error;
-  }
-
-  return data;
-}
-
-// ──────────────────────────────────────────────────────────────
-// ─── RPC-Based Fetcher
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Fetch a page of inventory rows according to an arbitrary filter,
- * with optional distinct-on(item_number) de-duplication.
- *
- * @param filter   A JSON object like { column: 'total_available', op: '=', value: '0' }
- * @param distinct When true, returns one row per item_number (latest by updated_at)
- * @param from     Zero-based offset
- * @param to       Inclusive upper bound for pagination
- */
-export async function getInventoryRows(
-  filter: Record<string, any>,
-  distinct = false,
-  from = 0,
-  to = 49,
-): Promise<Inventory[]> {
-  const { data, error } = await supabase.rpc("get_inventory_rows", {
-    _filter: filter,
-    _distinct: distinct,
-    _range_from: from,
-    _range_to: to,
-  });
-
-  if (error) {
-    console.error("Error fetching filtered inventory rows:", { filter, distinct, from, to, error });
-    throw error;
-  }
-
-  return (data as Inventory[]) ?? [];
-}
-
-// ──────────────────────────────────────────────────────────────
-// ─── View-Based Fetchers
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Fetch all per-warehouse metrics from our view
- */
-export async function getWarehouseInventoryMetrics(): Promise<WarehouseInventoryMetrics[]> {
-  const { data, error } = await supabase.from("vw_dashboard_inventory_by_warehouse").select("*");
-
-  if (error ?? !data) {
-    console.error("Error fetching warehouse metrics:", error);
-    throw error;
-  }
-  return data;
-}
-
-/**
- * Fetch inventory rows for a given warehouse where item cost is NULL or zero
- * Uses the materialized view 'vw_dashboard_inventory_item_cost_by_warehouse'
- *
- * @param warehouse - the warehouse to filter on
- * @param limit - maximum number of rows to return (default 50)
- */
-export async function fetchItemsMissingCostByWarehouse(warehouse: string): Promise<Inventory[]> {
-  const { data, error } = await supabase
-    .from("vw_dashboard_inventory_item_cost_by_warehouse")
-    .select("*")
-    .eq("warehouse", warehouse);
-
-  if (error) {
-    console.error("Error fetching items with missing cost:", error);
-    throw error;
-  }
-
-  return (data as Inventory[]) ?? [];
-}
-
-/**
- * Per-UOM counts
- */
 export type UomMetrics = {
   uom: string;
   item_count: number;
 };
 
-export async function getUomMetrics(): Promise<UomMetrics[]> {
-  const { data, error } = await supabase.from("vw_dashboard_inventory_items_by_uom").select("*"); // ← no generics here
-
-  if (error ?? !data) {
-    console.error("Error fetching UoM metrics:", error);
-    throw error;
+/**
+ * Get inventory summary data from API
+ */
+export async function getInventorySummary(): Promise<InventorySummary> {
+  try {
+    console.log("🔍 Fetching inventory summary from API");
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/inventory-summary`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Successfully fetched inventory summary from API:", data);
+    
+    // Extract the first row from the API response
+    const summaryData = data.rows?.[0];
+    if (!summaryData) {
+      throw new Error("No summary data found in API response");
+    }
+    
+    return summaryData;
+  } catch (err) {
+    console.error("❌ Exception in getInventorySummary:", err);
+    return {
+      total_inventory_records: 0,
+      unique_item_count: 0,
+      total_available_stock: 0,
+      total_on_order_quantity: 0,
+      total_committed_quantity: 0,
+      out_of_stock_count: 0,
+      total_on_order_value: 0,
+      total_inventory_value: 0,
+      total_committed_value: 0,
+    };
   }
-  return data as UomMetrics[]; // ← cast to your row type
 }
 
 /**
- * Detail rows for a single UoM
+ * Get inventory rows from API - returns both data and total count
  */
-export async function fetchItemsByUom(uom: string): Promise<Inventory[]> {
-  const { data, error } = await supabase
-    .from("vw_dashboard_inventory_details_by_uom")
-    .select("*") // ← again, no generics
-    .eq("uom", uom);
-
-  if (error ?? !data) {
-    console.error("Error fetching items by UoM:", error);
-    throw error;
+export async function getInventoryRows(
+  filter: any = {},
+  distinct: boolean = false,
+  offset: number = 0,
+  limit: number = 50
+): Promise<{ rows: InventoryRow[]; total: number }> {
+  try {
+    console.log("🔍 Fetching inventory rows from API with filter:", filter, "distinct:", distinct, "offset:", offset, "limit:", limit);
+    
+    const params = new URLSearchParams({
+      page: Math.floor(offset / limit) + 1 + '',
+      pageSize: limit + '',
+    });
+    
+    // Add distinct parameter if needed
+    if (distinct) {
+      params.set('distinct', 'true');
+    }
+    
+    // Add simple filters to params
+    if (filter && Object.keys(filter).length > 0) {
+      for (const [key, value] of Object.entries(filter)) {
+        if (typeof value === 'object' && value !== null) {
+          // Handle complex filters - for now, skip them as API doesn't support them yet
+          if ('isNotNull' in value && value.isNotNull) {
+            // Skip for now - would need API support
+          } else if ('equals' in value && value.equals !== undefined && value.equals !== null) {
+            params.set(key, value.equals.toString());
+          }
+        } else {
+          // Simple key-value filter
+          params.set(key, String(value));
+        }
+      }
+    }
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/inventory-details?${params}`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    
+        const data = await response.json();
+        console.log("✅ Successfully fetched inventory rows from API:", data.rows?.length || 0, "total:", data.total);
+        return { rows: data.rows || [], total: data.total || 0 };
+  } catch (err) {
+    console.error("❌ Exception in getInventoryRows:", err);
+    return { rows: [], total: 0 };
   }
-  return data as Inventory[]; // ← cast here as well
+}
+
+/**
+ * Get warehouse inventory metrics from API
+ */
+export async function getWarehouseInventoryMetrics(): Promise<WarehouseInventoryMetrics[]> {
+  try {
+    console.log("🔍 Fetching warehouse metrics from API");
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/inventory-warehouse`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Successfully fetched warehouse metrics from API:", data.rows?.length || 0);
+    return data.rows || [];
+  } catch (err) {
+    console.error("❌ Exception in getWarehouseInventoryMetrics:", err);
+    return [];
+  }
+}
+
+/**
+ * Get UoM metrics from API
+ */
+export async function getUomMetrics(): Promise<UomMetrics[]> {
+  try {
+    console.log("🔍 Fetching UoM metrics from API");
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/inventory-uom`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ Successfully fetched UoM metrics from API:", data.rows?.length || 0);
+    return data.rows || [];
+  } catch (err) {
+    console.error("❌ Exception in getUomMetrics:", err);
+    return [];
+  }
 }

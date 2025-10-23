@@ -104,8 +104,8 @@ function TanStackDataTable<T = Record<string, unknown>>({
   return (
     <SortableContext items={dataIds}>
       <div ref={tableContainerRef as any} className="overflow-x-auto">
-        {/* table-fixed makes width styles on th/td actually apply */}
-        <Table className="min-w-full table-fixed">
+        {/* table-fixed makes width styles on th/td actually apply; min-w-max allows horizontal growth */}
+        <Table className="min-w-max table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -119,9 +119,9 @@ function TanStackDataTable<T = Record<string, unknown>>({
          width: `${columnWidthsPct[header.column.id]}%`,
          maxWidth: `${columnWidthsPct[header.column.id]}%`,
          // NEW: never let headers collapse below a readable width
-         minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 96,
+         minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
        }
-     : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 96 }
+     : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
  }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -148,7 +148,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
                 <React.Fragment key={row.id}>
                   <TableRow data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
- <TableCell
+<TableCell
    key={cell.id}
    className="p-3"
    style={
@@ -157,9 +157,9 @@ function TanStackDataTable<T = Record<string, unknown>>({
            width: `${columnWidthsPct[cell.column.id]}%`,
            maxWidth: `${columnWidthsPct[cell.column.id]}%`,
            // NEW: keep body cells in sync with header min
-           minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 112,
+           minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128,
          }
-       : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 112 }
+       : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128 }
    }
  >
                         {/* Pure truncation; no tooltip */}

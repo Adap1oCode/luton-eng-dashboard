@@ -333,8 +333,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
 
-  // Column widths state for resizing
-  const { widths: columnWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
+  // Column widths state for resizing (initialize with empty object, will be updated after autoColumnWidthsPct is calculated)
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
@@ -1022,6 +1022,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     });
   }, [baseColumns, filteredRows, config]);
 
+  // Update column widths when autoColumnWidthsPct changes
+  React.useEffect(() => {
+    if (Object.keys(autoColumnWidthsPct).length > 0) {
+      setWidths(autoColumnWidthsPct);
+    }
+  }, [autoColumnWidthsPct, setWidths]);
+
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
   return (
@@ -1067,14 +1074,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
-          // ✅ Back-compat: pass both percent and pixel widths
-          columnWidthsPct={autoColumnWidthsPct}
-          columnWidths={columnWidths}
+          // ✅ Use resized column widths if available, otherwise fall back to auto-calculated
+          columnWidthsPct={Object.keys(columnWidths).length > 0 ? columnWidths : autoColumnWidthsPct}
           tableContainerRef={tableRef}
           filtersConfig={{
             columns: filterColumns,
-            // Back-compat: prefer your auto widths, fall back to incoming name if present
-            columnWidthsPct: typeof autoColumnWidthsPct !== "undefined" ? autoColumnWidthsPct : columnWidths,
+            // Use resized column widths if available, otherwise fall back to auto-calculated
+            columnWidthsPct: Object.keys(columnWidths).length > 0 ? columnWidths : autoColumnWidthsPct,
 
             show: showMoreFilters,
             filters,

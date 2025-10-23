@@ -5,7 +5,8 @@ import { useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 import type { Filter } from "@/components/dashboard/client/data-filters";
-import { useDataViewer, DataViewer } from "@/components/dashboard/client/data-viewer";
+import { useDataViewer } from "@/components/dashboard/client/data-viewer";
+import { DataViewer } from "@/components/dashboard/client/data-viewer-simple";
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize";
 import { attachTileActions } from "@/components/dashboard/client/tile-actions";
 import { tileCalculations } from "@/components/dashboard/client/tile-calculations";
@@ -37,12 +38,14 @@ export default function DashboardClient({
   config,
   metrics,
   records,
+  totalCount,
   from,
   to,
 }: {
   config: ClientDashboardConfig;
   metrics: any;
   records: any[];
+  totalCount?: number;
   from?: string;
   to?: string;
 }) {
@@ -76,8 +79,8 @@ export default function DashboardClient({
   }
 
   // data viewer handles drawer, filters, table view
-  const { filters, setFilters, drawerOpen, setDrawerOpen, filteredData, handleClickWidget, handleFilter } =
-    useDataViewer({ config, records: normalizedRecords });
+  const { filters, setFilters, drawerOpen, setDrawerOpen, filteredData, handleClickWidget, handleFilter, totalCount: dataViewerTotalCount } =
+    useDataViewer({ config, records: normalizedRecords, totalCount });
 
   // handle viewTable query param
   const searchParams = useSearchParams();
@@ -106,6 +109,7 @@ export default function DashboardClient({
         filteredData={filteredData}
         filters={filters}
         config={config}
+        totalCount={dataViewerTotalCount}
       />
 
       <div className="grid gap-4 lg:grid-cols-12">

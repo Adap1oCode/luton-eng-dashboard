@@ -1,8 +1,11 @@
 // src/app/api/[resource]/[id]/route.ts
 // Thin wrapper delegates to shared item handlers
 
+import { NextRequest } from "next/server";
+
 import { getOneHandler, updateHandler, deleteHandler } from "@/lib/api/handle-item";
 import { awaitParams, type AwaitableParams } from "@/lib/next/server-helpers";
+import { withLogging } from "@/lib/obs/with-logging";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +24,7 @@ function badRequest(message: string): Response {
   });
 }
 
-export async function GET(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+export const GET = withLogging(async (req: NextRequest, ctx: AwaitableParams<{ resource: string; id: string }>) => {
   const { resource, id } = await awaitParams(ctx);
   const normalizedId = normalizeId(id);
 
@@ -31,9 +34,9 @@ export async function GET(req: Request, ctx: AwaitableParams<{ resource: string;
   }
 
   return getOneHandler(req, resource, normalizedId);
-}
+});
 
-export async function PATCH(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+export const PATCH = withLogging(async (req: NextRequest, ctx: AwaitableParams<{ resource: string; id: string }>) => {
   const { resource, id } = await awaitParams(ctx);
   const normalizedId = normalizeId(id);
 
@@ -49,9 +52,9 @@ export async function PATCH(req: Request, ctx: AwaitableParams<{ resource: strin
   }
 
   return updateHandler(req, resource, normalizedId);
-}
+});
 
-export async function DELETE(req: Request, ctx: AwaitableParams<{ resource: string; id: string }>) {
+export const DELETE = withLogging(async (req: NextRequest, ctx: AwaitableParams<{ resource: string; id: string }>) => {
   const { resource, id } = await awaitParams(ctx);
   const normalizedId = normalizeId(id);
 
@@ -67,4 +70,4 @@ export async function DELETE(req: Request, ctx: AwaitableParams<{ resource: stri
   }
 
   return deleteHandler(req, resource, normalizedId);
-}
+});

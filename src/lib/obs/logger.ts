@@ -3,16 +3,25 @@ import https, { type RequestOptions } from "node:https";
 import { Writable } from "node:stream";
 
 import pino, { type LoggerOptions, type Logger } from "pino";
+import { getLoggingConfig } from "../../config/logging";
 
 type JsonLine = string;
 
 function createBaseLogger(): Logger {
+  const config = getLoggingConfig();
   const opts: LoggerOptions = {
-    level: process.env.LOG_LEVEL ?? "info",
+    level: config.level,
     messageKey: "msg",
+    timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
       // make `level` a JSON field
       level: (label: string) => ({ level: label }),
+      // Add service name for better filtering
+      bindings: () => ({ service: "luton-eng-dashboard" }),
+    },
+    // Add error serialization for better stack traces
+    serializers: {
+      err: pino.stdSerializers.err,
     },
   };
   return pino(opts);
@@ -21,107 +30,121 @@ function createBaseLogger(): Logger {
 // ---------------- Better Stack (Logtail) transport ----------------
 
 function createLogtailTransport(): Writable | null {
-  if (process.env.LOG_ENABLE_LOGTAIL !== "true") return null;
+  const config = getLoggingConfig();
+  if (!config.logtail.enabled) return null;
 
-  const url = process.env.LOGTAIL_URL;
-  const token = process.env.LOGTAIL_TOKEN;
+  const url = config.logtail.url;
+  const token = config.logtail.token;
   if (!url || !token) return null;
 
-  // Parse URL once
-  const u = new URL(url);
-  const optionsBase: RequestOptions = {
-    method: "POST",
-    hostname: u.hostname,
-    path: u.pathname + u.search,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
+  try {
+    // Parse URL once
+    const u = new URL(url);
+    const optionsBase: RequestOptions = {
+      method: "POST",
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    };
 
-  return new Writable({
-    write(chunk: Buffer, _enc, cb) {
-      const req = https.request(optionsBase, (res) => {
-        // drain response to free socket
-        res.on("data", () => {});
-        res.on("end", () => cb());
-      });
-      req.on("error", (err) => cb(err));
-      req.write(chunk);
-      req.end();
-    },
-  });
+    return new Writable({
+      write(chunk: Buffer, _enc, cb) {
+        const req = https.request(optionsBase, (res) => {
+          // drain response to free socket
+          res.on("data", () => {});
+          res.on("end", () => cb());
+        });
+        req.on("error", (err) => cb(err));
+        req.write(chunk);
+        req.end();
+      },
+    });
+  } catch (err) {
+    // If URL is invalid, log to console and return null (disable transport)
+    console.warn("[LOGTAIL] Invalid LOGTAIL_URL, disabling Logtail transport:", err);
+    return null;
+  }
 }
 
 // ---------------- Grafana Cloud Loki transport ----------------
 
 function createLokiTransport(): Writable | null {
-  if (process.env.LOG_ENABLE_LOKI !== "true") return null;
+  const config = getLoggingConfig();
+  if (!config.loki.enabled) return null;
 
-  const urlStr = process.env.LOKI_URL;
-  const user = process.env.LOKI_USER;
-  const pass = process.env.LOKI_PASS;
+  const urlStr = config.loki.url;
+  const user = config.loki.user;
+  const pass = config.loki.password;
   if (!urlStr || !user || !pass) return null;
 
-  const u = new URL(urlStr);
-  const auth = Buffer.from(`${user}:${pass}`).toString("base64");
-  const optionsBase: RequestOptions = {
-    method: "POST",
-    hostname: u.hostname,
-    path: u.pathname + u.search,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${auth}`,
-    },
-  };
+  try {
+    const u = new URL(urlStr);
+    const auth = Buffer.from(`${user}:${pass}`).toString("base64");
+    const optionsBase: RequestOptions = {
+      method: "POST",
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${auth}`,
+      },
+    };
 
-  // Buffer tiny batches (we have very low volume)
-  const buf: JsonLine[] = [];
-  let timer: NodeJS.Timeout | null = null;
+    // Buffer tiny batches (we have very low volume)
+    const buf: JsonLine[] = [];
+    let timer: NodeJS.Timeout | null = null;
 
-  function flush(cb?: (err?: Error) => void) {
-    if (buf.length === 0) return cb?.();
+    function flush(cb?: (err?: Error) => void) {
+      if (buf.length === 0) return cb?.();
 
-    const lines = buf.splice(0, buf.length);
-    // Loki needs [[timestampNs, line], ...]
-    const nowNs = BigInt(Date.now()) * 1_000_000n;
+      const lines = buf.splice(0, buf.length);
+      // Loki needs [[timestampNs, line], ...]
+      const nowNs = BigInt(Date.now()) * 1_000_000n;
 
-    const payload = JSON.stringify({
-      streams: [
-        {
-          stream: {
-            app: "tally-card-manager",
-            env: process.env.NODE_ENV ?? "dev",
+      const payload = JSON.stringify({
+        streams: [
+          {
+            stream: {
+              app: "tally-card-manager",
+              env: process.env.NODE_ENV ?? "dev",
+            },
+            values: lines.map((line) => [nowNs.toString(), line]),
           },
-          values: lines.map((line) => [nowNs.toString(), line]),
-        },
-      ],
-    });
+        ],
+      });
 
-    const req = https.request(optionsBase, (res) => {
-      res.on("data", () => {});
-      res.on("end", () => cb?.());
+      const req = https.request(optionsBase, (res) => {
+        res.on("data", () => {});
+        res.on("end", () => cb?.());
+      });
+      req.on("error", (err) => cb?.(err));
+      req.write(payload);
+      req.end();
+    }
+
+    return new Writable({
+      write(chunk: Buffer, _enc, cb) {
+        buf.push(chunk.toString());
+        if (!timer) {
+          timer = setTimeout(() => {
+            timer = null;
+            flush();
+          }, 400); // tiny debounce
+        }
+        cb();
+      },
+      final(cb) {
+        flush(cb);
+      },
     });
-    req.on("error", (err) => cb?.(err));
-    req.write(payload);
-    req.end();
+  } catch (err) {
+    // If URL is invalid, log to console and return null (disable transport)
+    console.warn("[LOKI] Invalid LOKI_URL, disabling Loki transport:", err);
+    return null;
   }
-
-  return new Writable({
-    write(chunk: Buffer, _enc, cb) {
-      buf.push(chunk.toString());
-      if (!timer) {
-        timer = setTimeout(() => {
-          timer = null;
-          flush();
-        }, 400); // tiny debounce
-      }
-      cb();
-    },
-    final(cb) {
-      flush(cb);
-    },
-  });
 }
 
 // ---------------- Fan-out logger (write to both if enabled) ----------------
