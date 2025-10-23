@@ -28,8 +28,7 @@ import {
   type UniqueIdentifier,
   DragOverlay,
 } from "@dnd-kit/core";
-import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { arrayMove, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ColumnDef,
   getCoreRowModel,
@@ -42,17 +41,7 @@ import {
   type VisibilityState,
   type Row,
 } from "@tanstack/react-table";
-import {
-  GripVertical,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Settings,
-  ChevronDown,
-  SortAsc,
-  SortDesc,
-  Filter,
-} from "lucide-react";
+import { ArrowUpDown, Settings, ChevronDown, SortAsc, SortDesc, Filter } from "lucide-react";
 import { toast } from "sonner";
 
 import { computeAutoColumnPercents } from "@/components/data-table/auto-column-widths";
@@ -62,8 +51,10 @@ import { DataTable } from "@/components/data-table/data-table";
 import { type FilterColumn, type ColumnFilterState } from "@/components/data-table/data-table-filters";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
+import { InlineEditCellWrapper } from "@/components/data-table/inline-edit-cell-wrapper";
+import { DecoratedHeader } from "@/components/data-table/resizable-draggable-header";
 import { SortMenu } from "@/components/data-table/sort-menu";
-import { StatusCell } from "@/components/data-table/status-cell";
+import { StatusCellWrapper } from "@/components/data-table/status-cell-wrapper";
 import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
@@ -92,171 +83,7 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   onClearFilters?: () => void;
 };
 
-// ✅ FIX 1 & 2: Move DraggableHeaderCell outside component (fixes nested component + hook in callback)
-interface DraggableHeaderCellProps {
-  columnId: string;
-  label: React.ReactNode;
-  sorted: false | "asc" | "desc";
-  isReorderable: boolean;
-  onToggleSort: () => void;
-  onMouseDownResize: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
-}
-
-const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
-  columnId,
-  label,
-  sorted,
-  isReorderable,
-  onToggleSort,
-  onMouseDownResize,
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: columnId });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-
-  return (
-    <div
-      ref={isReorderable ? setNodeRef : undefined}
-      style={isReorderable ? style : undefined}
-      className="relative space-y-2"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-1">
-          <GripVertical
-            className="h-4 w-4 cursor-move text-gray-400"
-            {...(isReorderable ? attributes : {})}
-            {...(isReorderable ? listeners : {})}
-          />
-          <span className="mr-2 truncate whitespace-nowrap">{label}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="outline" size="sm" onClick={onToggleSort} className="has-[>svg]:px-3">
-            {sorted === "asc" ? (
-              <ArrowUp className="h-4 w-4" />
-            ) : sorted === "desc" ? (
-              <ArrowDown className="h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-      {/* Resize handle on the right edge */}
-      <div
-        className="absolute top-0 right-0 z-10 h-full w-2 cursor-col-resize select-none"
-        onMouseDown={(e) => onMouseDownResize(e as React.MouseEvent<HTMLDivElement>, columnId)}
-      />
-    </div>
-  );
-};
-
-// ✅ Move header decorator component outside to avoid nested component error
-interface DecoratedHeaderProps {
-  column: {
-    id: string;
-    getIsSorted: () => false | "asc" | "desc";
-    toggleSorting: (desc?: boolean) => void;
-  };
-  label: React.ReactNode;
-  columnOrder: string[];
-  onMouseDownResize: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
-}
-
-const DecoratedHeader: React.FC<DecoratedHeaderProps> = ({ column, label, columnOrder, onMouseDownResize }) => {
-  const sorted = column.getIsSorted();
-  const reorderable = columnOrder.includes(column.id) && column.id !== "actions" && column.id !== "__select";
-
-  return (
-    <DraggableHeaderCell
-      columnId={column.id}
-      label={label}
-      sorted={sorted}
-      isReorderable={reorderable}
-      onToggleSort={() => column.toggleSorting(sorted === "asc")}
-      onMouseDownResize={onMouseDownResize}
-    />
-  );
-};
-
-// ✅ StatusCellWrapper component outside to avoid nested component error
-interface StatusCellWrapperProps<TRow> {
-  row: Row<TRow>;
-  editingStatus: { rowId: string; value: string } | null;
-  onEditStart: (rowId: string, status: string) => void;
-  onEditChange: (value: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
-}
-
-const StatusCellWrapper = <TRow extends { id: string }>({
-  row,
-  editingStatus,
-  onEditStart,
-  onEditChange,
-  onSave,
-  onCancel,
-}: StatusCellWrapperProps<TRow>) => {
-  const rawStatus = row.getValue("status");
-
-  // Safer coercion:
-  // - Preserve strings as-is
-  // - Map null/undefined to ""
-  // - String() for everything else
-  const statusString = typeof rawStatus === "string" ? rawStatus : rawStatus == null ? "" : String(rawStatus);
-  const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
-
-  return (
-    <StatusCell
-      status={statusString}
-      isEditing={isEditing}
-      // Use ?? to preserve intentional empty strings
-      editingStatus={editingStatus?.value ?? statusString}
-      statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
-      onEditChange={onEditChange}
-      onSave={onSave}
-      onCancel={onCancel}
-    />
-  );
-};
-
-// ✅ Generic InlineEditCellWrapper component for configurable inline editing
-interface InlineEditCellWrapperProps<TRow> {
-  row: Row<TRow>;
-  columnId: string;
-  editingCell: { rowId: string; columnId: string; value: any } | null;
-  config: InlineEditConfig;
-  onEditStart: (rowId: string, columnId: string, value: any) => void;
-  onEditChange: (value: any) => void;
-  onSave: () => void;
-  onCancel: () => void;
-}
-
-const InlineEditCellWrapper = <TRow extends { id: string }>({
-  row,
-  columnId,
-  editingCell,
-  config,
-  onEditStart,
-  onEditChange,
-  onSave,
-  onCancel,
-}: InlineEditCellWrapperProps<TRow>) => {
-  const rawValue = row.getValue(columnId);
-  const isEditing = editingCell?.rowId === (row.original as { id: string }).id && editingCell?.columnId === columnId;
-
-  return (
-    <InlineEditCell
-      value={rawValue}
-      isEditing={isEditing}
-      editingValue={editingCell?.value ?? rawValue}
-      config={config}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, columnId, rawValue)}
-      onEditChange={onEditChange}
-      onSave={onSave}
-      onCancel={onCancel}
-    />
-  );
-};
+// move header and cell wrappers into shared data-table modules
 
 export default function ResourceTableClient<TRow extends { id: string }>({
   config,
