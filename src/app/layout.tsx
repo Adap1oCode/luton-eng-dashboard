@@ -1,6 +1,10 @@
-// src/app/layout.tsx
 import type { Metadata } from "next";
+
+import { ThemeProvider } from "next-themes";
+
 import "./globals.css";
+import InitialLoadGate from "@/components/common/initial-load-gate";
+import RouteTransitionOverlay from "@/components/common/route-transition-overlay";
 import { APP_CONFIG } from "@/config/app-config";
 import { Analytics } from '@vercel/analytics/react';
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -19,9 +23,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <RouteTransitionOverlay />
+          <ErrorBoundary>
+            <InitialLoadGate>{children}</InitialLoadGate>
+          </ErrorBoundary>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
