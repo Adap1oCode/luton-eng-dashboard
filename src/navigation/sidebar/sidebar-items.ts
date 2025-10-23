@@ -187,8 +187,10 @@ export const sidebarItems: NavGroup[] = [
         icon: Fingerprint,
         public: true,
         subItems: [
-          { title: "Login v1", url: "/auth/v1/login", newTab: true, public: true },
-          { title: "Register v1", url: "/auth/v1/register", newTab: true, public: true },
+          { title: "Login", url: "/auth/login", newTab: true, public: true },
+          { title: "Register", url: "/auth/register", newTab: true, public: true },
+          { title: "Login v1 (Legacy)", url: "/auth/v1/login", newTab: true, public: true },
+          { title: "Register v1 (Legacy)", url: "/auth/v1/register", newTab: true, public: true },
         ],
       },
       { title: "Email", url: "/mail", icon: Mail, comingSoon: true },
