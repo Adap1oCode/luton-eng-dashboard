@@ -22,6 +22,7 @@ import {
 import { NoticeProvider } from "@/components/ui/notice";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
 // ✅ Add this import to keep your intended button
@@ -68,7 +69,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const contentLayout = await getContentLayout();
 
   return (
-    <>
+    <QueryProvider>
       {/* Mount once so any client component can open the Notice dialog */}
       <NoticeProvider>
         <SidebarProvider defaultOpen={defaultOpen}>
@@ -137,6 +138,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           </SidebarInset>
         </SidebarProvider>
       </NoticeProvider>
-    </>
+    </QueryProvider>
   );
 }

@@ -1,5 +1,5 @@
-import type { Filter } from "@/components/dashboard/client/data-filters";
-import { isFastFilter } from "@/components/dashboard/client/fast-filter";
+﻿import type { Filter } from "@/components/dashboard/client/data-filters";
+
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize"; // ✅ import
 import type { DashboardTile, DashboardWidget } from "@/components/dashboard/types";
 
@@ -66,7 +66,7 @@ export function attachTileActions(
       preCalculated,
       hasTemplate,
       hasTileFilter,
-      isFastFilter: tile.filter ? isFastFilter(tile.filter as Filter) : false,
+      isFastFilter: false, // Simplified - removed fast-filter dependency
       assignedClick: canClick,
       tileClickable: tile.clickable,
       widgetRpcName: (widget as any).rpcName,

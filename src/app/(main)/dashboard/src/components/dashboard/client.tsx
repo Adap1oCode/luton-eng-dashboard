@@ -1,12 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 import type { Filter } from "@/components/dashboard/client/data-filters";
-import { useDataViewer, DataViewer } from "@/components/dashboard/client/data-viewer";
-
+import { useDataViewer, DataViewer } from "@/app/(main)/dashboard/src/components/dashboard/client/data-viewer";
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize";
 import { attachTileActions } from "@/components/dashboard/client/tile-actions";
 import { tileCalculations } from "@/components/dashboard/client/tile-calculations";
@@ -19,7 +18,6 @@ import ChartByStatus from "@/components/dashboard/widgets/chart-by-status";
 import ChartDonut from "@/components/dashboard/widgets/chart-donut";
 import SectionCards from "@/components/dashboard/widgets/section-cards";
 import SummaryCards from "@/components/dashboard/widgets/summary-cards";
-// Remove isFastFilter if not used
 
 console.log("🏷️ chart-bar-horizontal module loaded");
 
@@ -132,7 +130,7 @@ export default function DashboardClient({
                     ? [w]
                     : (config.tiles ?? []);
           // NEW: when group is 'tiles' (or 'widgets'), use the full metrics array
-          // only keep those records that actually have our widget’s column (uom vs warehouse)
+          // only keep those records that actually have our widget's column (uom vs warehouse)
           const rawTiles = group === "tiles" || group === "widgets" ? metrics : (metrics[group] ?? []);
           // only keep rows that actually have our widget's column key
           const metricTiles = Array.isArray(rawTiles)
