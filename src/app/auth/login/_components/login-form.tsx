@@ -12,11 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  trackLoginAttempt,
+  trackLoginSuccess,
+  trackLoginFailed,
+  trackMagicLinkSent,
+  trackAuthError,
+} from "@/lib/analytics";
+import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
 import { supabaseBrowser } from "@/lib/supabase";
 
 import { sendMagicLink } from "../../actions"; // server action
-import { trackLoginAttempt, trackLoginSuccess, trackLoginFailed, trackMagicLinkSent, trackAuthError } from "@/lib/analytics";
-import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
 
 // -----------------------------
 // Schema
@@ -74,7 +80,7 @@ export function LoginFormV1() {
       const next = getNextFromLocation();
 
       // Track login attempt
-      const method = password.length >= 6 ? 'password' : 'magic_link';
+      const method = password.length >= 6 ? "password" : "magic_link";
       trackLoginAttempt(method);
 
       // With password → regular sign-in
@@ -86,13 +92,13 @@ export function LoginFormV1() {
           });
 
           if (result.error) {
-            trackLoginFailed('password', result.error.message);
+            trackLoginFailed("password", result.error.message);
             toast.error("Login failed", { description: result.error.message });
             return;
           }
 
           // Track successful login
-          trackLoginSuccess('password');
+          trackLoginSuccess("password");
 
           // Optional "remember me" UI hint only (no security impact)
           try {
@@ -115,8 +121,8 @@ export function LoginFormV1() {
           window.location.href = next; // redirect to ?next or /dashboard
           return;
         } catch (error) {
-          trackAuthError(error as Error, 'password_login');
-          trackLoginFailed('password', 'network_error');
+          trackAuthError(error as Error, "password_login");
+          trackLoginFailed("password", "network_error");
           toast.error("Login failed", { description: "Network error. Please try again." });
           return;
         }
@@ -129,7 +135,7 @@ export function LoginFormV1() {
         });
 
         trackMagicLinkSent(email);
-        
+
         // Track performance metrics
         trackAuthPerformance({
           pageLoadTime: measurePageLoad(),
@@ -142,8 +148,8 @@ export function LoginFormV1() {
           description: "Check your inbox to complete sign-in.",
         });
       } catch (err: unknown) {
-        trackAuthError(err as Error, 'magic_link');
-        trackLoginFailed('magic_link', getErrorMessage(err));
+        trackAuthError(err as Error, "magic_link");
+        trackLoginFailed("magic_link", getErrorMessage(err));
         toast.error("Could not send magic link", {
           description: getErrorMessage(err),
         });
@@ -251,7 +257,7 @@ export function LoginFormV1() {
                       Remember me for 30 days
                     </FormLabel>
                     <p id="remember-desc" className="text-xs text-gray-500">
-                      Don't use on a shared device.
+                      Don&apos;t use on a shared device.
                     </p>
                   </div>
                 </FormItem>
