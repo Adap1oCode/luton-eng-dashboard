@@ -43,6 +43,15 @@
     "node_modules",
     ".next",
     ".eslintrc.cjs",
-    "scripts"
+    "scripts",
+    "src/**/__tests__/**",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/components/**/*.stories.tsx",
+    "src/app/api/impersonate/route.ts",
+    "src/app/api/me/permissions/route.ts",
+    "src/app/api/me/role/route.ts",
+    "src/app/api/tally_cards/export/route.ts",
+    "src/app/api/tally_cards/route.ts"
   ]
 }

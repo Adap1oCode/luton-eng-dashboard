@@ -22,15 +22,15 @@ export async function getRequisitions(
 
   if (error ?? !data) return [];
 
-  return data.map((r) => ({
+  return (data as Array<Record<string, unknown>>).map((r: Record<string, unknown>) => ({
     ...r,
-    requisition_order_number: r.requisition_order_number ?? "",
-    order_date: r.order_date ?? "",
-    due_date: r.due_date ?? "",
-    status: r.status ?? "",
-    warehouse: r.warehouse ?? "",
-    created_by: r.created_by ?? "",
-    project_number: r.project_number ?? "",
-    customer_name: r.customer_name ?? "N/A",
+    requisition_order_number: String(r.requisition_order_number ?? ""),
+    order_date: (r.order_date as string | null) ?? "",
+    due_date: (r.due_date as string | null) ?? "",
+    status: String(r.status ?? ""),
+    warehouse: (r.warehouse as string | null) ?? "",
+    created_by: (r.created_by as string | null) ?? "",
+    project_number: (r.project_number as string | null) ?? "",
+    customer_name: (r.customer_name as string | null) ?? "N/A",
   }));
 }
