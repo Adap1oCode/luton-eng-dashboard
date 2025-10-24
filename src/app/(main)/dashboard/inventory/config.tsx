@@ -1,9 +1,9 @@
 // src/app/(main)/dashboard/inventory/config.tsx
 
-import { getInventoryRows } from "@/app/(main)/dashboard/inventory/_components/data";
+import { getWarehouseInventoryMetrics } from "@/lib/data/resources/dashboards/inventory-warehouse";
+import { getUomMetrics } from "@/lib/data/resources/dashboards/inventory-uom";
+import { getInventoryRows } from "@/lib/data/resources/dashboards/inventory-rows-rpc";
 import type { DashboardConfig } from "@/components/dashboard/types";
-
-import * as dataAPI from "./_components/data";
 
 // DEBUG: Log config loading
 console.log("🔧 Inventory config loading...");
@@ -19,16 +19,17 @@ export const inventoryConfig: DashboardConfig = {
   rowIdKey: "item_number",
   dateSearchEnabled: false,
 
-  // ◀─ UPDATED: proper API-first data fetching with total count
+  // ◀─ UPDATED: proper RPC-based data fetching with total count
   fetchRecords: async (_range: string, _from?: string, _to?: string, _filter?: any, _distinct?: boolean) => {
     console.log("🔍 [fetchRecords] Called with:", { _range, _from, _to, _filter, _distinct });
     
     // Always fetch 50 records for performance
     const limit = 50;
+    const offset = parseInt(_from ?? '0');
     const result = await getInventoryRows(
       _filter ?? {}, // ← send your logged filter object here
-      _distinct ?? false, // ← support distinct if used
-      0,
+      _distinct ?? false,
+      offset,
       limit,
     );
     
@@ -40,7 +41,7 @@ export const inventoryConfig: DashboardConfig = {
     // Store the total count in a way that can be accessed by the dashboard system
     // For now, we'll add it as a property to the first record
     if (result.rows.length > 0) {
-      result.rows[0]._totalCount = result.total;
+      (result.rows[0] as any)._totalCount = result.total;
     }
     
     return result.rows;
@@ -48,7 +49,7 @@ export const inventoryConfig: DashboardConfig = {
 
   // drive all valueField widgets off our two materialized‐view fetchers
   fetchMetrics: async () => {
-    const [wh, uom] = await Promise.all([dataAPI.getWarehouseInventoryMetrics(), dataAPI.getUomMetrics()]);
+    const [wh, uom] = await Promise.all([getWarehouseInventoryMetrics(), getUomMetrics()]);
     const merged = [...wh, ...uom];
     console.log("🔍 fetchMetrics merged rows:", merged.length, merged);
     return merged;

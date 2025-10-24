@@ -77,3 +77,4 @@ BEGIN
   RETURN QUERY EXECUTE sql_text;
 END;
 $function$;
+

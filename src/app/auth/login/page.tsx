@@ -1,9 +1,21 @@
 import React from "react";
 import Link from "next/link";
+import { Metadata } from "next";
 
 import { Command } from "lucide-react";
 
 import { LoginFormV1 } from "./_components/login-form";
+
+export const metadata: Metadata = {
+  title: "Login - Luton Engineering Dashboard",
+  description: "Sign in to your Luton Engineering Dashboard account to access your workspace and manage your projects.",
+  robots: "noindex, nofollow", // Prevent indexing of auth pages
+  openGraph: {
+    title: "Login - Luton Engineering Dashboard",
+    description: "Sign in to your Luton Engineering Dashboard account",
+    type: "website",
+  },
+};
 
 export default function LoginV1() {
   return (

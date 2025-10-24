@@ -207,3 +207,4 @@ describe('Bar Chart Clickability Tests', () => {
     });
   });
 });
+

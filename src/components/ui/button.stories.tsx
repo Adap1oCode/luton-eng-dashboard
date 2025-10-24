@@ -84,3 +84,4 @@ export const Icon: Story = {
     children: '🚀',
   },
 }
+

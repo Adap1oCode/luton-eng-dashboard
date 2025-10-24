@@ -108,3 +108,4 @@ SELECT
 FROM inventory
 WHERE is_deleted = false;
 
+

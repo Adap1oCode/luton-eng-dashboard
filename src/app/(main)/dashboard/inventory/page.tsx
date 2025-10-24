@@ -2,7 +2,7 @@
 
 import GenericDashboardPage from '@/components/dashboard/page'
 import { inventoryConfig as baseConfig } from '@/app/(main)/dashboard/inventory/config'
-import { getInventorySummary } from '@/app/(main)/dashboard/inventory/_components/data'
+import { getInventorySummary } from '@/lib/data/resources/dashboards/inventory-summary'
 
 export default async function InventoryPage() {
   // 1. Fetch the precomputed summary

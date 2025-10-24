@@ -4,6 +4,20 @@ import { vi } from "vitest";
 import { existsSync } from "node:fs";
 import "@testing-library/jest-dom";
 
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as any;
+
 // Load the first env file that exists
 for (const p of [".env.test.local", ".env.local", ".env"]) {
   if (existsSync(p)) {

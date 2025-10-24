@@ -42,3 +42,4 @@ const inventoryItemCostByWarehouse: ResourceConfig<InventoryItemCostByWarehouse,
 
 export default inventoryItemCostByWarehouse;
 
+

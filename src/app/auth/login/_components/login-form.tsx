@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { supabaseBrowser } from "@/lib/supabase";
 
 import { sendMagicLink } from "../../actions"; // server action
+import { trackLoginAttempt, trackLoginSuccess, trackLoginFailed, trackMagicLinkSent, trackAuthError } from "@/lib/analytics";
+import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
 
 // -----------------------------
 // Schema
@@ -71,37 +73,77 @@ export function LoginFormV1() {
       const password = (values.password ?? "").trim();
       const next = getNextFromLocation();
 
+      // Track login attempt
+      const method = password.length >= 6 ? 'password' : 'magic_link';
+      trackLoginAttempt(method);
+
       // With password → regular sign-in
       if (password.length >= 6) {
-        const s = supabaseBrowser();
-        const { error } = await s.auth.signInWithPassword({ email, password });
+        try {
+          const { result, responseTime } = await measureApiResponse(async () => {
+            const s = supabaseBrowser();
+            return await s.auth.signInWithPassword({ email, password });
+          });
 
-        if (error) {
-          toast.error("Login failed", { description: error.message });
+          if (result.error) {
+            trackLoginFailed('password', result.error.message);
+            toast.error("Login failed", { description: result.error.message });
+            return;
+          }
+
+          // Track successful login
+          trackLoginSuccess('password');
+
+          // Optional "remember me" UI hint only (no security impact)
+          try {
+            if (values.remember) localStorage.setItem("remember_login", "1");
+            else localStorage.removeItem("remember_login");
+          } catch (e) {
+            // best-effort; ignore storage errors
+            console.warn("localStorage unavailable:", e);
+          }
+
+          // Track performance metrics
+          trackAuthPerformance({
+            pageLoadTime: measurePageLoad(),
+            authFormRenderTime: 0, // Would need to be measured at component mount
+            apiResponseTime: responseTime,
+            totalAuthTime: responseTime,
+          });
+
+          toast.success("Logged in", { description: "Welcome back!" });
+          window.location.href = next; // redirect to ?next or /dashboard
+          return;
+        } catch (error) {
+          trackAuthError(error as Error, 'password_login');
+          trackLoginFailed('password', 'network_error');
+          toast.error("Login failed", { description: "Network error. Please try again." });
           return;
         }
-
-        // Optional "remember me" UI hint only (no security impact)
-        try {
-          if (values.remember) localStorage.setItem("remember_login", "1");
-          else localStorage.removeItem("remember_login");
-        } catch (e) {
-          // best-effort; ignore storage errors
-          console.warn("localStorage unavailable:", e);
-        }
-
-        toast.success("Logged in", { description: "Welcome back!" });
-        window.location.href = next; // redirect to ?next or /dashboard
-        return;
       }
 
       // Without password → magic link
       try {
-        await sendMagicLink(email, window.location.origin, next);
+        const { responseTime } = await measureApiResponse(async () => {
+          await sendMagicLink(email, window.location.origin, next);
+        });
+
+        trackMagicLinkSent(email);
+        
+        // Track performance metrics
+        trackAuthPerformance({
+          pageLoadTime: measurePageLoad(),
+          authFormRenderTime: 0,
+          apiResponseTime: responseTime,
+          totalAuthTime: responseTime,
+        });
+
         toast.success("Magic link sent", {
           description: "Check your inbox to complete sign-in.",
         });
       } catch (err: unknown) {
+        trackAuthError(err as Error, 'magic_link');
+        trackLoginFailed('magic_link', getErrorMessage(err));
         toast.error("Could not send magic link", {
           description: getErrorMessage(err),
         });

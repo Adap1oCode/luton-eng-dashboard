@@ -1,4 +1,4 @@
-import { getInventorySummary } from '../_components/data';
+import { getInventorySummary } from '@/lib/data/resources/dashboards/inventory-summary';
 
 // Mock fetch globally
 global.fetch = jest.fn();

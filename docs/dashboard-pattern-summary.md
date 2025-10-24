@@ -205,3 +205,4 @@ const { data } = await supabase.rpc('get_inventory_rows', params);
 
 *Last Updated: Current session*
 *Status: In Progress - RPC approach working, total count and pagination issues remain*
+
