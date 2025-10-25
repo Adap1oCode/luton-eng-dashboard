@@ -1,24 +1,41 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 import type { Filter } from "@/components/dashboard/client/data-filters";
-import { useDataViewer, DataViewer } from "@/components/dashboard/client/data-viewer";
-
+import { useDataViewer } from "@/components/dashboard/client/data-viewer";
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize";
 import { attachTileActions } from "@/components/dashboard/client/tile-actions";
 import { tileCalculations } from "@/components/dashboard/client/tile-calculations";
 import type { ClientDashboardConfig, DashboardWidget, DashboardTile } from "@/components/dashboard/types";
-import ChartAreaInteractive from "@/components/dashboard/widgets/chart-area-interactive";
-import ChartBarHorizontal from "@/components/dashboard/widgets/chart-bar-horizontal";
-import ChartBarVertical from "@/components/dashboard/widgets/chart-bar-vertical";
-import ChartByProject from "@/components/dashboard/widgets/chart-by-project";
-import ChartByStatus from "@/components/dashboard/widgets/chart-by-status";
-import ChartDonut from "@/components/dashboard/widgets/chart-donut";
 import SectionCards from "@/components/dashboard/widgets/section-cards";
 import SummaryCards from "@/components/dashboard/widgets/summary-cards";
+
+// Lazily load heavy chart widgets on the client only
+const ChartAreaInteractive = dynamic(() => import("@/components/dashboard/widgets/chart-area-interactive"), {
+  ssr: false,
+});
+const ChartBarHorizontal = dynamic(() => import("@/components/dashboard/widgets/chart-bar-horizontal"), {
+  ssr: false,
+});
+const ChartBarVertical = dynamic(() => import("@/components/dashboard/widgets/chart-bar-vertical"), {
+  ssr: false,
+});
+const ChartByProject = dynamic(() => import("@/components/dashboard/widgets/chart-by-project"), {
+  ssr: false,
+});
+const ChartByStatus = dynamic(() => import("@/components/dashboard/widgets/chart-by-status"), {
+  ssr: false,
+});
+const ChartDonut = dynamic(() => import("@/components/dashboard/widgets/chart-donut"), {
+  ssr: false,
+});
+const DataViewer = dynamic(() => import("@/components/dashboard/client/data-viewer").then(m => m.DataViewer), {
+  ssr: false,
+});
 // Remove isFastFilter if not used
 
 console.log("🏷️ chart-bar-horizontal module loaded");
@@ -38,14 +55,12 @@ export default function DashboardClient({
   config,
   metrics,
   records,
-  totalCount,
   from,
   to,
 }: {
   config: ClientDashboardConfig;
   metrics: any;
   records: any[];
-  totalCount?: number;
   from?: string;
   to?: string;
 }) {
@@ -79,8 +94,8 @@ export default function DashboardClient({
   }
 
   // data viewer handles drawer, filters, table view
-  const { filters, setFilters, drawerOpen, setDrawerOpen, filteredData, handleClickWidget, handleFilter, totalCount: dataViewerTotalCount } =
-    useDataViewer({ config, records: normalizedRecords, totalCount });
+  const { filters, setFilters, drawerOpen, setDrawerOpen, filteredData, handleClickWidget, handleFilter } =
+    useDataViewer({ config, records: normalizedRecords });
 
   // handle viewTable query param
   const searchParams = useSearchParams();
@@ -109,7 +124,6 @@ export default function DashboardClient({
         filteredData={filteredData}
         filters={filters}
         config={config}
-        totalCount={dataViewerTotalCount}
       />
 
       <div className="grid gap-4 lg:grid-cols-12">
