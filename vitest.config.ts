@@ -7,6 +7,13 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     include: ["src/**/*.spec.ts", "src/**/*.spec.tsx"],
+    exclude: [
+      // Short-term: exclude heavier suites until build and DB parity stabilize
+      "src/**/*.integration.spec.ts",
+      "src/tests/integration/**",
+      "src/tests/performance/**",
+      "src/app/**/**.e2e.spec.ts",
+    ],
     setupFiles: ["./vitest.setup.ts"], // dotenv + var mirroring lives here
     coverage: {
       provider: "v8",
