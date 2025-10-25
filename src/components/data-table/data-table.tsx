@@ -103,7 +103,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
 }: TanStackDataTableProps<T>) {
   return (
     <SortableContext items={dataIds}>
-      <div ref={tableContainerRef as any} className="overflow-x-auto">
+      <div ref={tableContainerRef as any} className="overflow-x-auto" data-testid="data-table">
         {/* table-fixed makes width styles on th/td actually apply; min-w-max allows horizontal growth */}
         <Table className="min-w-max table-fixed">
           <TableHeader>
@@ -356,7 +356,7 @@ function LegacyDataTable<T extends Record<string, unknown>>({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <SortableContext items={columnOrder}>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-testid="data-table">
           <Table ref={tableRef} className="min-w-full table-fixed">
             <colgroup>
               <col style={{ width: "40px" }} /> {/* Checkbox */}

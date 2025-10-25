@@ -35,6 +35,7 @@ export default async function InventoryPage() {
   // 4. Render the generic dashboard with debug info
   return (
     <div>
+      <h1 className="sr-only">Inventory</h1>
       {/* DEBUG INFO - TEMPORARY */}
       <div className="fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded shadow-lg z-50 max-w-md">
         <h3 className="font-bold">🔍 DEBUG INFO</h3>

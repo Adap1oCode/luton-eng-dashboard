@@ -22,15 +22,15 @@ export async function getPurchaseOrders(
 
   if (error ?? !data) return [];
 
-  return data.map((po) => ({
-    po_number: po.po_number ?? "",
-    order_date: po.order_date ?? null,
-    due_date: po.due_date ?? null,
-    status: po.status ?? "",
-    warehouse: po.warehouse ?? "",
-    vendor_name: po.vendor_name ?? "N/A",
-    vendor_number: po.vendor_number ?? 0,
-    grand_total: po.grand_total ?? "0",
-    is_deleted: po.is_deleted ?? false,
+  return (data as Array<Record<string, unknown>>).map((po: Record<string, unknown>) => ({
+    po_number: String(po.po_number ?? ""),
+    order_date: (po.order_date as string | null) ?? null,
+    due_date: (po.due_date as string | null) ?? null,
+    status: String(po.status ?? ""),
+    warehouse: String(po.warehouse ?? ""),
+    vendor_name: String(po.vendor_name ?? "N/A"),
+    vendor_number: Number(po.vendor_number ?? 0),
+    grand_total: String(po.grand_total ?? "0"),
+    is_deleted: Boolean(po.is_deleted ?? false),
   }));
 }
