@@ -2,6 +2,7 @@
 import * as dotenv from "dotenv";
 import { vi } from "vitest";
 import { existsSync } from "node:fs";
+import "@testing-library/jest-dom";
 
 // Load the first env file that exists
 for (const p of [".env.test.local", ".env.local", ".env"]) {
