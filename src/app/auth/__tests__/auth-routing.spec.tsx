@@ -49,8 +49,9 @@ describe("Auth Routing", () => {
     it("has proper form structure", () => {
       render(<LoginPage />);
 
-      // Form elements should be present
-      expect(screen.getByRole("form")).toBeInTheDocument();
+      // Form elements should be present - check by actual structure
+      expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
+      expect(screen.getByLabelText("Password")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: /remember me/i })).toBeInTheDocument();
     });
@@ -75,8 +76,10 @@ describe("Auth Routing", () => {
     it("has proper form structure", () => {
       render(<RegisterPage />);
 
-      // Form elements should be present
-      expect(screen.getByRole("form")).toBeInTheDocument();
+      // Form elements should be present - check by actual structure
+      expect(screen.getByLabelText("Email")).toBeInTheDocument();
+      expect(screen.getByLabelText("Password")).toBeInTheDocument();
+      expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /create account/i })).toBeInTheDocument();
     });
   });

@@ -293,3 +293,4 @@ describe('Bar Chart Integration Tests', () => {
     });
   });
 });
+

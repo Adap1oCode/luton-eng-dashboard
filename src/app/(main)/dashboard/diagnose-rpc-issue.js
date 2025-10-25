@@ -41,3 +41,4 @@ console.log('4. Check for "get_inventory_rows will execute:" in the console');
 console.log('5. Look for the actual SQL being generated');
 console.log('6. Check if the SQL looks correct');
 
+

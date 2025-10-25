@@ -616,3 +616,4 @@ Based on Stock Adjustments `/forms/stock-adjustments/page.tsx`:
 
 This inventory dashboard should follow the same patterns but adapted for dashboard visualization instead of form data entry.
 
+

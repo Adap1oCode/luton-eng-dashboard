@@ -30,3 +30,4 @@ test.describe('Dashboard', () => {
     await expect(page.locator('main')).toBeVisible();
   });
 });
+

@@ -12,7 +12,6 @@ import warehouses from "./warehouses.config.ts";
 import inventorySummary from "./dashboards/inventory-summary.ts";
 import inventoryWarehouse from "./dashboards/inventory-warehouse.ts";
 import inventoryUom from "./dashboards/inventory-uom.ts";
-import inventoryDetails from "./dashboards/inventory-details.ts";
 import inventoryItemCostByWarehouse from "./dashboards/inventory-item-cost-by-warehouse.ts";
 import v_table_report_combined from "./dbdocs/v_table_report_combined.config.ts";
 
@@ -30,7 +29,6 @@ const resources = {
   inventorySummary,
   inventoryWarehouse,
   inventoryUom,
-  inventoryDetails,
   inventoryItemCostByWarehouse,
 
   // ✅ Friendly aliases for business-facing routes
@@ -41,7 +39,6 @@ const resources = {
   "inventory-summary": inventorySummary,
   "inventory-warehouse": inventoryWarehouse,
   "inventory-uom": inventoryUom,
-  "inventory-details": inventoryDetails,
   "inventory-item-cost-by-warehouse": inventoryItemCostByWarehouse,
   // ✅ DB documentation viewer (admin-only)
   "db-docs": v_table_report_combined,
@@ -64,6 +61,5 @@ export {
   inventorySummary,
   inventoryWarehouse,
   inventoryUom,
-  inventoryDetails,
   inventoryItemCostByWarehouse,
 };

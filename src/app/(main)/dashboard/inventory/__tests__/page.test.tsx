@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import InventoryPage from '../page';
-import { getInventorySummary } from '../_components/data';
+import { getInventorySummary } from '@/lib/data/resources/dashboards/inventory-summary';
 
 // Mock the data function
-jest.mock('../_components/data', () => ({
+jest.mock('@/lib/data/resources/dashboards/inventory-summary', () => ({
   getInventorySummary: jest.fn(),
 }));
 

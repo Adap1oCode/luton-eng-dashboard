@@ -1,9 +1,21 @@
 import React from "react";
 import Link from "next/link";
+import { Metadata } from "next";
 
 import { Command } from "lucide-react";
 
 import { RegisterFormV1 } from "./_components/register-form";
+
+export const metadata: Metadata = {
+  title: "Register - Luton Engineering Dashboard",
+  description: "Create your Luton Engineering Dashboard account to get started with project management and collaboration tools.",
+  robots: "noindex, nofollow", // Prevent indexing of auth pages
+  openGraph: {
+    title: "Register - Luton Engineering Dashboard",
+    description: "Create your Luton Engineering Dashboard account",
+    type: "website",
+  },
+};
 
 export default function RegisterV1() {
   return (

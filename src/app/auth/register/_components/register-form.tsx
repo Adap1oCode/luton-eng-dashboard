@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { supabaseBrowser } from "@/lib/supabase";
+import { PasswordStrength } from "@/components/auth/password-strength";
+import { trackRegisterAttempt, trackRegisterSuccess, trackRegisterFailed, trackAuthError } from "@/lib/analytics";
+import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
 
 const FormSchema = z
   .object({
@@ -55,24 +58,39 @@ export function RegisterFormV1() {
       const password = values.password.trim();
       const next = getNextFromLocation();
 
-      try {
-        const s = supabaseBrowser();
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      // Track registration attempt
+      trackRegisterAttempt();
 
-        const { data, error } = await s.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo },
+      try {
+        const { result, responseTime } = await measureApiResponse(async () => {
+          const s = supabaseBrowser();
+          const origin = typeof window !== "undefined" ? window.location.origin : "";
+          const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+          return await s.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo },
+          });
         });
 
-        if (error) {
-          toast.error("Registration failed", { description: error.message });
+        if (result.error) {
+          trackRegisterFailed(result.error.message);
+          toast.error("Registration failed", { description: result.error.message });
           return;
         }
 
-        if (!data.session) {
+        // Track performance metrics
+        trackAuthPerformance({
+          pageLoadTime: measurePageLoad(),
+          authFormRenderTime: 0,
+          apiResponseTime: responseTime,
+          totalAuthTime: responseTime,
+        });
+
+        if (!result.data.session) {
           // Email confirmation required
+          trackRegisterSuccess(); // Still count as success since account was created
           toast.success("Check your email", {
             description: "We sent a confirmation link to finish setting up your account.",
           });
@@ -80,9 +98,12 @@ export function RegisterFormV1() {
         }
 
         // Auto-confirmed (session created)
+        trackRegisterSuccess();
         toast.success("Account created", { description: "Welcome!" });
         window.location.href = next;
       } catch (e: any) {
+        trackAuthError(e, 'registration');
+        trackRegisterFailed(e?.message ?? 'unknown_error');
         toast.error("Registration failed", {
           description: e?.message ?? "Please try again.",
         });
@@ -187,7 +208,7 @@ export function RegisterFormV1() {
                         id="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        autoComplete="current-password"
+                        autoComplete="new-password"
                         className="h-12 rounded-lg border-gray-300 pr-12 text-base focus:border-orange-500 focus:ring-orange-500"
                         disabled={pending}
                         {...field}
@@ -199,6 +220,7 @@ export function RegisterFormV1() {
                         className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                         disabled={pending}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -208,6 +230,7 @@ export function RegisterFormV1() {
                       </Button>
                     </div>
                   </FormControl>
+                  <PasswordStrength password={field.value} />
                   <FormMessage />
                 </FormItem>
               )}

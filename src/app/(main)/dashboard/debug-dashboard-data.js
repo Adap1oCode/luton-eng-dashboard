@@ -42,3 +42,4 @@ console.log('1. Check browser console for debug messages');
 console.log('2. Verify fetchRecords is called with correct parameters');
 console.log('3. Verify the returned data has 883 records');
 console.log('4. If data is correct but UI shows wrong count, the issue is in the data viewer component');
+
