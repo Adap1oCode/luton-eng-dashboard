@@ -10,6 +10,7 @@ export interface ReactQueryMetrics {
   averageMutationTime: number
   staleQueries: number
   backgroundRefetches: number
+  queryUpdates: number
 }
 
 // Performance monitoring for React Query
@@ -23,6 +24,7 @@ export class ReactQueryPerformanceMonitor {
     averageMutationTime: 0,
     staleQueries: 0,
     backgroundRefetches: 0,
+    queryUpdates: 0,
   }
 
   private queryTimes: number[] = []
@@ -41,10 +43,9 @@ export class ReactQueryPerformanceMonitor {
       }
       
       if (event.type === 'updated') {
-        if (event.query.state.isStale) {
-          this.metrics.staleQueries++
-          console.log('📊 React Query: Query became stale', event.query.queryKey)
-        }
+        // Track query updates
+        this.metrics.queryUpdates++
+        console.log('📊 React Query: Query updated', event.query.queryKey)
       }
     })
 
@@ -163,6 +164,7 @@ export class ReactQueryPerformanceMonitor {
       averageMutationTime: 0,
       staleQueries: 0,
       backgroundRefetches: 0,
+      queryUpdates: 0,
     }
     this.queryTimes = []
     this.mutationTimes = []
