@@ -37,7 +37,7 @@ export function useStockAdjustments(filters: StockAdjustmentFilters = {}) {
     queryKey: queryKeys.stockAdjustments.list(filters),
     queryFn: async () => {
       return performanceMonitor.trackQuery(
-        queryKeys.stockAdjustments.list(filters),
+        [...queryKeys.stockAdjustments.list(filters)],
         async () => {
           const qs = new URLSearchParams({
             page: String(page),

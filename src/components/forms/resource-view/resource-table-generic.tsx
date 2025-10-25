@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ResourceTableClient from './resource-table-client'
 import { BaseViewConfig } from '@/components/data-table/view-defaults'
 
-interface ResourceTableGenericProps<T = any> {
+interface ResourceTableGenericProps<T extends { id: string } = { id: string }> {
   // Required: The resource endpoint
   endpoint: string
   // Required: The view configuration
@@ -23,7 +23,7 @@ interface ResourceTableGenericProps<T = any> {
   onError?: (error: Error) => void
 }
 
-export default function ResourceTableGeneric<T = any>({
+export default function ResourceTableGeneric<T extends { id: string } = { id: string }>({
   endpoint,
   config,
   initialRows,
@@ -116,12 +116,7 @@ export default function ResourceTableGeneric<T = any>({
       initialTotal={total}
       page={page}
       pageSize={pageSize}
-      onPageChange={handlePageChange}
-      onPageSizeChange={handlePageSizeChange}
       onFiltersChange={handleFiltersChange}
-      isLoading={isLoading}
-      isFetching={isFetching}
-      error={error}
     />
   )
 }

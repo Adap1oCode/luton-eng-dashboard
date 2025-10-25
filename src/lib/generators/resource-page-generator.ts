@@ -72,7 +72,7 @@ export function generateResourcePage(config: ResourcePageConfig) {
     features: {
       rowSelection: features.rowSelection ?? true,
       pagination: features.pagination ?? true,
-      sorting: features.sorting ?? true,
+      sortable: features.sortable ?? true,
       filtering: features.filtering ?? true,
       inlineEditing: features.inlineEditing ?? false,
     },

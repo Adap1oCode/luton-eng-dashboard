@@ -21,8 +21,6 @@ interface GenericPageShellProps {
   showSaveViewButton?: boolean
   // Optional: Show toolbar container
   showToolbarContainer?: boolean
-  // Optional: Custom CSS classes
-  className?: string
 }
 
 export default function GenericPageShell({
@@ -35,7 +33,6 @@ export default function GenericPageShell({
   enableAdvancedFilters = true,
   showSaveViewButton = false,
   showToolbarContainer = false,
-  className,
 }: GenericPageShellProps) {
   return (
     <PageShell
@@ -47,7 +44,6 @@ export default function GenericPageShell({
       enableAdvancedFilters={enableAdvancedFilters}
       showSaveViewButton={showSaveViewButton}
       showToolbarContainer={showToolbarContainer}
-      className={className}
     >
       {children}
     </PageShell>

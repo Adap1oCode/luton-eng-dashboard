@@ -13,11 +13,20 @@ export function useDataViewer({ config, records, totalCount }: {
   const [filters, setFilters] = useState<Filter[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const filteredData = useMemo(() => {
     // Simple filtering logic
     return records
   }, [records, filters])
+
+  const handleClickWidget = (tile: any) => {
+    console.log('Widget clicked:', tile)
+  }
+
+  const handleFilter = (filterType: string) => (filter: Filter) => {
+    console.log('Filter applied:', filterType, filter)
+  }
 
   return {
     data: filteredData,
@@ -30,6 +39,11 @@ export function useDataViewer({ config, records, totalCount }: {
     setPageSize,
     isLoading: false,
     error: null,
+    drawerOpen,
+    setDrawerOpen,
+    filteredData,
+    handleClickWidget,
+    handleFilter,
   }
 }
 
@@ -39,18 +53,21 @@ export function DataViewer({
   setDrawerOpen, 
   filteredData, 
   filters, 
-  config 
+  config,
+  totalCount
 }: {
   drawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
   filteredData: unknown[]
   filters: Filter[]
   config: ClientDashboardConfig
+  totalCount?: number
 }) {
   return (
     <div className="p-4">
       <h3>Data Viewer</h3>
       <p>Records: {filteredData.length}</p>
+      <p>Total Count: {totalCount}</p>
       <p>Filters: {filters.length}</p>
     </div>
   )
