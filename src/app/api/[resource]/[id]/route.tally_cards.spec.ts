@@ -3,15 +3,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/api/resolve-resource");
-vi.mock("@/lib/supabase-server");
+vi.mock("@/lib/supabase-server", () => ({
+  createClient: vi.fn(),
+}));
 vi.mock("@/lib/supabase", () => ({
-  createSupabaseServerClient: vi.fn(),
+  supabase: {
+    rpc: vi.fn(),
+    from: vi.fn(),
+  },
 }));
 
 // Import mocked modules properly
 import { resolveResource } from "@/lib/api/resolve-resource";
-import { createClient } from "@/lib/supabase-server";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { createClient as createSupabaseServerClient } from "@/lib/supabase-server";
 
 import { PATCH, DELETE } from "./route";
 
