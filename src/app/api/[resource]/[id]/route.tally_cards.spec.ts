@@ -91,8 +91,8 @@ describe("PATCH /api/tcm_tally_cards/{id}", () => {
     });
 
     // Mock supabase-server with proper typing - use as unknown to bypass type checking
-    vi.mocked(createClient).mockResolvedValue(
-      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(
+      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
     );
     
     // Mock createSupabaseServerClient for DELETE handler
@@ -229,8 +229,8 @@ describe("DELETE /api/tcm_tally_cards/{id}", () => {
     });
 
     // Mock supabase-server with proper typing - use as unknown to bypass type checking
-    vi.mocked(createClient).mockResolvedValue(
-      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(
+      mockSupabaseClient as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
     );
     
     // Mock createSupabaseServerClient for DELETE handler
