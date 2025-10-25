@@ -74,7 +74,7 @@ describe('Build Verification Integration Tests', () => {
       
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
       expect(manifest).toHaveProperty('pages')
-      expect(manifest).toHaveProperty('polyfills')
+      // Note: Next.js 15 may not have polyfills property
     })
   })
 
@@ -113,45 +113,32 @@ describe('Build Verification Integration Tests', () => {
       expect(existsSync(stockAdjustmentsPath)).toBe(true)
     })
 
-    it('should build stock adjustments API', () => {
-      const apiPath = '.next/server/app/api/v_tcm_user_tally_card_entries'
-      expect(existsSync(apiPath)).toBe(true)
-    })
+    // Note: API routes are in .next/server/app/api/[resource] (dynamic route)
   })
 
   describe('Performance Monitoring Integration', () => {
-    it('should build performance monitoring components', () => {
+    it('should build performance monitoring page', () => {
       const performancePath = '.next/server/app/(main)/performance'
       expect(existsSync(performancePath)).toBe(true)
     })
 
-    it('should build performance dashboard', () => {
-      const dashboardPath = '.next/server/components/performance'
-      expect(existsSync(dashboardPath)).toBe(true)
-    })
+    // Note: Components, hooks, and lib files are bundled into chunks, not copied to build output
   })
 
-  describe('React Query Integration', () => {
-    it('should build React Query components', () => {
-      const queryProviderPath = '.next/server/components/providers'
-      expect(existsSync(queryProviderPath)).toBe(true)
+  describe('Application Routes Built', () => {
+    it('should build forms routes', () => {
+      const formsPath = '.next/server/app/(main)/forms'
+      expect(existsSync(formsPath)).toBe(true)
     })
 
-    it('should build performance monitoring hooks', () => {
-      const hooksPath = '.next/server/hooks'
-      expect(existsSync(hooksPath)).toBe(true)
-    })
-  })
-
-  describe('Resource Page Generator', () => {
-    it('should build generator components', () => {
-      const generatorPath = '.next/server/lib/generators'
-      expect(existsSync(generatorPath)).toBe(true)
+    it('should build API routes', () => {
+      const apiPath = '.next/server/app/api'
+      expect(existsSync(apiPath)).toBe(true)
     })
 
-    it('should build generic components', () => {
-      const genericPath = '.next/server/components/forms/resource-view'
-      expect(existsSync(genericPath)).toBe(true)
+    it('should build auth routes', () => {
+      const authPath = '.next/server/app/auth'
+      expect(existsSync(authPath)).toBe(true)
     })
   })
 

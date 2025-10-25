@@ -61,10 +61,7 @@ describe('Simple Build Verification', () => {
       expect(existsSync(pagePath)).toBe(true)
     })
 
-    it('should build stock adjustments API', () => {
-      const apiPath = '.next/server/app/api/v_tcm_user_tally_card_entries'
-      expect(existsSync(apiPath)).toBe(true)
-    })
+    // Note: API routes use dynamic [resource] route
   })
 
   describe('Performance Monitoring', () => {
@@ -73,34 +70,21 @@ describe('Simple Build Verification', () => {
       expect(existsSync(perfPath)).toBe(true)
     })
 
-    it('should build performance dashboard component', () => {
-      const dashboardPath = '.next/server/components/performance'
-      expect(existsSync(dashboardPath)).toBe(true)
-    })
+    // Note: Components are bundled into chunks, not copied to build output
   })
 
-  describe('React Query Integration', () => {
-    it('should build React Query provider', () => {
-      const providerPath = '.next/server/components/providers'
-      expect(existsSync(providerPath)).toBe(true)
+  describe('Application Integration', () => {
+    it('should build forms routes', () => {
+      const formsPath = '.next/server/app/(main)/forms'
+      expect(existsSync(formsPath)).toBe(true)
     })
 
-    it('should build React Query configuration', () => {
-      const configPath = '.next/server/lib/react-query.js'
-      expect(existsSync(configPath)).toBe(true)
-    })
-  })
-
-  describe('Resource Page Generator', () => {
-    it('should build generator components', () => {
-      const generatorPath = '.next/server/lib/generators'
-      expect(existsSync(generatorPath)).toBe(true)
+    it('should build auth routes', () => {
+      const authPath = '.next/server/app/auth'
+      expect(existsSync(authPath)).toBe(true)
     })
 
-    it('should build generic components', () => {
-      const genericPath = '.next/server/components/forms/resource-view'
-      expect(existsSync(genericPath)).toBe(true)
-    })
+    // Note: React Query, hooks, lib files are bundled, not in separate folders
   })
 
   describe('Build Quality', () => {
