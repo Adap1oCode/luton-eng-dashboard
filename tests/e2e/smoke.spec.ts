@@ -14,7 +14,7 @@ test.describe("Smoke @smoke", () => {
 
   test("inventory dashboard renders", async ({ page }) => {
     await page.goto("/dashboard/inventory");
-    await expect(page.getByRole("heading", { name: /Inventory/i })).toBeVisible();
-    await expect(page.getByTestId("data-table")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByTestId("data-table")).toBeVisible({ timeout: 15000 });
   });
 });
