@@ -45,7 +45,7 @@ export default async function GenericDashboardPage({ config }: Props) {
       config={{ ...clientConfig, range, from, to } as ClientDashboardConfig}
       metrics={metrics}
       records={records}
-      totalCount={totalCount}
+      
       from={from}
       to={to}
     />

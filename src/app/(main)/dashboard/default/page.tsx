@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
-const ChartAreaInteractive = dynamic(() => import("./_components/chart-area-interactive").then(m => m.ChartAreaInteractive), { ssr: false });
-const DataTable = dynamic(() => import("./_components/data-table").then(m => m.DataTable), { ssr: false });
+const ChartAreaInteractive = dynamic(() => import("./_components/chart-area-interactive").then(m => m.ChartAreaInteractive), );
+const DataTable = dynamic(() => import("./_components/data-table").then(m => m.DataTable), );
 import data from "./_components/data.json";
 import { SectionCards } from "./_components/section-cards";
 
