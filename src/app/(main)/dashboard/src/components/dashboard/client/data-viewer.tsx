@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+
 import { format } from "date-fns";
-import { Filter as FilterIcon, ChevronLeft, ChevronRight, ChevronDown, Search, Calendar, X, Download, Printer, FileText } from "lucide-react";
+import {
+  Filter as FilterIcon,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  Calendar,
+  X,
+  Download,
+  Printer,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { applyDataFilters, Filter } from "@/components/dashboard/client/data-filters";
@@ -16,7 +28,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 
-export function useDataViewer({ config, records, totalCount }: { config: ClientDashboardConfig; records: unknown[]; totalCount?: number }) {
+export function useDataViewer({
+  config,
+  records,
+  totalCount,
+}: {
+  config: ClientDashboardConfig;
+  records: unknown[];
+  totalCount?: number;
+}) {
   const [filters, setFilters] = useState<Filter[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rpcData, setRpcData] = useState<any[] | null>(null);
@@ -44,60 +64,60 @@ export function useDataViewer({ config, records, totalCount }: { config: ClientD
   const handleClickWidget = async (widget: DashboardWidget | DashboardTile) => {
     console.log("🚨 ===== TILE CLICK DEBUG START =====");
     console.log("🚨 Widget/Tile clicked:", widget);
-    
+
     setLoading(true);
-    
+
     try {
       const rpcName = (widget as any).rpcName;
-      
+
       if (rpcName) {
         console.log("🔧 ===== RPC FUNCTION CALL DEBUG =====");
         console.log("🔧 RPC Name:", rpcName);
-        
+
         // Build RPC parameters
         const rpcParams: any = {
           _distinct: false,
           _range_from: 0,
           _range_to: 999, // Large range for now
         };
-        
+
         // Add filter if present - convert to RPC format
         const filter = (widget as any).filter;
         if (filter) {
           console.log("🔧 Original filter:", filter);
-          
+
           if (filter.equals !== undefined) {
             // Convert equals filter to RPC format
-            rpcParams._filter = {
+            rpcParams.filter = {
               column: filter.column,
               op: "=",
-              value: filter.equals
+              value: filter.equals,
             };
           } else if (filter.isNotNull) {
             // Convert isNotNull filter to RPC format
-            rpcParams._filter = {
+            rpcParams.filter = {
               column: filter.column,
-              op: "IS NOT NULL"
+              op: "IS NOT NULL",
             };
           } else {
             // Pass through other filter formats
-            rpcParams._filter = filter;
+            rpcParams.filter = filter;
           }
         }
-        
+
         console.log("🔧 Final RPC parameters:", JSON.stringify(rpcParams, null, 2));
-        
+
         // Call the RPC function via Supabase
         const { data, error } = await supabase.rpc(rpcName, rpcParams);
-        
+
         if (error) {
           console.error("❌ RPC call failed:", error);
           throw error;
         }
-        
+
         console.log("✅ RPC call successful!");
         console.log("✅ RPC returned", data?.length ?? 0, "rows");
-        
+
         setRpcData(data || []);
         setDrawerOpen(true);
       } else {
@@ -129,7 +149,7 @@ export function useDataViewer({ config, records, totalCount }: { config: ClientD
   };
 
   // Calculate total count for pagination
-  const dataViewerTotalCount = rpcData ? rpcData.length : (totalCount || filteredData.length);
+  const dataViewerTotalCount = rpcData ? rpcData.length : totalCount || filteredData.length;
 
   return {
     filters,
@@ -210,14 +230,10 @@ export function DataViewer({
             <div className="flex items-center gap-2">
               {filters.length > 0 && (
                 <Badge variant="secondary">
-                  {filters.length} filter{filters.length > 1 ? 's' : ''} applied
+                  {filters.length} filter{filters.length > 1 ? "s" : ""} applied
                 </Badge>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDrawerOpen(false)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setDrawerOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -230,7 +246,12 @@ export function DataViewer({
             <div className="flex flex-wrap gap-2">
               {filters.map((filter, index) => (
                 <Badge key={index} variant="outline">
-                  {'column' in filter ? filter.column : 'filter'} {'equals' in filter && filter.equals !== undefined ? `= ${filter.equals}` : 'isNotNull' in filter && filter.isNotNull ? 'is not null' : 'filtered'}
+                  {"column" in filter ? filter.column : "filter"}{" "}
+                  {"equals" in filter && filter.equals !== undefined
+                    ? `= ${filter.equals}`
+                    : "isNotNull" in filter && filter.isNotNull
+                      ? "is not null"
+                      : "filtered"}
                 </Badge>
               ))}
             </div>
@@ -254,36 +275,33 @@ export function DataViewer({
                 </Select>
                 <span className="text-sm text-gray-600">entries</span>
               </div>
-              
+
               {selectedRows.size > 0 && (
                 <Badge variant="secondary">
-                  {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected
+                  {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
                 </Badge>
               )}
             </div>
 
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
               <Button variant="outline" size="sm">
-                <Printer className="h-4 w-4 mr-2" />
+                <Printer className="mr-2 h-4 w-4" />
                 Print
               </Button>
             </div>
           </div>
 
           {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                    />
+                    <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
                   </TableHead>
                   {config.tableColumns?.map((column, index) => (
                     <TableHead key={index} className="px-2">
@@ -306,7 +324,7 @@ export function DataViewer({
                     </TableCell>
                     {config.tableColumns?.map((column, colIndex) => (
                       <TableCell key={colIndex} className="px-2">
-                        {row[(column as any).key] !== undefined ? String(row[(column as any).key]) : '-'}
+                        {row[(column as any).key] !== undefined ? String(row[(column as any).key]) : "-"}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -321,7 +339,7 @@ export function DataViewer({
               Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} entries
               {totalCount > filteredData.length && ` (${totalCount} total)`}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -331,11 +349,11 @@ export function DataViewer({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
+
               <span className="text-sm text-gray-600">
                 Page {currentPage} of {totalPages}
               </span>
-              
+
               <Button
                 variant="outline"
                 size="sm"
