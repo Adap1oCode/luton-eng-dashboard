@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Github, Eye, EyeOff } from "lucide-react";
@@ -40,6 +40,7 @@ export function RegisterFormV1() {
   // mirror login's ?next behavior
   function getNextFromLocation(): string {
     try {
+      if (typeof window === "undefined") return "/dashboard";
       const sp = new URLSearchParams(window.location.search);
       const n = sp.get("next");
       return n && n.startsWith("/") ? n : "/dashboard";
@@ -81,7 +82,9 @@ export function RegisterFormV1() {
 
         // Auto-confirmed (session created)
         toast.success("Account created", { description: "Welcome!" });
-        window.location.href = next;
+        if (typeof window !== "undefined") {
+          window.location.href = next;
+        }
       } catch (e: any) {
         toast.error("Registration failed", {
           description: e?.message ?? "Please try again.",
@@ -162,7 +165,6 @@ export function RegisterFormV1() {
                   <FormLabel className="text-base font-medium text-gray-700">Email</FormLabel>
                   <FormControl>
                     <Input
-                      id="email"
                       type="email"
                       placeholder="m@example.com"
                       autoComplete="email"
@@ -181,10 +183,9 @@ export function RegisterFormV1() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
+                  <div className="relative">
+                    <FormControl>
                       <Input
-                        id="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         autoComplete="current-password"
@@ -192,22 +193,22 @@ export function RegisterFormV1() {
                         disabled={pending}
                         {...field}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={pending}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={pending}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -218,10 +219,9 @@ export function RegisterFormV1() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base font-medium text-gray-700">Confirm Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
+                  <div className="relative">
+                    <FormControl>
                       <Input
-                        id="confirmPassword"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         autoComplete="current-password"
@@ -229,22 +229,22 @@ export function RegisterFormV1() {
                         disabled={pending}
                         {...field}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={pending}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={pending}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

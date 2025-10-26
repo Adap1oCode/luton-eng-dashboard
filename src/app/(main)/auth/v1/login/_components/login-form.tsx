@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Github, Eye, EyeOff } from "lucide-react";
@@ -31,6 +31,7 @@ const FormSchema = z.object({
 // -----------------------------
 function getNextFromLocation(): string {
   try {
+    if (typeof window === "undefined") return "/dashboard";
     const sp = new URLSearchParams(window.location.search);
     const n = sp.get("next");
     // Guard against external redirects
@@ -91,13 +92,16 @@ export function LoginFormV1() {
         }
 
         toast.success("Logged in", { description: "Welcome back!" });
-        window.location.href = next; // redirect to ?next or /dashboard
+        if (typeof window !== "undefined") {
+          window.location.href = next; // redirect to ?next or /dashboard
+        }
         return;
       }
 
       // Without password → magic link
       try {
-        await sendMagicLink(email, window.location.origin, next);
+        const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+        await sendMagicLink(email, origin, next);
         toast.success("Magic link sent", {
           description: "Check your inbox to complete sign-in.",
         });
@@ -129,7 +133,6 @@ export function LoginFormV1() {
                   <FormLabel className="text-base font-medium text-gray-700">Email Address</FormLabel>
                   <FormControl>
                     <Input
-                      id="email"
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
@@ -154,10 +157,9 @@ export function LoginFormV1() {
                     <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
                     <span className="text-xs text-gray-500">Leave empty for a magic link</span>
                   </div>
-                  <FormControl>
-                    <div className="relative">
+                  <div className="relative">
+                    <FormControl>
                       <Input
-                        id="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         autoComplete="current-password"
@@ -165,24 +167,24 @@ export function LoginFormV1() {
                         disabled={pending}
                         {...field}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={togglePasswordVisibility}
-                        tabIndex={-1}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        disabled={pending}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={togglePasswordVisibility}
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      disabled={pending}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
