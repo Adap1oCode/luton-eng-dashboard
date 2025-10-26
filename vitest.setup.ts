@@ -18,6 +18,117 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 } as any;
 
+// Mock HTMLElement prototype for Radix UI components
+if (typeof global.HTMLElement === 'undefined') {
+  global.HTMLElement = class HTMLElement {
+    style: any = {};
+    classList: any = {
+      add: vi.fn(),
+      remove: vi.fn(),
+      contains: vi.fn(),
+      toggle: vi.fn(),
+    };
+    setAttribute = vi.fn();
+    getAttribute = vi.fn();
+    removeAttribute = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+    dispatchEvent = vi.fn();
+    focus = vi.fn();
+    blur = vi.fn();
+    click = vi.fn();
+    appendChild = vi.fn();
+    removeChild = vi.fn();
+  } as any;
+}
+
+// Mock Element prototype
+if (typeof global.Element === 'undefined') {
+  global.Element = class Element {
+    style: any = {};
+    classList: any = {
+      add: vi.fn(),
+      remove: vi.fn(),
+      contains: vi.fn(),
+      toggle: vi.fn(),
+    };
+    setAttribute = vi.fn();
+    getAttribute = vi.fn();
+    removeAttribute = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+    dispatchEvent = vi.fn();
+    focus = vi.fn();
+    blur = vi.fn();
+    click = vi.fn();
+    appendChild = vi.fn();
+    removeChild = vi.fn();
+  } as any;
+}
+
+// Ensure Element has a proper prototype
+if (global.Element && !global.Element.prototype) {
+  global.Element.prototype = {} as any;
+}
+
+// Mock document methods that might be needed
+if (typeof global.document !== 'undefined') {
+  global.document.getElementsByTagName = global.document.getElementsByTagName || vi.fn().mockReturnValue([]);
+  global.document.createElement = global.document.createElement || vi.fn().mockReturnValue({
+    setAttribute: vi.fn(),
+    getAttribute: vi.fn(),
+    removeAttribute: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    focus: vi.fn(),
+    blur: vi.fn(),
+    click: vi.fn(),
+    appendChild: vi.fn(),
+    removeChild: vi.fn(),
+    style: {},
+    classList: {
+      add: vi.fn(),
+      remove: vi.fn(),
+      contains: vi.fn(),
+      toggle: vi.fn(),
+    },
+  });
+  global.document.createTextNode = global.document.createTextNode || vi.fn().mockReturnValue({
+    appendChild: vi.fn(),
+    removeChild: vi.fn(),
+  });
+}
+
+// Mock navigator.clipboard
+Object.assign(global.navigator, {
+  clipboard: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+    readText: vi.fn().mockResolvedValue('')
+  }
+});
+
+// Also mock window.navigator.clipboard
+if (typeof global.window !== 'undefined') {
+  Object.assign(global.window.navigator, {
+    clipboard: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue('')
+    }
+  });
+}
+
+// Mock window.navigator.clipboard as well
+// Object.defineProperty(global.window, 'navigator', {
+//   value: {
+//     clipboard: {
+//       writeText: vi.fn().mockResolvedValue(undefined),
+//       readText: vi.fn().mockResolvedValue('')
+//     }
+//   },
+//   writable: true
+// });
+
 // Load the first env file that exists
 for (const p of [".env.test.local", ".env.local", ".env"]) {
   if (existsSync(p)) {

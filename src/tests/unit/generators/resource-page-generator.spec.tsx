@@ -185,9 +185,7 @@ describe('Resource Page Generator', () => {
       expect(viewConfig.features).toEqual({
         rowSelection: false,
         pagination: true,
-        sorting: false,
-        filtering: true,
-        inlineEditing: true,
+        sortable: false,
       })
     })
   })
