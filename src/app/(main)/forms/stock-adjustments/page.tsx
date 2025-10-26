@@ -80,6 +80,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
         initialTotal={total}
         page={page}
         pageSize={pageSize}
+        showInlineExportButton={false}
       />
     </PageShell>
   );

@@ -14,7 +14,6 @@ export interface DraggableHeaderCellProps {
   sorted: false | "asc" | "desc";
   isReorderable: boolean;
   onToggleSort: () => void;
-  onMouseDownResize: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
 }
 
 export const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
@@ -23,7 +22,6 @@ export const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
   sorted,
   isReorderable,
   onToggleSort,
-  onMouseDownResize,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: columnId });
   const style = { transform: CSS.Transform.toString(transform), transition } as React.CSSProperties;
@@ -32,7 +30,7 @@ export const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
     <div
       ref={isReorderable ? setNodeRef : undefined}
       style={isReorderable ? style : undefined}
-      className="relative space-y-2"
+      className="relative"
     >
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-1">
@@ -44,23 +42,17 @@ export const DraggableHeaderCell: React.FC<DraggableHeaderCellProps> = ({
           <span className="mr-2 truncate whitespace-nowrap">{label}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="outline" size="sm" onClick={onToggleSort} className="has-[>svg]:px-3">
+          <Button variant="outline" onClick={onToggleSort} className="h-6 px-2 py-1 flex items-center justify-center">
             {sorted === "asc" ? (
-              <ArrowUp className="h-4 w-4" />
+              <ArrowUp className="h-2 w-2" />
             ) : sorted === "desc" ? (
-              <ArrowDown className="h-4 w-4" />
+              <ArrowDown className="h-2 w-2" />
             ) : (
-              <ArrowUpDown className="h-4 w-4" />
+              <ArrowUpDown className="h-2 w-2" />
             )}
           </Button>
         </div>
       </div>
-      {/* Resize handle on the right edge */}
-      <div
-        className="absolute top-0 right-0 z-10 h-full w-2 cursor-col-resize select-none"
-        onMouseDown={(e) => onMouseDownResize(e as React.MouseEvent<HTMLDivElement>, columnId)}
-        data-testid="resize-handle"
-      />
     </div>
   );
 };
@@ -73,10 +65,9 @@ export interface DecoratedHeaderProps {
   };
   label: React.ReactNode;
   columnOrder: string[];
-  onMouseDownResize: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
 }
 
-export const DecoratedHeader: React.FC<DecoratedHeaderProps> = ({ column, label, columnOrder, onMouseDownResize }) => {
+export const DecoratedHeader: React.FC<DecoratedHeaderProps> = ({ column, label, columnOrder }) => {
   const sorted = column.getIsSorted();
   const reorderable = columnOrder.includes(column.id) && column.id !== "actions" && column.id !== "__select";
 
@@ -87,7 +78,6 @@ export const DecoratedHeader: React.FC<DecoratedHeaderProps> = ({ column, label,
       sorted={sorted}
       isReorderable={reorderable}
       onToggleSort={() => column.toggleSorting(sorted === "asc")}
-      onMouseDownResize={onMouseDownResize}
     />
   );
 };

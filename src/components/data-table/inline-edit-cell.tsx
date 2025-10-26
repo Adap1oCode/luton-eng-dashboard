@@ -23,6 +23,7 @@ export interface InlineEditConfig {
   validation?: (value: any) => boolean;
   formatDisplay?: (value: any) => React.ReactNode;
   parseValue?: (value: string) => any;
+  showBadge?: boolean; // Whether to show badge in display mode
 }
 
 interface InlineEditCellProps {
@@ -142,9 +143,13 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
 
   return (
     <div className="group flex items-center justify-start gap-2">
-      <Badge variant={badgeVariant} className={`px-2 py-1 text-xs ${badgeClassName}`}>
-        {displayValue}
-      </Badge>
+      {config.showBadge !== false ? (
+        <Badge variant={badgeVariant} className={`px-2 py-1 text-xs ${badgeClassName}`}>
+          {displayValue}
+        </Badge>
+      ) : (
+        <span>{displayValue}</span>
+      )}
       {!disabled && (
         <Button
           variant="ghost"

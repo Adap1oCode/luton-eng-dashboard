@@ -39,6 +39,7 @@ export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
     placeholder: "Enter quantity",
     validation: (value) => !isNaN(Number(value)),
     parseValue: (value) => Number(value),
+    showBadge: false, // Disable badges for Qty column
   },
 };
 
@@ -73,7 +74,7 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
     {
       id: "tally_card_number",
       accessorKey: "tally_card_number",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card" />,
+      header: "Tally Card",
       cell: ({ row }) => {
         const id = row.original.id;
         const tallyCardNumber = row.getValue<string | null>("tally_card_number");
@@ -86,7 +87,7 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
         // Create hyperlink to edit page
         return (
           <Link
-            href={`/forms/stock-adjustments/edit/${id}`}
+            href={`/forms/stock-adjustments/${id}/edit`}
             className="font-medium text-blue-600 transition-colors duration-150 hover:text-blue-800 hover:underline"
           >
             {tallyCardNumber}
@@ -117,7 +118,7 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       cell: ({ row }) => {
         const qty = row.getValue<number | null>("qty");
         
-        // Show quantity value without badges
+        // Show quantity value without badges (badges disabled via inline edit config)
         if (qty !== null && qty !== undefined) {
           return <span>{qty}</span>;
         }

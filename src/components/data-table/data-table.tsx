@@ -73,6 +73,7 @@ interface TanStackDataTableProps<T = Record<string, unknown>> {
   renderExpanded?: (row: any) => React.ReactNode;
   columnWidthsPct?: Record<string, number>;
   tableContainerRef?: React.MutableRefObject<HTMLElement | null>;
+  onMouseDownResize?: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
   filtersConfig?: {
     columns: FilterColumn[];
     columnWidthsPct?: Record<string, number>;
@@ -99,6 +100,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
   renderExpanded,
   columnWidthsPct,
   tableContainerRef,
+  onMouseDownResize,
   filtersConfig,
 }: TanStackDataTableProps<T>) {
   return (
@@ -112,7 +114,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                    className="p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 relative"
                     style={
                       columnWidthsPct?.[header.column.id] != null
                         ? {
@@ -125,6 +127,15 @@ function TanStackDataTable<T = Record<string, unknown>>({
                     }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {/* Custom resize handle - positioned at the actual right edge of the column */}
+                    {header.column.getCanResize() && (
+                      <div
+                        className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-500 transition-colors"
+                        onMouseDown={(e) => onMouseDownResize(e, header.column.id)}
+                        style={{ userSelect: 'none' }}
+                        data-testid={`resize-handle-${header.column.id}`}
+                      />
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -394,12 +405,12 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                           >
                             {sortConfig.column === colId ? (
                               sortConfig.direction === "asc" ? (
-                                <ArrowUp className="h-3 w-3" />
+                                <ArrowUp className="h-2.5 w-2.5" />
                               ) : (
-                                <ArrowDown className="h-3 w-3" />
+                                <ArrowDown className="h-2.5 w-2.5" />
                               )
                             ) : (
-                              <ArrowUpDown className="h-3 w-3" />
+                              <ArrowUpDown className="h-2.5 w-2.5" />
                             )}
                           </button>
                         </div>

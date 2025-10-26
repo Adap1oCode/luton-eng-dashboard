@@ -52,11 +52,11 @@ import { type FilterColumn, type ColumnFilterState } from "@/components/data-tab
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
 import { InlineEditCellWrapper } from "@/components/data-table/inline-edit-cell-wrapper";
+import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { DecoratedHeader } from "@/components/data-table/resizable-draggable-header";
 import { SortMenu } from "@/components/data-table/sort-menu";
 import { StatusCellWrapper } from "@/components/data-table/status-cell-wrapper";
 import { stringPredicate } from "@/components/data-table/table-utils";
-import { useColumnResize } from "@/components/data-table/use-column-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
@@ -326,14 +326,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             }
             label={label}
             columnOrder={columnOrder}
-            onMouseDownResize={onMouseDownResize}
           />
         );
       }
 
       return c;
     });
-  }, [baseColumns, columnOrder, onMouseDownResize]);
+  }, [baseColumns, columnOrder]);
 
   // 🧩 Enhance columns: add filter function + inline status editing
   const enhancedColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
@@ -449,9 +448,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    columnResizeMode: "onChange",
     enableRowSelection: true,
-    enableColumnResizing: enableColumnResizing,
     // ✅ use the same idField consistently for stable keys
     getRowId: (row: TRow, idx: number, parent?: Row<TRow>) => {
       const domId = (row as any)[idField] as string | undefined;
@@ -735,7 +732,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4" />
+              <ArrowUpDown className="h-2.5 w-2.5" />
               Sort
               <ChevronDown className="h-4 w-4" />
             </Button>
@@ -912,6 +909,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           // ✅ Use resized column widths if available, otherwise fall back to auto-calculated
           columnWidthsPct={Object.keys(columnWidths).length > 0 ? columnWidths : autoColumnWidthsPct}
           tableContainerRef={tableRef}
+          onMouseDownResize={onMouseDownResize}
           filtersConfig={{
             columns: filterColumns,
             // Use resized column widths if available, otherwise fall back to auto-calculated

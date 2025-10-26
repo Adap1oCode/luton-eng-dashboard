@@ -23,14 +23,14 @@ export function DataTableColumnHeader<TData, TValue>({
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const isSorted = column.getIsSorted();
-  const icon =
-    isSorted === "desc" ? (
-      <ArrowDown className="ml-2 h-3 w-3" />
-    ) : isSorted === "asc" ? (
-      <ArrowUp className="ml-2 h-3 w-3" />
-    ) : (
-      <ArrowUpDown className="ml-2 h-3 w-3" />
-    );
+            const icon =
+              isSorted === "desc" ? (
+                <ArrowDown className="ml-2 h-2.5 w-2.5" />
+              ) : isSorted === "asc" ? (
+                <ArrowUp className="ml-2 h-2.5 w-2.5" />
+              ) : (
+                <ArrowUpDown className="ml-2 h-2.5 w-2.5" />
+              );
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -48,7 +48,7 @@ export function DataTableColumnHeader<TData, TValue>({
               <Button 
                 variant="outline" 
                 className={cn(
-                  "flex items-center has-[>svg]:px-3 h-9 px-4 py-2",
+                  "flex items-center has-[>svg]:px-3 h-8 rounded-md gap-1.5 px-3",
                   isSorted && "border-blue-500 bg-blue-50 text-blue-700"
                 )}
               >
@@ -57,11 +57,11 @@ export function DataTableColumnHeader<TData, TValue>({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
-                <ArrowUp className="mr-2 h-3 w-3 text-muted-foreground/70" />
-                Asc
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
-                <ArrowDown className="mr-2 h-3 w-3 text-muted-foreground/70" />
+              <ArrowUp className="mr-2 h-2.5 w-2.5 text-muted-foreground/70" />
+              Asc
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+              <ArrowDown className="mr-2 h-2.5 w-2.5 text-muted-foreground/70" />
                 Desc
               </DropdownMenuItem>
             </DropdownMenuContent>
