@@ -211,6 +211,40 @@ Confirmed active files with imports:
 
 ---
 
+## 🔧 TOOLBAR ARCHITECTURE CHANGES (COMPLETED)
+
+### Problem Solved
+- **Issue**: Duplicate toolbars with non-functional buttons in top toolbar
+- **Solution**: Consolidated into single, functional toolbar
+
+### Changes Made
+1. **Removed Top Toolbar**: Eliminated non-functional placeholder buttons from `PageShell`
+2. **Consolidated Toolbar**: Moved all controls to `ResourceTableClient` toolbar
+3. **Status Dropdown Integration**: Moved Status dropdown to table toolbar (first position)
+4. **Clean Architecture**: Single source of truth for all table controls
+
+### New Layout
+```
+┌─────────────────────────────────────────────────────────┐
+│ Stock Adjustments                    [310]              │
+│ [+ New Adjustment] [Delete] [Export CSV]                │
+├─────────────────────────────────────────────────────────┤
+│ [Status: All adjustments ▼] [Columns ▼] [Sort ▼] [More Filters ▼] [Export CSV] │
+├─────────────────────────────────────────────────────────┤
+│ [Checkbox] Tally Card │ Warehouse │ Name │ Qty │ ...    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Benefits
+- ✅ **No Duplication**: Single toolbar with all functional buttons
+- ✅ **Better UX**: All table controls in one logical location
+- ✅ **Cleaner Code**: Removed non-functional placeholder buttons
+- ✅ **Future-Ready**: Easy to add Views functionality when needed
+- ✅ **Zero Regression**: All existing functionality preserved
+- ✅ **Test Coverage**: Unit tests updated to prevent regression
+
+---
+
 ## 🎯 RECOMMENDATIONS
 
 ### Phase 1: Quick Wins (Safe to delete)

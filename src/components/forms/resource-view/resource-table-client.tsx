@@ -64,6 +64,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FullScreenLoader } from "@/components/ui/enhanced-loader";
+import { BackgroundLoader } from "@/components/ui/background-loader";
 
 type FilterMode = "contains" | "equals" | "startsWith" | "endsWith";
 
@@ -83,6 +85,17 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   onClearFilters?: () => void;
   onColumnWidthsChange?: (widths: Record<string, number>) => void;
   initialColumnWidths?: Record<string, number>;
+  
+  // Enhanced loading props
+  isLoading?: boolean;
+  loadingTitle?: string;
+  loadingDescription?: string;
+  isRefetching?: boolean;
+  refetchMessage?: string;
+  refetchPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center';
+  
+  // Quick filters props
+  quickFiltersSlot?: React.ReactNode;
 };
 
 // move header and cell wrappers into shared data-table modules
@@ -103,6 +116,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   onClearFilters,
   onColumnWidthsChange,
   initialColumnWidths = {},
+  
+  // Enhanced loading props
+  isLoading = false,
+  loadingTitle = "Loading...",
+  loadingDescription = "Please wait...",
+  isRefetching = false,
+  refetchMessage = "Updating...",
+  refetchPosition = 'top-right',
+  
+  // Quick filters props
+  quickFiltersSlot,
 }: ResourceTableClientProps<TRow>) {
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
@@ -877,12 +901,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
-        {/* ✅ Toolbar مع More Filters */}
+        {/* ✅ Consolidated Toolbar with Quick Filters */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {/* Quick Filters (Status dropdown) */}
+              {quickFiltersSlot}
+              {/* Table Controls */}
               {ColumnsAndSortToolbar}
-              {/* زر More Filters */}
+              {/* More Filters */}
               <Button
                 variant="outline"
                 onClick={() => setShowMoreFilters(!showMoreFilters)}
@@ -892,7 +919,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 {showMoreFilters ? "Hide Filters" : "More Filters"}
               </Button>
             </div>
-            {/* زر Export في أقصى اليمين */}
+            {/* Export Button */}
             {showInlineExportButton && (
               <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
                 Export CSV
@@ -947,6 +974,23 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         ) : null}
       </DragOverlay>
       {ConfirmComponent}
+      
+      {/* Enhanced loading indicators */}
+      {isLoading && (
+        <FullScreenLoader
+          title={loadingTitle}
+          description={loadingDescription}
+          size="md"
+        />
+      )}
+      
+      {isRefetching && (
+        <BackgroundLoader
+          message={refetchMessage}
+          position={refetchPosition}
+          size="md"
+        />
+      )}
     </DndContext>
   );
 }

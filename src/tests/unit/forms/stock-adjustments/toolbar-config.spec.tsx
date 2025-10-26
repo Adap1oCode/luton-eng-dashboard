@@ -17,7 +17,7 @@ describe('Stock Adjustments Toolbar Config', () => {
 
     it('should have correct left toolbar buttons', () => {
       const leftButtons = stockAdjustmentsToolbar.left
-      expect(leftButtons).toHaveLength(2)
+      expect(leftButtons).toHaveLength(3)
 
       // New button
       const newButton = leftButtons.find(btn => btn.id === 'new')
@@ -37,6 +37,14 @@ describe('Stock Adjustments Toolbar Config', () => {
       expect(deleteButton?.action).toBe('deleteSelected')
       expect(deleteButton?.enableWhen).toBe('anySelected')
       expect(deleteButton?.requiredAny).toEqual(['resource:tcm_user_tally_card_entries:delete'])
+
+      // Export CSV button
+      const exportButton = leftButtons.find(btn => btn.id === 'exportCsv')
+      expect(exportButton).toBeDefined()
+      expect(exportButton?.label).toBe('Export CSV')
+      expect(exportButton?.icon).toBe('Download')
+      expect(exportButton?.variant).toBe('outline')
+      expect(exportButton?.onClickId).toBe('exportCsv')
     })
 
     it('should have empty right toolbar', () => {

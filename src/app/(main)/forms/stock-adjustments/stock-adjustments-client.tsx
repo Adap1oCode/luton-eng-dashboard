@@ -6,6 +6,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
+import { FullScreenLoader } from "@/components/ui/enhanced-loader";
+import { BackgroundLoader } from "@/components/ui/background-loader";
 import { stockAdjustmentsViewConfig } from "./view.config";
 import { stockAdjustmentsToolbar, stockAdjustmentsActions } from "./toolbar.config";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
@@ -168,12 +170,6 @@ export function StockAdjustmentsClient({
         toolbarConfig={stockAdjustmentsToolbar}
         toolbarActions={stockAdjustmentsActions}
         enableAdvancedFilters={false}
-        quickFiltersSlot={
-          <QuickFiltersClient
-            onFilterChange={handleFilterChange}
-            currentFilters={{ status: statusFilter || "ALL" }}
-          />
-        }
       >
         <ResourceTableClient
           config={stockAdjustmentsViewConfig}
@@ -184,31 +180,31 @@ export function StockAdjustmentsClient({
           showInlineExportButton={false}
           onColumnWidthsChange={handleColumnWidthsChange}
           initialColumnWidths={columnWidths}
+          quickFiltersSlot={
+            <QuickFiltersClient
+              onFilterChange={handleFilterChange}
+              currentFilters={{ status: statusFilter || "ALL" }}
+            />
+          }
         />
       </PageShell>
       
-      {/* Loading indicator - only show for initial load, not for background refetches */}
+      {/* Enhanced loading indicator - only show for initial load, not for background refetches */}
       {isLoading && !data && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="text-gray-700">Loading stock adjustments...</span>
-            </div>
-          </div>
-        </div>
+        <FullScreenLoader
+          title="Loading Stock Adjustments"
+          description="Fetching your data..."
+          size="md"
+        />
       )}
       
       {/* Background loading indicator for refetches */}
       {isFetching && data && (
-        <div className="fixed top-4 right-4 z-50">
-          <div className="bg-white rounded-lg p-3 shadow-lg border">
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-sm text-gray-700">Updating...</span>
-            </div>
-          </div>
-        </div>
+        <BackgroundLoader
+          message="Updating..."
+          position="top-right"
+          size="md"
+        />
       )}
     </>
   );
