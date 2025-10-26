@@ -34,6 +34,9 @@ src/app/(main)/forms/{resource-name}/
 ├── page.tsx                    # List view (required)
 ├── view.config.tsx             # Table configuration (required)
 ├── toolbar.config.tsx          # Toolbar configuration (required)
+├── stock-adjustments-client.tsx        # Client component (optional)
+├── stock-adjustments-error-boundary.tsx # Error boundary (optional)
+├── quick-filters-client.tsx            # Quick filters (optional)
 ├── new/
 │   ├── page.tsx                # Create form (required)
 │   └── form.config.ts          # Form configuration (required)
@@ -367,6 +370,15 @@ src/lib/data/resource-fetch.ts
 - Generic API fetching utility
 - Used by `page.tsx` for SSR
 
+### Client-Side Fetch
+```
+src/lib/api/client-fetch.ts
+```
+- Client-side data fetching utility for React Query
+- Provides `fetchResourcePageClient()` function
+- Uses `window.location.origin` for base URL
+- Compatible with React Query for caching and background updates
+
 ### Forms Utilities
 ```
 src/lib/forms/
@@ -441,12 +453,18 @@ docs/forms/stock-adjustments.md
 URL: /forms/stock-adjustments
   ↓
 page.tsx (Server Component)
-  ↓ fetches from
+  ↓ fetches initial data from
 API: GET /api/v_tcm_user_tally_card_entries
-  ↓ transforms via toRow()
-ResourceTableClient (Client Component)
   ↓ renders
-DataTable (TanStack Table)
+StockAdjustmentsErrorBoundary
+  ↓ wraps
+StockAdjustmentsClient (Client Component)
+  ├── Uses React Query for client-side data fetching
+  ├── Manages pagination, filters, column widths
+  ├── Handles error states and loading indicators
+  └── Renders PageShell with ResourceTableClient
+      ↓ renders
+      DataTable (TanStack Table)
 ```
 
 ### Create

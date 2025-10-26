@@ -15,14 +15,16 @@
 3. [Row Actions](#3-row-actions)
 4. [Edit / Create Form](#4-edit--create-form)
 5. [API Contracts](#5-api-contracts)
-6. [Permissions](#6-permissions)
-7. [Test Hooks](#7-test-hooks-shared-identifiers)
-8. [Testing Expectations](#8-testing-expectations)
-9. [Performance & UX](#9-performance--ux)
-10. [Accessibility](#10-accessibility)
-11. [Definition of Done](#11-definition-of-done)
-12. [File Map](#12-file-map-reference)
-13. [Reuse Guidance](#13-reuse-guidance)
+6. [Client-Side Architecture](#6-client-side-architecture)
+7. [Permissions](#7-permissions)
+8. [Test Hooks](#8-test-hooks-shared-identifiers)
+9. [Testing Expectations](#9-testing-expectations)
+10. [Performance & UX](#10-performance--ux)
+11. [Accessibility](#11-accessibility)
+12. [Definition of Done](#12-definition-of-done)
+13. [Component Architecture](#13-component-architecture-bug-fixing-reference)
+14. [File Map](#14-file-map-reference)
+15. [Reuse Guidance](#15-reuse-guidance)
 
 ---
 
@@ -81,27 +83,24 @@ Standardized shared component used for all list pages.
 | Column | Header | Sortable | Filterable | Special Features |
 |--------|--------|----------|------------|------------------|
 | **Selection** | Checkbox (first column) | ❌ | ❌ | — |
-| **Name** | Name | ✅ | ✅ | — |
+| **Tally Card** | Tally Card | ✅ | ✅ | ✅ **Hyperlink to edit** |
 | **Warehouse** | Warehouse | ✅ | ✅ | — |
-| **Tally Card** | Tally Card # | ✅ | ✅ | ✅ **Hyperlink to edit** |
-| **Qty** | Quantity | ✅ | ✅ | ✅ **Status badge** (Active/Zero) |
+| **Name** | Name | ✅ | ✅ | — |
+| **Qty** | Qty | ✅ | ✅ | ✅ **Inline editing** (no badges) |
 | **Location** | Location | ✅ | ✅ | — |
 | **Note** | Note | ❌ | ✅ | — |
 | **Updated** | Updated | ✅ | ✅ | — |
 | **Actions** | ⋯ (last column) | ❌ | ❌ | — |
 
 **Special Column Features:**
-1. **Tally Card Hyperlink**: Clickable links navigate to `/forms/stock-adjustments/edit/{id}` for quick editing
-2. **Qty Status Badge**: 
-   - Green "Active" badge for qty > 0
-   - Orange "Zero" badge for qty = 0
-   - Provides visual status indicator at a glance
-3. **Inline Editing**: 
+1. **Tally Card Hyperlink**: Clickable links navigate to `/forms/stock-adjustments/{id}/edit` for quick editing
+2. **Qty Inline Editing**: 
    - Quantity column is editable directly in the table
    - Click on quantity value to enter edit mode
    - Use check/cancel buttons to save or cancel changes
    - Validation ensures numeric values only
    - Changes are saved via API call to update the record
+   - **Note**: Status badges have been removed for cleaner appearance
 
 #### Features
 
@@ -123,19 +122,20 @@ Standardized shared component used for all list pages.
 
 **Data Table Features:**
 - ✅ **Column reordering** (drag and drop)
-- ✅ **Column resizing** (manual width adjustment)
+- ✅ **Column resizing** (manual width adjustment with persistence)
 - ✅ **Column show/hide** (visibility toggle)
-- ✅ **Multi-column sorting** (click headers to sort)
+- ✅ **Multi-column sorting** (click headers to sort with visual indicators)
 - ✅ **Global filtering** (text search across all columns)
 - ✅ **Per-column filtering** (specific column filters)
 - ✅ **Row selection** (checkbox for bulk actions)
 - ✅ **Row actions menu** (View/Edit/Delete per row)
-- ✅ **Export to CSV** (download visible data)
 - ✅ **Quick Filters** (Status dropdown for fast filtering)
 - ✅ **Inline Editing** (Edit quantity directly in table cells)
 - ✅ **Hyperlink columns** (Quick navigation to edit pages)
-- ✅ **Status badges** (Visual indicators for active/zero quantities)
+- ✅ **Column borders** (Light grey background on headers for clarity)
 - ✅ **URL state persistence** (pagination/filters in URL)
+- ✅ **Client-side data fetching** (React Query for better UX)
+- ✅ **Comprehensive error handling** (Toast notifications with retry)
 - ✅ **Responsive design** (mobile-friendly)
 - ✅ **Keyboard navigation** (accessibility)
 
@@ -145,13 +145,15 @@ Between the toolbar and table, quick filter dropdowns provide fast filtering for
 
 - **Status Filter**: 
   - "All adjustments" (default) - Shows all records
-  - "Active (qty > 0)" - Shows only records with quantity > 0
+  - "Active (qty > 0)" - Shows only records with quantity > 0 (excludes null values)
   - "Zero quantity" - Shows only records with quantity = 0
 
 **Implementation:**
 - Quick filter configuration is defined in `view.config.tsx` as `quickFilters` array
 - Rendered via `<QuickFiltersClient />` component passed to `PageShell`'s `quickFiltersSlot` prop
-- Filter state is managed client-side with callbacks for server-side filtering
+- Filter state is managed client-side with React Query for seamless UX
+- Server-side filtering via custom query parameters (`qty_gt`, `qty_eq`, `qty_not_null`)
+- No page refresh - filters update data dynamically
 
 ---
 
@@ -226,7 +228,44 @@ Between the toolbar and table, quick filter dropdowns provide fast filtering for
 
 ---
 
-## 6. Permissions
+## 6. Client-Side Architecture
+
+The Stock Adjustments screen uses a modern client-side architecture for optimal user experience:
+
+### 6.1 Component Structure
+
+```
+StockAdjustmentsErrorBoundary
+└── StockAdjustmentsClient (Client Component)
+    ├── PageShell (with toolbar and quick filters)
+    └── ResourceTableClient (Generic table component)
+```
+
+### 6.2 Data Fetching
+
+- **React Query**: Client-side data fetching with caching and background updates
+- **Server-Side Rendering**: Initial data loaded on server for SEO and performance
+- **Client-Side Updates**: Subsequent data changes handled client-side without page refresh
+- **Error Handling**: Comprehensive error boundaries with retry functionality
+
+### 6.3 State Management
+
+- **URL State**: Pagination, filters, and sorting persisted in URL parameters
+- **Column Widths**: User preferences maintained across data fetches
+- **Filter State**: Quick filters update URL and trigger data refetch
+- **Loading States**: Full-screen loading for initial load, toast notifications for background updates
+
+### 6.4 Key Features
+
+- **No Page Refresh**: All interactions (filtering, sorting, pagination) update data dynamically
+- **Optimistic Updates**: UI responds immediately to user actions
+- **Error Recovery**: Graceful error handling with retry options
+- **Performance**: Efficient data fetching with React Query caching
+- **Accessibility**: Full keyboard navigation and screen reader support
+
+---
+
+## 7. Permissions
 
 | Action | Permission Key | Behavior |
 |--------|----------------|----------|
@@ -238,7 +277,7 @@ Between the toolbar and table, quick filter dropdowns provide fast filtering for
 
 ---
 
-## 7. Test Hooks (Shared Identifiers)
+## 8. Test Hooks (Shared Identifiers)
 
 | Element | Test ID |
 |---------|---------|
@@ -257,9 +296,9 @@ Between the toolbar and table, quick filter dropdowns provide fast filtering for
 
 ---
 
-## 8. Testing Expectations
+## 9. Testing Expectations
 
-### 8.1 Playwright E2E Conformance Tests
+### 9.1 Playwright E2E Conformance Tests
 
 **Files:**
 ```
@@ -280,7 +319,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
 - ✅ CSV export includes visible columns only
 - ✅ All API calls return expected HTTP codes
 
-### 8.2 Unit Tests
+### 9.2 Unit Tests
 
 - Column header sort toggle
 - Resize hook width logic
@@ -296,7 +335,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
 
 ---
 
-## 9. Performance & UX
+## 10. Performance & UX
 
 - ✅ SSR API must respond < 300 ms warm cache
 - ✅ Page load < 1 s visible render
@@ -306,7 +345,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
 
 ---
 
-## 10. Accessibility
+## 11. Accessibility
 
 - ✅ Keyboard reorder & resize fallback
 - ✅ ARIA labels for toolbar buttons
@@ -315,7 +354,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
 
 ---
 
-## 11. Definition of Done
+## 12. Definition of Done
 
 - ✅ All CRUD + conformance tests pass
 - ✅ Permissions enforced and UI gated
@@ -327,11 +366,11 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
 
 ---
 
-## 12. Component Architecture (Bug Fixing Reference)
+## 13. Component Architecture (Bug Fixing Reference)
 
-### 12.1 View Screen (List Page) Components
+### 13.1 View Screen (List Page) Components
 
-**Flow:** `page.tsx` (server) → `PageShell` (server shell) → `StockAdjustmentsClient` (client) → `ResourceTableClient` → `DataTable`
+**Flow:** `page.tsx` (server) → `StockAdjustmentsErrorBoundary` → `StockAdjustmentsClient` (client) → `PageShell` → `ResourceTableClient` → `DataTable`
 
 #### Server Components (Rendered on Server)
 
@@ -340,30 +379,40 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
    - **Responsibilities:** 
      - Fetches paginated data from API via `fetchResourcePage()`
      - Transforms domain data to row format via `toRow()`
-     - Renders `PageShell` with `StockAdjustmentsClient` as children
+     - Renders `StockAdjustmentsErrorBoundary` with `StockAdjustmentsClient` as children
    - **Bug Fixes:** API endpoint issues, data transformation problems
 
-2. **`src/components/forms/shell/page-shell.tsx`** 
-   - **Purpose:** Shared server shell for all list/view screens
+2. **`src/app/(main)/forms/stock-adjustments/stock-adjustments-error-boundary.tsx`**
+   - **Purpose:** Error boundary for UI rendering errors
    - **Responsibilities:**
-     - Renders header card with title and record count
-     - Renders toolbar (buttons, filters, export)
-     - Renders footer (pagination)
-     - Provides optimistic updates context
-   - **Bug Fixes:** Layout issues, toolbar not showing, count not updating
+     - Catches React rendering errors
+     - Provides fallback UI with retry option
+     - Logs errors for debugging
+   - **Bug Fixes:** UI crashes, rendering errors
 
 #### Client Components (Hydrated in Browser)
 
-3. **`src/components/forms/stock-adjustments/stock-adjustments-client.tsx`**
-   - **Purpose:** Data fetching and state management wrapper
+3. **`src/app/(main)/forms/stock-adjustments/stock-adjustments-client.tsx`**
+   - **Purpose:** Main client component for data fetching and state management
    - **Responsibilities:**
-     - Uses React Query for client-side data fetching
-     - Manages pagination state (page, pageSize)
-     - Manages filter state
-     - Performance monitoring
-   - **Bug Fixes:** Data not refreshing, pagination broken, filters not working
+     - Uses React Query for client-side data fetching with `fetchResourcePageClient()`
+     - Manages pagination state (page, pageSize) via URL parameters
+     - Manages filter state and quick filters
+     - Handles column width persistence
+     - Comprehensive error handling with toast notifications
+     - Loading states (full-screen and background updates)
+   - **Bug Fixes:** Data not refreshing, pagination broken, filters not working, column widths resetting
 
-4. **`src/components/forms/resource-view/resource-table-client.tsx`**
+4. **`src/components/forms/shell/page-shell.tsx`** 
+   - **Purpose:** Shared server shell for all list/view screens
+   - **Responsibilities:**
+     - Renders header card with title and record count
+     - Renders action toolbar (New, Delete, Export buttons)
+     - Renders quick filters slot
+     - Provides optimistic updates context
+   - **Bug Fixes:** Layout issues, toolbar not showing, count not updating
+
+5. **`src/components/forms/resource-view/resource-table-client.tsx`**
    - **Purpose:** Generic client island for data tables
    - **Responsibilities:**
      - Column management (visibility, order, resize)
@@ -374,7 +423,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
      - Export to CSV
    - **Bug Fixes:** Columns disappearing, sort not working, selection broken
 
-5. **`src/components/data-table/data-table.tsx`**
+6. **`src/components/data-table/data-table.tsx`**
    - **Purpose:** Core table rendering component (TanStack Table)
    - **Responsibilities:**
      - Renders table HTML structure
@@ -383,7 +432,7 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
      - Keyboard navigation
    - **Bug Fixes:** Cells not rendering, expansion broken, keyboard navigation issues
 
-6. **`src/components/forms/shell/toolbar/toolbar.tsx` & `toolbar-client.tsx`**
+7. **`src/components/forms/shell/toolbar/toolbar.tsx` & `toolbar-client.tsx`**
    - **Purpose:** Toolbar with buttons and actions
    - **Responsibilities:**
      - Renders left/right button clusters
@@ -403,7 +452,18 @@ src/tests/integration/forms/stock-adjustments/  # Integration tests
    - **Purpose:** Pagination controls
    - **Bug Fixes:** Page navigation broken, page size selector not working
 
-### 12.2 Create/Edit Form Components
+#### Client-Side Utilities
+
+10. **`src/lib/api/client-fetch.ts`**
+    - **Purpose:** Client-side data fetching utility for React Query
+    - **Responsibilities:**
+      - Provides `fetchResourcePageClient()` function for client-side API calls
+      - Uses `window.location.origin` for base URL (no server-side dependencies)
+      - Handles query parameter construction and response parsing
+      - Compatible with React Query for caching and background updates
+    - **Bug Fixes:** Client-side data fetching issues, API call failures
+
+### 13.2 Create/Edit Form Components
 
 **Flow:** `new/page.tsx` (server) → `FormShell` (server shell) → `FormIsland` (client) → `DynamicForm` → `DynamicField`
 
