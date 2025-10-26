@@ -218,7 +218,29 @@ export function createSupabaseProvider<T, TInput>(
       if (q && cfg.search?.length) query = query.or(buildOrIlike(q, cfg.search));
       if (isObject(filters)) {
         for (const [k, v] of Object.entries(filters)) {
-          query = Array.isArray(v) ? query.in(k, v as any[]) : query.eq(k, v as any);
+          if (Array.isArray(v)) {
+            query = query.in(k, v as any[]);
+          } else if (k.endsWith('_gt')) {
+            const column = k.slice(0, -3); // Remove '_gt' suffix
+            query = query.gt(column, v as any);
+          } else if (k.endsWith('_gte')) {
+            const column = k.slice(0, -4); // Remove '_gte' suffix
+            query = query.gte(column, v as any);
+          } else if (k.endsWith('_lt')) {
+            const column = k.slice(0, -3); // Remove '_lt' suffix
+            query = query.lt(column, v as any);
+          } else if (k.endsWith('_lte')) {
+            const column = k.slice(0, -4); // Remove '_lte' suffix
+            query = query.lte(column, v as any);
+          } else if (k.endsWith('_eq')) {
+            const column = k.slice(0, -3); // Remove '_eq' suffix
+            query = query.eq(column, v as any);
+          } else if (k.endsWith('_not_null')) {
+            const column = k.slice(0, -8); // Remove '_not_null' suffix
+            query = query.not(column, 'is', null);
+          } else {
+            query = query.eq(k, v as any);
+          }
         }
       }
       if (activeOnly && cfg.activeFlag) query = query.eq(cfg.activeFlag, true);

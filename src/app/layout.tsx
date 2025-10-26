@@ -8,6 +8,7 @@ import InitialLoadGate from "@/components/common/initial-load-gate";
 import RouteTransitionOverlay from "@/components/common/route-transition-overlay";
 import { APP_CONFIG } from "@/config/app-config";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <InitialLoadGate>{children}</InitialLoadGate>
           </ErrorBoundary>
         </ThemeProvider>
+        <Toaster />
         <Analytics />
       </body>
     </html>

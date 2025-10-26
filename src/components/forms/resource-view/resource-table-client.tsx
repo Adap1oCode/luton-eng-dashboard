@@ -81,6 +81,8 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   onFiltersChange?: (filters: Record<string, ColumnFilterState>) => void;
   onClearSorting?: () => void;
   onClearFilters?: () => void;
+  onColumnWidthsChange?: (widths: Record<string, number>) => void;
+  initialColumnWidths?: Record<string, number>;
 };
 
 // move header and cell wrappers into shared data-table modules
@@ -99,6 +101,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   onFiltersChange,
   onClearSorting,
   onClearFilters,
+  onColumnWidthsChange,
+  initialColumnWidths = {},
 }: ResourceTableClientProps<TRow>) {
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
@@ -161,15 +165,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const tableRef = React.useRef<HTMLElement | null>(null);
 
   // Column widths state for resizing (preserve widths during re-renders)
-  const columnWidthsRef = React.useRef<Record<string, number>>({});
+  const columnWidthsRef = React.useRef<Record<string, number>>(initialColumnWidths);
   const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(columnWidthsRef.current, tableRef);
   
   // Update ref when widths change to preserve them during re-renders
   React.useEffect(() => {
     if (Object.keys(columnWidths).length > 0) {
       columnWidthsRef.current = columnWidths;
+      // Notify parent component of column width changes
+      onColumnWidthsChange?.(columnWidths);
     }
-  }, [columnWidths]);
+  }, [columnWidths, onColumnWidthsChange]);
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);

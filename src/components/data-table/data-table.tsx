@@ -131,7 +131,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
                     {header.column.getCanResize() && (
                       <div
                         className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-500 transition-colors"
-                        onMouseDown={(e) => onMouseDownResize(e, header.column.id)}
+                        onMouseDown={(e) => onMouseDownResize?.(e, header.column.id)}
                         style={{ userSelect: 'none' }}
                         data-testid={`resize-handle-${header.column.id}`}
                       />

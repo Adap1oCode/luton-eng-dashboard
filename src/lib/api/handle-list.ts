@@ -54,11 +54,29 @@ export async function listHandler(req: Request, resourceKey: string) {
     const url = new URL(req.url);
     const { q, page, pageSize, activeOnly, raw } = parseListQuery(url);
 
+    // Extract custom filtering parameters (like qty_gt, qty_eq, etc.)
+    const filters: Record<string, any> = {};
+    for (const [key, value] of url.searchParams.entries()) {
+      // Skip standard parameters that are handled separately
+      if (!['q', 'page', 'pageSize', 'activeOnly', 'raw'].includes(key)) {
+        // Handle numeric filters (qty_gt, qty_eq, etc.)
+        if (key.endsWith('_gt') || key.endsWith('_gte') || key.endsWith('_lt') || key.endsWith('_lte') || key.endsWith('_eq')) {
+          const numValue = Number(value);
+          if (Number.isFinite(numValue)) {
+            filters[key] = numValue;
+          }
+        } else {
+          // Handle other filters as strings
+          filters[key] = value;
+        }
+      }
+    }
+
     const provider = createSupabaseServerProvider(entry.config as any);
 
     // ✅ Scoping is applied inside the provider (server mode) when AUTH_SCOPING_ENABLED is true.
     //    Provider calls getSessionContext() and applies warehouse/ownership scope internally.
-    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly });
+    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly, filters });
 
     // Optional debug logging (safe; separate session fetch used only for logs)
     if (AUTH_SCOPING_ENABLED) {

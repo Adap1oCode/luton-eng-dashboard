@@ -10,10 +10,11 @@ import type { QuickFilter } from "./view.config";
 import { quickFilters } from "./view.config";
 
 interface QuickFiltersClientProps {
-  onFilterChange?: (filterId: string, value: string) => void;
+  onFilterChange?: (newFilters: Record<string, string>) => void;
+  currentFilters?: Record<string, string>;
 }
 
-export function QuickFiltersClient({ onFilterChange }: QuickFiltersClientProps) {
+export function QuickFiltersClient({ onFilterChange, currentFilters }: QuickFiltersClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -30,19 +31,11 @@ export function QuickFiltersClient({ onFilterChange }: QuickFiltersClientProps) 
   const handleValueChange = (filterId: string, value: string) => {
     setSelectedValues((prev) => ({ ...prev, [filterId]: value }));
     
-    // Update URL params
-    const params = new URLSearchParams(searchParams.toString());
-    if (value && value !== "ALL") {
-      params.set(filterId, value);
-    } else {
-      params.delete(filterId);
+    // Call the callback if provided with the new filter state
+    if (onFilterChange) {
+      const newFilters = { ...selectedValues, [filterId]: value };
+      onFilterChange(newFilters);
     }
-    
-    // Update URL to trigger server-side filtering
-    router.push(`?${params.toString()}`, { scroll: false });
-    
-    // Call the callback if provided
-    onFilterChange?.(filterId, value);
   };
 
   return (
