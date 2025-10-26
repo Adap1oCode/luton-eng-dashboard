@@ -8,9 +8,10 @@ import type { Metadata } from "next";
 import PageShell from "@/components/forms/shell/page-shell";
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
 import { resolveSearchParams, parsePagination, type SPRecord } from "@/lib/next/search-params";
-import StockAdjustmentsClient from "@/components/forms/stock-adjustments/stock-adjustments-client";
+import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 
 import { stockAdjustmentsToolbar, stockAdjustmentsChips, stockAdjustmentsActions } from "./toolbar.config";
+import { stockAdjustmentsViewConfig } from "./view.config";
 
 // 🧾 Browser tab title for this screen (pairs with root layout title template)
 export const metadata: Metadata = {
@@ -56,11 +57,12 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       showSaveViewButton={false}
       showToolbarContainer={false}
     >
-      <StockAdjustmentsClient
+      <ResourceTableClient
+        config={stockAdjustmentsViewConfig}
         initialRows={rows}
         initialTotal={total}
-        initialPage={page}
-        initialPageSize={pageSize}
+        page={page}
+        pageSize={pageSize}
       />
     </PageShell>
   );
