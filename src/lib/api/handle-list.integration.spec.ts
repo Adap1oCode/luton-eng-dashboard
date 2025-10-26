@@ -6,9 +6,9 @@ import { describe, it, expect, vi } from "vitest";
  * This guarantees we're testing the convention path.
  */
 
-(vi as any).mock("@/lib/data/resources/tally_cards/config.ts", () => ({
+(vi as any).mock("@/lib/data/resources/tally-cards/config.ts", () => ({
   default: {
-    table: "tally_cards",
+    table: "tcm_tally_cards",
     select: "id, foo",
     pk: "id",
     defaultSort: { column: "id", desc: false },
@@ -17,7 +17,7 @@ import { describe, it, expect, vi } from "vitest";
   allowRaw: true,
 }), { virtual: true } as any);
 
-(vi as any).mock("@/lib/data/resources/tally_cards/projection.ts", () => ({
+(vi as any).mock("@/lib/data/resources/tally-cards/projection.ts", () => ({
   toRow: (d: any) => ({ id: d.id, foo: d.foo }),
 }), { virtual: true } as any);
 
@@ -33,11 +33,11 @@ vi.mock("@/lib/supabase/factory", () => ({
 describe("handle-list integration", () => {
   it("uses the convention-based resource config to fetch & shape rows", async () => {
     const { listHandler } = await import("./handle-list");
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=2");
-    const res = await listHandler(req, "tally_cards");
+    const req = new Request("http://x.local/api/tally-cards?page=1&pageSize=2");
+    const res = await listHandler(req, "tally-cards");
     const body = await res.json();
 
-    expect(body.resource).toBe("tally_cards");
+    expect(body.resource).toBe("tally-cards");
     expect(body.total).toBe(2);
     // Projection applied
     expect(body.rows).toEqual([{ id: 1, foo: "A" }, { id: 2, foo: "B" }]);

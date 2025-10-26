@@ -47,10 +47,22 @@ export function compileFilter(filter: Filter): (row: Record<string, any>) => boo
     if (filter.isNotNull === true) return raw !== null && raw !== undefined
 
     if (filter.equals !== undefined) {
+      // For numeric comparisons, use direct comparison
+      if (typeof raw === 'number' && typeof filter.equals === 'number') {
+        const match = raw === filter.equals
+        console.group(`[FILTER.equals] Comparing row[${col}] (numeric)`)
+        console.log("📄 raw value     →", raw)
+        console.log("🎯 target value  →", filter.equals)
+        console.log("✅ match         →", match)
+        console.groupEnd()
+        return match
+      }
+      
+      // For string comparisons, use normalization
       const target = normalizeFieldValue(filter.equals)
       const match = rowVal === target
 
-      console.group(`[FILTER.equals] Comparing row[${col}]`)
+      console.group(`[FILTER.equals] Comparing row[${col}] (string)`)
       console.log("📄 raw value     →", raw)
       console.log("🎯 target value  →", filter.equals)
       console.log("🔁 normalized row→", rowVal)

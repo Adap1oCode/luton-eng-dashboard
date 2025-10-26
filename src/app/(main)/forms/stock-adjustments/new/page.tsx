@@ -2,6 +2,7 @@ import React from "react";
 
 import FormIsland from "@/components/forms/shell/form-island";
 import FormShell from "@/components/forms/shell/form-shell";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 import { ensureSections, getAllFields } from "@/lib/forms/config-normalize";
 import { buildDefaults } from "@/lib/forms/schema";
 
@@ -38,13 +39,15 @@ export default async function NewStockAdjustmentPage() {
           </button>
         ),
         primary: (
-          <button
-            form={formId}
-            type="submit"
-            className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
-          >
-            {cfg.submitLabel ?? "Save"}
-          </button>
+          <PermissionGate any={["resource:tcm_user_tally_card_entries:create"]}>
+            <button
+              form={formId}
+              type="submit"
+              className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
+            >
+              {cfg.submitLabel ?? "Save"}
+            </button>
+          </PermissionGate>
         ),
       }}
     >

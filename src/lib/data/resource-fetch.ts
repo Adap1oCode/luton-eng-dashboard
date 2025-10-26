@@ -23,7 +23,9 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
   });
 
   const res = await fetch(`${base}${endpoint}?${qs.toString()}`, {
-    cache: "no-store",
+    // Enable caching for better performance
+    cache: "force-cache",
+    next: { revalidate: 300 }, // Revalidate every 5 minutes
     headers: cookieHeader,
   });
 

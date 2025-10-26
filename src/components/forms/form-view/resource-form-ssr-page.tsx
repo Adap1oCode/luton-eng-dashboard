@@ -12,6 +12,7 @@ import Link from "next/link";
 
 import FormIsland from "@/components/forms/shell/form-island";
 import FormShell from "@/components/forms/shell/form-shell";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 
 // IMPORTANT: Align with what FormIsland expects.
 // Derive types directly from FormIsland props so we never depend on where they're declared.
@@ -43,6 +44,12 @@ interface ResourceFormSSRPageProps {
   // Optional flags
   hideCancel?: boolean;
   hidePrimary?: boolean;
+
+  // Permission gating
+  primaryButtonPermissions?: {
+    any?: string[];
+    all?: string[];
+  };
 }
 
 // Safely build a default cancel URL using common fields on EnhancedFormConfig.
@@ -70,6 +77,7 @@ export default function ResourceFormSSRPage({
   primaryLabel,
   hideCancel = false,
   hidePrimary = false,
+  primaryButtonPermissions,
 }: ResourceFormSSRPageProps) {
   const computedCancelHref = cancelHref ?? resolveDefaultCancelHref(config);
   const computedPrimaryLabel = primaryLabel ?? (config as any)?.submitLabel ?? "Save";
@@ -87,13 +95,28 @@ export default function ResourceFormSSRPage({
             </Link>
           ),
         primary: hidePrimary ? null : (
-          <button
-            form={formId}
-            type="submit"
-            className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
-          >
-            {computedPrimaryLabel}
-          </button>
+          primaryButtonPermissions ? (
+            <PermissionGate 
+              any={primaryButtonPermissions.any} 
+              all={primaryButtonPermissions.all}
+            >
+              <button
+                form={formId}
+                type="submit"
+                className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
+              >
+                {computedPrimaryLabel}
+              </button>
+            </PermissionGate>
+          ) : (
+            <button
+              form={formId}
+              type="submit"
+              className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700"
+            >
+              {computedPrimaryLabel}
+            </button>
+          )
         ),
       }}
     >

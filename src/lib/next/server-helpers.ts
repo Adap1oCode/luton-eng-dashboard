@@ -9,6 +9,9 @@
 
 import { headers as nextHeaders } from "next/headers";
 
+import { logBase } from "@/lib/obs/logger";
+import { getRequestContext } from "@/lib/obs/request-context";
+
 /**
  * Await Next.js 15 route params safely.
  * Example:
@@ -42,24 +45,76 @@ export async function serverRequestMeta() {
 /**
  * Simple helper for server-side fetch calls that need user session cookies.
  * Always disables cache to ensure fresh data.
+ * Includes logging for failed requests to help with debugging.
  */
 export async function serverFetchJson<T = any>(
   url: string,
   options: RequestInit & { cookie?: string } = {},
 ): Promise<T> {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      ...(options.cookie ? { cookie: options.cookie } : {}),
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    ...options,
-  });
+  const ctx = getRequestContext();
+  const log = ctx ? logBase({ 
+    request_id: ctx.request_id,
+    route: ctx.route,
+    method: ctx.method 
+  }) : logBase({});
 
-  if (!res.ok) {
-    throw new Error(`serverFetchJson failed ${res.status}: ${url}`);
+  const started = Date.now();
+  
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        ...(options.cookie ? { cookie: options.cookie } : {}),
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    const duration_ms = Date.now() - started;
+
+    if (!res.ok) {
+      // Log failed requests with context
+      log.warn({
+        evt: "server_fetch_failed",
+        url,
+        status: res.status,
+        status_text: res.statusText,
+        duration_ms,
+        method: options.method ?? "GET",
+        request_id: ctx?.request_id
+      });
+      
+      throw new Error(`serverFetchJson failed ${res.status}: ${url}`);
+    }
+
+    // Log successful requests (optional, can be removed if too verbose)
+    if (duration_ms > 1000) { // Only log slow requests
+      log.info({
+        evt: "server_fetch_slow",
+        url,
+        status: res.status,
+        duration_ms,
+        method: options.method ?? "GET",
+        request_id: ctx?.request_id
+      });
+    }
+
+    return res.json() as Promise<T>;
+  } catch (err: any) {
+    const duration_ms = Date.now() - started;
+    
+    // Log fetch errors
+    log.error({
+      evt: "server_fetch_error",
+      url,
+      duration_ms,
+      method: options.method ?? "GET",
+      error_message: err?.message,
+      error_code: err?.code,
+      request_id: ctx?.request_id
+    });
+    
+    throw err;
   }
-
-  return res.json() as Promise<T>;
 }

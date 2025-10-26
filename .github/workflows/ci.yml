@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+      
+      - name: Run CI verification
+        run: npm run ci:verify
+      
+      - name: Docs updated check
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'app/**'
+              - 'packages/**'
+            docs:
+              - 'docs/**'
+      
+      - name: Fail if docs missing
+        if: steps.changes.outputs.code == 'true' && steps.changes.outputs.docs != 'true'
+        run: |
+          echo "❌ Code changed but docs not updated. Add docs or label PR 'no-docs-needed'."
+          exit 1
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            coverage/
+            test-results/
+            playwright-report/

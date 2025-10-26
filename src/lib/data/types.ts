@@ -280,3 +280,18 @@ export interface User {
   created_at: ISODateTime | null;
   updated_at: ISODateTime | null;
 }
+
+export interface DbTableReport {
+  table_schema: string;
+  table_name: string;
+  columns: any;
+  indexes: any;
+  constraints: any;
+  foreign_keys: any;
+  grants: any;
+  rls: any;
+  triggers: any;
+  dependencies: any;
+  usage: any;
+  size: any;
+}

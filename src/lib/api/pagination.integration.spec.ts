@@ -70,8 +70,8 @@ describe("pagination contract (integration, mocked provider)", () => {
 
   it("returns correct counts for pageSize=20 across pages", async () => {
     // Page 1
-    let req = new Request("http://x.local/api/tally_cards?page=1&pageSize=20");
-    let res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    let req = new Request("http://x.local/api/tally-cards?page=1&pageSize=20");
+    let res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res);
     let body = await res.json();
 
@@ -83,8 +83,8 @@ describe("pagination contract (integration, mocked provider)", () => {
     expect(body.rows[19].id).toBe("20");
 
     // Page 2
-    req = new Request("http://x.local/api/tally_cards?page=2&pageSize=20");
-    res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    req = new Request("http://x.local/api/tally-cards?page=2&pageSize=20");
+    res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res);
     body = await res.json();
 
@@ -96,8 +96,8 @@ describe("pagination contract (integration, mocked provider)", () => {
     expect(body.rows[19].id).toBe("40");
 
     // Page 3 (remainder)
-    req = new Request("http://x.local/api/tally_cards?page=3&pageSize=20");
-    res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    req = new Request("http://x.local/api/tally-cards?page=3&pageSize=20");
+    res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res);
     body = await res.json();
 
@@ -110,8 +110,8 @@ describe("pagination contract (integration, mocked provider)", () => {
   });
 
   it("returns empty rows for out-of-range page (page > totalPages)", async () => {
-    const req = new Request("http://x.local/api/tally_cards?page=99&pageSize=20");
-    const res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    const req = new Request("http://x.local/api/tally-cards?page=99&pageSize=20");
+    const res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res);
     const body = await res.json();
 
@@ -122,13 +122,13 @@ describe("pagination contract (integration, mocked provider)", () => {
   });
 
   it("no overlaps or gaps between page 1 and 2", async () => {
-    const req1 = new Request("http://x.local/api/tally_cards?page=1&pageSize=25");
-    const res1 = await GET(req1 as any, { params: { resource: "tally_cards" } } as any);
+    const req1 = new Request("http://x.local/api/tally-cards?page=1&pageSize=25");
+    const res1 = await GET(req1 as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res1);
     const b1 = await res1.json();
 
-    const req2 = new Request("http://x.local/api/tally_cards?page=2&pageSize=25");
-    const res2 = await GET(req2 as any, { params: { resource: "tally_cards" } } as any);
+    const req2 = new Request("http://x.local/api/tally-cards?page=2&pageSize=25");
+    const res2 = await GET(req2 as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res2);
     const b2 = await res2.json();
 
@@ -144,8 +144,8 @@ describe("pagination contract (integration, mocked provider)", () => {
   });
 
   it("respects raw=true pagination and type preservation", async () => {
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=10&raw=true");
-    const res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    const req = new Request("http://x.local/api/tally-cards?page=1&pageSize=10&raw=true");
+    const res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
     expectResponse(res);
     const body = await res.json();
 

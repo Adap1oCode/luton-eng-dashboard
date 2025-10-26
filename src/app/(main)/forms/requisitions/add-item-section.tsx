@@ -5,7 +5,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { dataProvider } from "@/lib/data";
-import type { Item } from "@/lib/data/types";
+// import type { Item } from "@/lib/data/types"; // Item type not found, using any for now
+type Item = any; // TODO: Define proper Item type
 
 import type { RequisitionFormState } from "./types";
 

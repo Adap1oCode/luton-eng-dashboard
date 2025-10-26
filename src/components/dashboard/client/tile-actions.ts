@@ -1,5 +1,5 @@
-import type { Filter } from "@/components/dashboard/client/data-filters";
-import { isFastFilter } from "@/components/dashboard/client/fast-filter";
+﻿import type { Filter } from "@/components/dashboard/client/data-filters";
+
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize"; // ✅ import
 import type { DashboardTile, DashboardWidget } from "@/components/dashboard/types";
 
@@ -36,6 +36,7 @@ export function attachTileActions(
   handleClickWidget: (tile: DashboardTile) => void,
   handleClickFilter: (filter: Filter) => void,
 ): DashboardTile[] {
+  console.log(`[attachTileActions] Processing ${tiles.length} tiles for widget ${widget.key}`);
   return tiles.map((tile) => {
     // inherit rpcName and preCalculated
     const rpcName = tile.rpcName ?? (widget as any).rpcName;
@@ -44,7 +45,20 @@ export function attachTileActions(
     // clickable if tile flagged and we have either a rpcName or a template filter or a tile.filter
     const hasTemplate = preCalculated && widget.filter !== undefined;
     const hasTileFilter = tile.filter !== undefined;
-    const canClick = tile.clickable === true && (Boolean(rpcName) ?? hasTemplate ?? hasTileFilter);
+    const canClick = tile.clickable === true && (Boolean(rpcName) || hasTemplate || hasTileFilter);
+    
+    // Debug logging for outOfStockCount tile
+    if (tile.key === 'outOfStockCount') {
+      console.log(`[attachTileActions] DEBUG for ${tile.key}:`, {
+        tileClickable: tile.clickable,
+        rpcName,
+        hasTemplate,
+        hasTileFilter,
+        canClick,
+        tileFilter: tile.filter,
+        widgetFilter: widget.filter
+      });
+    }
 
     console.groupCollapsed(`[attachTileActions] Tile: ${tile.key}`);
     console.debug({
@@ -52,8 +66,10 @@ export function attachTileActions(
       preCalculated,
       hasTemplate,
       hasTileFilter,
-      isFastFilter: tile.filter ? isFastFilter(tile.filter as Filter) : false,
+      isFastFilter: false, // Simplified - removed fast-filter dependency
       assignedClick: canClick,
+      tileClickable: tile.clickable,
+      widgetRpcName: (widget as any).rpcName,
     });
     console.groupEnd();
 
@@ -62,14 +78,23 @@ export function attachTileActions(
       rpcName,
       preCalculated,
 
-      onClick: canClick
+      // If we have an RPC function, use onClick (RPC call)
+      // Otherwise, use onClickFilter (client-side filtering)
+      onClick: canClick && rpcName
         ? () => {
-            console.debug(`[attachTileActions] onClick for tile=${tile.key}`);
+            console.debug(`[attachTileActions] onClick for tile=${tile.key} (RPC: ${rpcName})`);
             handleClickWidget(tile);
           }
-        : undefined,
+        : (() => {
+            if (canClick && !rpcName) {
+              console.debug(`[attachTileActions] No onClick for tile=${tile.key} - no RPC function`);
+            } else if (!canClick) {
+              console.debug(`[attachTileActions] No onClick for tile=${tile.key} - not clickable`);
+            }
+            return undefined;
+          })(),
 
-      onClickFilter: canClick
+      onClickFilter: canClick && !rpcName
         ? () => {
             console.groupCollapsed(`[attachTileActions] onClickFilter for tile=${tile.key}`);
             // 1) Pre-calculated branch: use widget.filter as a TEMPLATE

@@ -168,7 +168,7 @@ export function buildColumns(): ColumnDef<TallyCardRow>[] {
             href={`/forms/tally-cards/edit/${id}`}
             className="font-medium text-blue-600 transition-colors duration-150 hover:text-blue-800 hover:underline"
           >
-            {number}
+            {String(number)}
           </a>
         );
       },

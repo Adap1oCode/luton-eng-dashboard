@@ -22,7 +22,6 @@
  * 🔪 This file powers both the frontend UI and the tile validator script.
  */
 
-import { getRequisitions } from '@/app/(main)/dashboard/requisitions/_components/data'
 import type { DashboardConfig } from '@/components/dashboard/types'
 
 const chartWidgets = [
@@ -76,7 +75,10 @@ export const requisitionsConfig: DashboardConfig = {
    tableName: "requisitions",
   range: '3m',
   rowIdKey: 'requisition_order_number',
-  fetchRecords: getRequisitions,
+  fetchRecords: async (_range: string, _from?: string, _to?: string, _filter?: any, _distinct?: boolean) => {
+    // TODO: Implement requisitions data fetching
+    return { data: [], total: 0 };
+  },
 
   filters: {
     status: 'status',

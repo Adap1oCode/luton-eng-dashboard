@@ -30,7 +30,7 @@ import {
   adjustmentTypeOptions,
   statusOptions,
   reasonOptions,
-} from "./config";
+} from "./form.config";
 
 export function NewStockAdjustmentForm() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export function NewStockAdjustmentForm() {
       const selectedWh = warehouses.find((w) => w.value === warehouseValue);
 
       // Calculate adjustment difference
-      const adjustmentDifference = values.adjustedQuantity - values.currentQuantity;
+      const adjustmentDifference = (values.adjustedQuantity || 0) - (values.currentQuantity || 0);
 
       // Transform form data to match the API structure
       const payload = {
@@ -95,7 +95,7 @@ export function NewStockAdjustmentForm() {
         owner: values.owner,
       };
 
-      const response = await fetch("/api/stock_adjustments", {
+      const response = await fetch("/api/stock-adjustments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

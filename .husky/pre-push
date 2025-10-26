@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+npm run ci:verify || { echo "❌ Pre-push verification failed"; exit 1; }

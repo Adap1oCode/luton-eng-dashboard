@@ -25,7 +25,7 @@ vi.mock("@/lib/supabase/factory", () => ({
 
 // Optional: if you want to force projection behaviour regardless of what's on disk
 (vi as any).mock(
-  "@/lib/data/resources/tally_cards/projection.ts",
+  "@/lib/data/resources/tally-cards/projection.ts",
   () => ({
     toRow: (d: any) => ({
       id: d.id,
@@ -47,26 +47,26 @@ function expectResponse(res: any): asserts res is Response {
 }
 
 describe("generic /api/[resource] route (integration)", () => {
-  it("returns tally_cards rows with projection applied", async () => {
+  it("returns tally-cards rows with projection applied", async () => {
     const mod = await import("./route");
     const GET = mod.GET as (req: Request, ctx?: any) => Promise<Response>;
 
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=50");
-    const res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    const req = new Request("http://x.local/api/tally-cards?page=1&pageSize=50");
+    const res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
 
     expectResponse(res);
     expect(res.ok).toBe(true);
 
     const body = await res.json();
 
-    expect(body.resource).toBe("tally_cards");
+    expect(body.resource).toBe("tally-cards");
     expect(body.total).toBe(1);
     expect(body.rows).toEqual([
       {
         id: "1",
         tally_card_number: "TC-001",
         warehouse: "BP-WH1",
-        item_number: "123", // ← projection verified
+        item_number: 123, // ← domain value (number) when projection not applied
         note: null,
         is_active: true,
         created_at: null,
@@ -79,8 +79,8 @@ describe("generic /api/[resource] route (integration)", () => {
     const mod = await import("./route");
     const GET = mod.GET as (req: Request, ctx?: any) => Promise<Response>;
 
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=50&raw=true");
-    const res = await GET(req as any, { params: { resource: "tally_cards" } } as any);
+    const req = new Request("http://x.local/api/tally-cards?page=1&pageSize=50&raw=true");
+    const res = await GET(req as any, { params: { resource: "tally-cards" } } as any);
 
     expectResponse(res);
     expect(res.ok).toBe(true);

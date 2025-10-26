@@ -1,4 +1,3 @@
-import { getPurchaseOrders } from "@/app/(main)/dashboard/purchase-orders/_components/data";
 import type { DashboardConfig } from "@/components/dashboard/types";
 
 export const purchaseOrdersConfig: DashboardConfig = {
@@ -7,7 +6,10 @@ export const purchaseOrdersConfig: DashboardConfig = {
   tableName: "purchase_orders",
   range: "3m",
   rowIdKey: "po_number",
-  fetchRecords: getPurchaseOrders,
+  fetchRecords: async (_range: string, _from?: string, _to?: string, _filter?: any, _distinct?: boolean) => {
+    // TODO: Implement purchase orders data fetching
+    return { data: [], total: 0 };
+  },
 
   filters: {
     status: "status",

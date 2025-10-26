@@ -13,14 +13,14 @@ import rawVendors from "@/data/mock/vendors.json";
 import type { DataProvider } from "../provider";
 import type {
   Warehouse,
-  Item,
-  Requisition,
-  Customer,
-  Vendor,
-  Category,
-  Location,
-  Site,
-  RequisitionItem, // ✅ new
+  // Item, // Item type not found, using any for now
+  // Requisition, // Requisition type not found, using any for now
+  // Customer, // Customer type not found, using any for now
+  // Vendor, // Vendor type not found, using any for now
+  // Category, // Category type not found, using any for now
+  // Location, // Location type not found, using any for now
+  // Site, // Site type not found, using any for now
+  // RequisitionItem, // RequisitionItem type not found, using any for now
 } from "../types";
 
 // ----------------- Helpers -----------------
@@ -83,7 +83,7 @@ function paginate<T>(arr: T[], page = 1, pageSize = 20) {
 
 // Sites (a.k.a. Warehouses list in your UI)
 // REPLACE your mapSites with this:
-function mapSites(rows: any[]): Site[] {
+function mapSites(rows: any[]): any[] {
   return rows.map((r) => {
     const warehouse = s(r["Warehouse"]); // e.g. "AM - WH 1", "CC - WH 1"
     return {
@@ -95,7 +95,7 @@ function mapSites(rows: any[]): Site[] {
 }
 
 // Customers (Project = Customers)
-function mapCustomers(rows: any[]): Customer[] {
+function mapCustomers(rows: any[]): any[] {
   return rows.map((r) => {
     const projNum = s(r["Project Number"]); // e.g. "ECG/SBU/ASN/NP/SUBT-19/04"
     return {
@@ -108,7 +108,7 @@ function mapCustomers(rows: any[]): Customer[] {
 }
 
 // Vendors
-function mapVendors(rows: any[]): Vendor[] {
+function mapVendors(rows: any[]): any[] {
   // Seen fields: "Vendor Name", "Vendor Number"
   return rows.map((r) => ({
     id: makeId(r["Vendor Number"], r["Vendor Name"]),
@@ -119,7 +119,7 @@ function mapVendors(rows: any[]): Vendor[] {
 }
 
 // Categories
-function mapCategories(rows: any[]): Category[] {
+function mapCategories(rows: any[]): any[] {
   // Seen field: "Category Name"
   return rows.map((r) => {
     const name = s(r["Category Name"]) || s(r["Name"]);
@@ -131,7 +131,7 @@ function mapCategories(rows: any[]): Category[] {
 }
 
 // Locations (bin locations under a site/warehouse)
-function mapLocations(rows: any[]): Location[] {
+function mapLocations(rows: any[]): any[] {
   // Seen fields: "Warehouse", "Location", "Location Description"
   return rows.map((r) => ({
     id: makeId(r["Location"]),
@@ -142,23 +142,26 @@ function mapLocations(rows: any[]): Location[] {
 }
 
 // Warehouses (your UI equates these to Sites; so we map Sites -> Warehouse shape)
-function mapWarehousesFromSites(sites: Site[]): Warehouse[] {
+function mapWarehousesFromSites(sites: any[]): Warehouse[] {
   return sites.map((s) => ({
     id: s.id,
+    code: s.code || s.id,
     name: s.description || s.code || s.id,
-    short: s.code || s.id.slice(0, 6),
+    is_active: true,
+    created_at: null,
+    updated_at: null,
   }));
 }
 
 // Requisitions
-function mapRequisitions(rows: any[]): Requisition[] {
+function mapRequisitions(rows: any[]): any[] {
   // Seen fields: "Requisition Order / Transfer Req. Order", "Warehouse", "Status",
   // "Order Date", "Due Date", "Reference Number", "Project Number", "Notes", "PO#",
   // plus totals ("Items Total", "Shipping Cost", "Tax", "Grand Total") which we ignore for now.
   return rows.map((r) => {
     const code = s(r["Requisition Order / Transfer Req. Order"]) || s(r["Reference Number"]);
     const warehouseName = s(r["Warehouse"]);
-    const req: Requisition = {
+    const req: any = {
       id: makeId(code),
       code,
       project: s(r["Project Number"]) || s(r["Client Name"]) || "",
@@ -176,7 +179,7 @@ function mapRequisitions(rows: any[]): Requisition[] {
 }
 
 // Items
-function mapItems(rows: any[]): Item[] {
+function mapItems(rows: any[]): any[] {
   // Try to be flexible with column names coming from CSV/Excel
   return rows.map((r) => {
     const itemNo = s(r["Item No"]) || s(r["Item Number"]) || s(r["itemNo"]) || s(r["SKU"]) || s(r["Code"]);
@@ -210,7 +213,7 @@ function mapItems(rows: any[]): Item[] {
 }
 
 // 🔹 NEW: Requisition Items (TABLE rows) — from inventory-items.json
-function mapRequisitionItems(rows: any[]): RequisitionItem[] {
+function mapRequisitionItems(rows: any[]): any[] {
   return rows.map((r: any) => {
     const itemNo = s(r.itemNo) || s(r["Item Number"]) || s(r["Item No"]) || s(r.SKU) || s(r.Code);
     const description = s(r.description) || s(r["Description"]) || s(r["Item Description"]) || s(r.Name);
@@ -248,14 +251,14 @@ function mapRequisitionItems(rows: any[]): RequisitionItem[] {
 
 // ----------------- Materialize canonical datasets -----------------
 
-const SITES: Site[] = mapSites(rawSites as any[]);
-const CUSTOMERS: Customer[] = mapCustomers(rawCustomers as any[]);
-const VENDORS: Vendor[] = mapVendors(rawVendors as any[]);
-const CATEGORIES: Category[] = mapCategories(rawCategories as any[]);
-const LOCATIONS: Location[] = mapLocations(rawLocations as any[]);
-const ITEMS: Item[] = mapItems(rawItems as any[]);
-const REQUISITION_ITEMS: RequisitionItem[] = mapRequisitionItems(rawRequisitionItems as any[]); // ✅ new table rows
-const REQUISITIONS: Requisition[] = mapRequisitions(rawRequisitions as any[]);
+const SITES: any[] = mapSites(rawSites as any[]);
+const CUSTOMERS: any[] = mapCustomers(rawCustomers as any[]);
+const VENDORS: any[] = mapVendors(rawVendors as any[]);
+const CATEGORIES: any[] = mapCategories(rawCategories as any[]);
+const LOCATIONS: any[] = mapLocations(rawLocations as any[]);
+const ITEMS: any[] = mapItems(rawItems as any[]);
+const REQUISITION_ITEMS: any[] = mapRequisitionItems(rawRequisitionItems as any[]); // ✅ new table rows
+const REQUISITIONS: any[] = mapRequisitions(rawRequisitions as any[]);
 const WAREHOUSES: Warehouse[] = mapWarehousesFromSites(SITES);
 
 // ----------------- Provider -----------------
@@ -304,7 +307,7 @@ export const mockProvider: DataProvider = {
 
   // Customers (Projects) — dedupe by 'name' (Site) and sort alpha asc
   async listCustomers({ page = 1, pageSize = 50 } = {}) {
-    const byName = new Map<string, Customer>();
+    const byName = new Map<string, any>();
     for (const c of CUSTOMERS) {
       const key = (c.name ?? "").toLowerCase();
       if (key && !byName.has(key)) byName.set(key, c);

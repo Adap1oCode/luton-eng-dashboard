@@ -52,6 +52,9 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
       options={prep.options ?? {}}
       cancelHref={`/forms/${resourceKey}`}
       primaryLabel="Update"
+      primaryButtonPermissions={{
+        any: ["resource:tcm_user_tally_card_entries:update"]
+      }}
     />
   );
 }

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     .select("permission_key")
     .eq("role_id", me?.role_id ?? "");
 
-  const canImpersonate = (perms ?? []).some(p => p.permission_key === "admin:impersonate");
+  const canImpersonate = (perms ?? []).some((p: { permission_key?: string }) => p.permission_key === "admin:impersonate");
   if (!canImpersonate) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const res = NextResponse.json({ ok: true });

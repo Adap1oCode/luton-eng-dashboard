@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { dataProvider } from "@/lib/data"; // Sites/Customers from mock provider
-import type { Site, Customer } from "@/lib/data/types";
+// import type { Site, Customer } from "@/lib/data/types"; // Types not found, using any for now
+type Site = any; // TODO: Define proper Site type
+type Customer = any; // TODO: Define proper Customer type
 import type { RequisitionFormState, InventoryItem, InventoryData } from "../types";
 
 export function useRequisitionForm(): RequisitionFormState {

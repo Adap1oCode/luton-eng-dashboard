@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -10,7 +10,7 @@ type Props = {
   title?: string;
 };
 
-export default function RouteTransitionOverlay({ minDurationMs = 300, title = APP_CONFIG.name }: Props) {
+function RouteTransitionOverlayInner({ minDurationMs = 300, title = APP_CONFIG.name }: Props) {
   const [visible, setVisible] = useState(false);
   const pathname = usePathname();
   const params = useSearchParams();
@@ -37,5 +37,13 @@ export default function RouteTransitionOverlay({ minDurationMs = 300, title = AP
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RouteTransitionOverlay(props: Props) {
+  return (
+    <Suspense fallback={null}>
+      <RouteTransitionOverlayInner {...props} />
+    </Suspense>
   );
 }

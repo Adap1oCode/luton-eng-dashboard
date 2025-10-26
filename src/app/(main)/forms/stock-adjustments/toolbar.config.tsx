@@ -26,6 +26,7 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       icon: "Plus",
       variant: "default",
       href: "/forms/stock-adjustments/new",
+      requiredAny: ["resource:tcm_user_tally_card_entries:create"],
     },
     {
       id: "delete",
@@ -34,6 +35,7 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
+      requiredAny: ["resource:tcm_user_tally_card_entries:delete"],
     },
   ],
   right: [

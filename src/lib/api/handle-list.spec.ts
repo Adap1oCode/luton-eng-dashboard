@@ -6,7 +6,7 @@ const fakeRows = [
 ];
 
 const mockResolve = {
-  key: "tally_cards",
+  key: "tcm_tally_cards",
   config: {
     table: "tally_cards",
     select: "id,foo,updated_at",
@@ -47,11 +47,11 @@ describe("listHandler", () => {
   it("applies projection by default", async () => {
     const { listHandler } = await import("./handle-list");
 
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=1");
-    const res = await listHandler(req, "tally_cards");
+    const req = new Request("http://x.local/api/tcm_tally_cards?page=1&pageSize=1");
+    const res = await listHandler(req, "tcm_tally_cards");
     const body = await res.json();
 
-    expect(body.resource).toBe("tally_cards");
+    expect(body.resource).toBe("tcm_tally_cards");
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(1);
     expect(body.total).toBe(2);
@@ -62,8 +62,8 @@ describe("listHandler", () => {
   it("returns domain rows when raw=true and allowed", async () => {
     const { listHandler } = await import("./handle-list");
 
-    const req = new Request("http://x.local/api/tally_cards?page=1&pageSize=2&raw=true");
-    const res = await listHandler(req, "tally_cards");
+    const req = new Request("http://x.local/api/tcm_tally_cards?page=1&pageSize=2&raw=true");
+    const res = await listHandler(req, "tcm_tally_cards");
     const body = await res.json();
 
     expect(body.rows).toEqual(fakeRows);
@@ -73,8 +73,8 @@ describe("listHandler", () => {
   it("clamps pageSize and page", async () => {
     const { listHandler } = await import("./handle-list");
 
-    const req = new Request("http://x.local/api/tally_cards?page=-10&pageSize=999999");
-    const res = await listHandler(req, "tally_cards");
+    const req = new Request("http://x.local/api/tcm_tally_cards?page=-10&pageSize=999999");
+    const res = await listHandler(req, "tcm_tally_cards");
     const body = await res.json();
 
     expect(body.page).toBe(1);
@@ -92,8 +92,8 @@ describe("listHandler", () => {
     }));
 
     const { listHandler } = await import("./handle-list");
-    const req = new Request("http://x.local/api/tally_cards?raw=true");
-    const res = await listHandler(req, "tally_cards");
+    const req = new Request("http://x.local/api/tcm_tally_cards?raw=true");
+    const res = await listHandler(req, "tcm_tally_cards");
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.message).toMatch(/Raw mode is not allowed/);
