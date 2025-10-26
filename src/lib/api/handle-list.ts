@@ -52,13 +52,28 @@ export async function listHandler(req: Request, resourceKey: string) {
     const entry = await resolveResource(resourceKey);
 
     const url = new URL(req.url);
-    const { q, page, pageSize, activeOnly, raw } = parseListQuery(url);
+    const parsed = parseListQuery(url);
+    const { q, page, pageSize, activeOnly, raw } = parsed;
 
     const provider = createSupabaseServerProvider(entry.config as any);
 
     // ✅ Scoping is applied inside the provider (server mode) when AUTH_SCOPING_ENABLED is true.
     //    Provider calls getSessionContext() and applies warehouse/ownership scope internally.
-    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly });
+    // Extract structured filters of the form: filters[col][value], filters[col][mode]
+    const filters: Record<string, any> = {};
+    const sp = (parsed as any).searchParams as URLSearchParams | undefined;
+    if (sp) {
+      for (const [key, value] of sp.entries()) {
+        const m = key.match(/^filters\[(.+?)\]\[(value|mode)\]$/);
+        if (!m) continue;
+        const col = m[1];
+        const kind = m[2] as "value" | "mode";
+        filters[col] = filters[col] || {};
+        filters[col][kind] = value;
+      }
+    }
+
+    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly, filters });
 
     // Optional debug logging (safe; separate session fetch used only for logs)
     if (AUTH_SCOPING_ENABLED) {

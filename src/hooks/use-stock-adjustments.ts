@@ -9,6 +9,7 @@ export interface StockAdjustmentFilters {
   warehouse?: string
   dateFrom?: string
   dateTo?: string
+  // structured filters mapping, e.g.: filters[name][value], filters[name][mode]
   [key: string]: any
 }
 
@@ -43,12 +44,11 @@ export function useStockAdjustments(filters: StockAdjustmentFilters = {}) {
             page: String(page),
             pageSize: String(pageSize),
             raw: 'true',
-            ...Object.fromEntries(
-              Object.entries(extraQuery)
-                .filter(([, v]) => v !== undefined)
-                .map(([k, v]) => [k, String(v)])
-            ),
           })
+          for (const [k, v] of Object.entries(extraQuery)) {
+            if (v === undefined || v === null) continue
+            qs.append(k, String(v))
+          }
 
           const res = await fetch(`/api/v_tcm_user_tally_card_entries?${qs.toString()}`, {
             cache: 'no-store', // Client-side should not cache

@@ -216,9 +216,19 @@ export function createSupabaseProvider<T, TInput>(
       }
 
       if (q && cfg.search?.length) query = query.or(buildOrIlike(q, cfg.search));
+      // Structured filters: { col: { value, mode } }
       if (isObject(filters)) {
         for (const [k, v] of Object.entries(filters)) {
-          query = Array.isArray(v) ? query.in(k, v as any[]) : query.eq(k, v as any);
+          const f = v as any;
+          const value = f?.value ?? f;
+          const mode = (f?.mode ?? "contains") as string;
+          if (value == null || value === "") continue;
+          const val = String(value);
+          if (mode === "equals") query = query.eq(k, val);
+          else if (mode === "notEquals") query = query.neq(k, val);
+          else if (mode === "startsWith") query = query.ilike(k, `${val}%`);
+          else if (mode === "endsWith") query = query.ilike(k, `%${val}`);
+          else query = query.ilike(k, `%${val}%`);
         }
       }
       if (activeOnly && cfg.activeFlag) query = query.eq(cfg.activeFlag, true);

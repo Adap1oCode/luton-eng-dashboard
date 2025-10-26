@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useStockAdjustments } from '@/hooks/use-stock-adjustments'
+import type { ColumnFilterState } from '@/components/data-table/data-table-filters'
 import ResourceTableClient from '@/components/forms/resource-view/resource-table-client'
 import { stockAdjustmentsViewConfig } from '@/app/(main)/forms/stock-adjustments/view.config'
 import { usePerformanceMonitoring } from '@/hooks/use-performance-monitoring'
+import { queryKeys } from '@/lib/react-query'
 
 interface StockAdjustmentsClientProps {
   initialRows: any[]
@@ -21,16 +24,30 @@ export default function StockAdjustmentsClient({
 }: StockAdjustmentsClientProps) {
   const [page, setPage] = useState(initialPage)
   const [pageSize, setPageSize] = useState(initialPageSize)
-  const [filters, setFilters] = useState({})
+  const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({})
+
+  // React Query client for invalidation
+  const queryClient = useQueryClient()
 
   // Performance monitoring
   const { logPerformanceSummary, getMetrics } = usePerformanceMonitoring()
 
   // Use React Query for data fetching with caching
+  // Map UI filters -> API query (bracketed format)
+  const apiFilters = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [id, f] of Object.entries(filters)) {
+      if (!f?.value) continue
+      out[`filters[${id}][value]`] = f.value
+      out[`filters[${id}][mode]`] = (f.mode ?? 'contains') as string
+    }
+    return out
+  }, [filters])
+
   const { data, isLoading, error, isFetching } = useStockAdjustments({
     page,
     pageSize,
-    ...filters,
+    ...apiFilters,
   })
 
   // Transform data for the table
@@ -73,9 +90,14 @@ export default function StockAdjustmentsClient({
   }
 
   // Handle filter changes
-  const handleFiltersChange = (newFilters: any) => {
+  const handleFiltersChange = (newFilters: Record<string, ColumnFilterState>) => {
     setFilters(newFilters)
     setPage(1) // Reset to first page when filters change
+  }
+
+  // Expose invalidation helper for inline edits (passed via context or prop if needed)
+  const invalidateStockAdjustments = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.stockAdjustments.all })
   }
 
   return (

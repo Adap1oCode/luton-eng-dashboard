@@ -12,8 +12,8 @@ export type SortConfig = {
 export type SavedView = {
   id: string;
   name: string;
-  description?: string;
-  isDefault?: boolean;
+  description: string;
+  isDefault: boolean;
   columnOrder: string[];
   visibleColumns: Record<string, boolean>;
   sortConfig: SortConfig;
@@ -54,9 +54,9 @@ function writeStorage(tableId: string, views: SavedView[]) {
 
 export function useSavedViews(tableId: string, defaultColumnIds: string[]) {
   const [views, setViews] = useState<SavedView[]>(() => {
+    // keep local for offline/SSR fallback; remote layer will hydrate
     const existing = readStorage(tableId);
     if (existing.length) return existing;
-    // Build one default view on first load
     const def: SavedView = {
       id: "default",
       name: "Default View",
@@ -126,6 +126,15 @@ export function useSavedViews(tableId: string, defaultColumnIds: string[]) {
     );
   }, []);
 
+  // Remote hydration: optional small helper (call from caller when ready)
+  const hydrateFromRemote = useCallback((remoteViews: SavedView[]) => {
+    if (!Array.isArray(remoteViews)) return;
+    if (remoteViews.length === 0) return; // keep local default
+    setViews(remoteViews);
+    const def = remoteViews.find((x) => x.isDefault) ?? remoteViews[0];
+    if (def) setCurrentViewId(def.id);
+  }, []);
+
   return {
     views,
     currentViewId,
@@ -136,5 +145,6 @@ export function useSavedViews(tableId: string, defaultColumnIds: string[]) {
     deleteView,
     updateView,
     setDefault,
+    hydrateFromRemote,
   };
 }

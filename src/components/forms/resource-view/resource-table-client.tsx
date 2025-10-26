@@ -41,7 +41,7 @@ import {
   type VisibilityState,
   type Row,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Settings, ChevronDown, SortAsc, SortDesc, Filter } from "lucide-react";
+import { ArrowUpDown, Settings, ChevronDown, SortAsc, SortDesc, Filter, Layout, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { computeAutoColumnPercents } from "@/components/data-table/auto-column-widths";
@@ -57,13 +57,18 @@ import { SortMenu } from "@/components/data-table/sort-menu";
 import { StatusCellWrapper } from "@/components/data-table/status-cell-wrapper";
 import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
+import { useSavedViews } from "@/components/data-table/use-saved-views";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ViewsMenu } from "@/components/data-table/views-menu";
 
 type FilterMode = "contains" | "equals" | "startsWith" | "endsWith";
 
@@ -157,10 +162,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ NEW: State لإظهار/إخفاء قسم More Filters
   const [showMoreFilters, setShowMoreFilters] = React.useState(false);
 
+  // Save View dialog state
+  const [saveViewDialogOpen, setSaveViewDialogOpen] = React.useState(false);
+  const [viewName, setViewName] = React.useState("");
+  const [viewDescription, setViewDescription] = React.useState("");
+
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
 
-  // Column widths state for resizing (initialize with empty object, will be updated after autoColumnWidthsPct is calculated)
+  // Column widths state for resizing (initialize from active view once hydrated)
   const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
 
   // Track currently dragged column id to render an overlay ghost
@@ -217,7 +227,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: editingStatus.value }),
       });
-      if (res.ok) router.refresh();
+      if (res.ok) {
+        // Avoid route refresh to preserve column state; soft-refresh via revalidation hint
+        // Consumers should invalidate React Query where relevant.
+      }
       else alert("Failed to update status");
     } catch {
       alert("Error updating status");
@@ -249,9 +262,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         body: JSON.stringify(updateData),
       });
 
-      if (res.ok) {
-        router.refresh();
-      } else {
+      if (!res.ok) {
         alert(`Failed to update ${editingCell.columnId}`);
       }
     } catch {
@@ -693,6 +704,47 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
     return (
       <div className="flex items-center gap-2">
+        {/* Views dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Layout className="h-4 w-4" />
+              Views
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <ViewsMenu
+              views={views.map((v) => ({ 
+                ...v, 
+                description: v.description ?? "", 
+                isDefault: !!v.isDefault,
+                createdAt: new Date(v.createdAt) 
+              }))}
+              currentViewId={currentView?.id ?? "default"}
+              onApplyView={(v) => {
+                applyView(v.id);
+                setColumnOrder(v.columnOrder);
+                setColumnVisibility(v.visibleColumns as any);
+                const w = (v as any).columnWidthsPct;
+                if (w) setWidths(w);
+              }}
+              onDeleteView={(id) => {
+                handleDeleteViewRemote(id);
+                // optimistically remove from local state
+                const updatedViews = views.filter((v) => v.id !== id);
+                if (updatedViews.length) {
+                  const nextDefault = updatedViews.find((v) => v.isDefault) ?? updatedViews[0];
+                  applyView(nextDefault.id);
+                }
+              }}
+              formatDate={(d) => d.toLocaleDateString()}
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Columns dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -720,6 +772,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
               onDragOver={onDragOver}
               onDrop={onDrop}
             />
+            {/* Optional: Auto-fit action */}
+            <div className="border-t border-gray-200 p-2 dark:border-gray-700">
+              <Button variant="outline" size="sm" onClick={autoFitColumns}>Auto-fit columns</Button>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -745,7 +801,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     );
   }, [table, isResizing, setColumnOrder, dragIdRef, idField]);
 
-  // ✅ NEW: More Filters Section
+  // ✅ NEW: More Filters Section and client->parent filter mapping
   const MoreFiltersSection = React.useMemo(() => {
     if (!showMoreFilters) return null;
 
@@ -833,7 +889,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return () => document.removeEventListener("click", onToolbarClick, true);
   }, [table]);
 
-  // ✅ Auto-assign smart percentage widths from data (safe when `config` is undefined)
+  // ✅ Auto-assign smart percentage widths from data (on-demand only)
   const autoColumnWidthsPct = React.useMemo(() => {
     const defaultOverrides = { __select: 3, actions: 8 };
     const cfg = (config ?? {}) as any; // ← guard `config`
@@ -849,12 +905,210 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     });
   }, [baseColumns, filteredRows, config]);
 
-  // Update column widths when autoColumnWidthsPct changes
+  // -- Saved Views: hydrate & persist state ---------------------------------
+  const tableId = React.useMemo(() => {
+    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
+    return `forms/${routeSegment}`;
+  }, [config]);
+
+  const defaultColumnIds = React.useMemo(() => {
+    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
+    // keep __select first if present
+    const selectId = all.find((id) => id === "__select");
+    const others = all.filter((id) => id && id !== "__select");
+    return selectId ? [selectId, ...others] : others;
+  }, [baseColumns]);
+
+  const {
+    views,
+    currentView,
+    setCurrentViewId,
+    applyView,
+    saveView,
+    updateView,
+    setDefault,
+    hydrateFromRemote,
+  } = useSavedViews(tableId, defaultColumnIds);
+
+  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
   React.useEffect(() => {
-    if (Object.keys(autoColumnWidthsPct).length > 0) {
-      setWidths(autoColumnWidthsPct);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/saved-views?tableId=${encodeURIComponent(tableId)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (!cancelled && Array.isArray(body.views)) {
+          hydrateFromRemote(
+            body.views.map((v: any) => ({
+              id: v.id,
+              name: v.name,
+              description: v.description ?? "",
+              isDefault: !!v.isDefault,
+              columnOrder: v.state?.columnOrder ?? defaultColumnIds,
+              visibleColumns: v.state?.visibleColumns ?? Object.fromEntries(defaultColumnIds.map((id: string) => [id, true])),
+              sortConfig: v.state?.sortConfig ?? { column: null, direction: "none" as const, type: "alphabetical" as const },
+              createdAt: v.createdAt ?? new Date().toISOString(),
+            }))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId, hydrateFromRemote, defaultColumnIds]);
+
+  // Apply current view to column order/visibility/widths once when table is ready
+  React.useEffect(() => {
+    if (!currentView) return;
+    const ids = currentView.columnOrder?.length ? currentView.columnOrder : defaultColumnIds;
+    initialOrderRef.current = ids;
+    setColumnOrder(ids);
+
+    // visibility
+    const vmap = currentView.visibleColumns ?? Object.fromEntries(ids.map((id) => [id, true]));
+    setColumnVisibility(vmap as any);
+
+    // widths
+    const w = (currentView as any).columnWidthsPct as Record<string, number> | undefined;
+    if (w && Object.keys(w).length) setWidths(w);
+  }, [currentView, defaultColumnIds, setWidths]);
+
+  // Persist state changes into current view snapshot
+  React.useEffect(() => {
+    if (!currentView) return;
+    const snapshot: any = {
+      ...currentView,
+      columnOrder,
+      visibleColumns: columnVisibility,
+      columnWidthsPct: columnWidths,
+      sortConfig: (table.getState().sorting?.[0]
+        ? {
+            column: table.getState().sorting[0].id,
+            direction: table.getState().sorting[0].desc ? "desc" : "asc",
+            type: "alphabetical",
+          }
+        : { column: null, direction: "none", type: "alphabetical" }),
+    };
+    updateView(currentView.id, snapshot);
+  }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
+
+  // Provide an explicit Auto-fit action (optional: wire to Columns menu)
+  const autoFitColumns = React.useCallback(() => {
+    const next = autoColumnWidthsPct;
+    if (next && Object.keys(next).length) setWidths(next);
   }, [autoColumnWidthsPct, setWidths]);
+
+  // Remote view persistence actions
+  const handleSaveViewRemote = React.useCallback(
+    async (name: string, description: string, isDefault: boolean) => {
+      try {
+        const state = {
+          columnOrder,
+          columnVisibility,
+          columnWidthsPct: columnWidths,
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
+          filters,
+        };
+
+        const res = await fetch("/api/saved-views", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tableId, name, description, isDefault, state }),
+        });
+        if (!res.ok) throw new Error("Failed to save view");
+        const body = await res.json();
+        const newView = {
+          id: body.id,
+          name,
+          description: description ?? "",
+          isDefault: !!isDefault,
+          columnOrder,
+          visibleColumns: columnVisibility as Record<string, boolean>,
+          sortConfig: state.sortConfig,
+          createdAt: new Date().toISOString(),
+        };
+        saveView(newView as any);
+        toast("View saved successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to save view: ${err?.message ?? ""}`);
+      }
+    },
+    [tableId, columnOrder, columnVisibility, columnWidths, table, filters, saveView]
+  );
+
+  const handleUpdateViewRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const state = {
+          columnOrder,
+          columnVisibility,
+          columnWidthsPct: columnWidths,
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
+          filters,
+        };
+
+        const res = await fetch(`/api/saved-views/${viewId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state }),
+        });
+        if (!res.ok) throw new Error("Failed to update view");
+        toast("View updated successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to update view: ${err?.message ?? ""}`);
+      }
+    },
+    [columnOrder, columnVisibility, columnWidths, table, filters]
+  );
+
+  const handleDeleteViewRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const res = await fetch(`/api/saved-views/${viewId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete view");
+        toast("View deleted successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to delete view: ${err?.message ?? ""}`);
+      }
+    },
+    []
+  );
+
+  const handleSetDefaultRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const res = await fetch(`/api/saved-views/${viewId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isDefault: true }),
+        });
+        if (!res.ok) throw new Error("Failed to set default view");
+        setDefault(viewId);
+        toast("Default view updated!");
+      } catch (err: any) {
+        toast.error(`Failed to set default: ${err?.message ?? ""}`);
+      }
+    },
+    [setDefault]
+  );
 
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 
@@ -881,12 +1135,23 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 {showMoreFilters ? "Hide Filters" : "More Filters"}
               </Button>
             </div>
-            {/* زر Export في أقصى اليمين */}
-            {showInlineExportButton && (
-              <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
-                Export CSV
+            <div className="flex items-center gap-2">
+              {/* زر Save View */}
+              <Button
+                variant="outline"
+                onClick={() => setSaveViewDialogOpen(true)}
+                className="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+              >
+                <Save className="h-4 w-4" />
+                Save View
               </Button>
-            )}
+              {/* زر Export في أقصى اليمين */}
+              {showInlineExportButton && (
+                <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
+                  Export CSV
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -915,7 +1180,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
               setFilters((prev) => {
                 const newFilters = { ...prev, [id]: next };
 
-                // New behavior from origin/main: notify parent if provided
                 if (onFiltersChange) onFiltersChange(newFilters);
 
                 return newFilters; // keep functional setState contract
@@ -935,6 +1199,73 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         ) : null}
       </DragOverlay>
       {ConfirmComponent}
+
+      {/* Save View Dialog */}
+      <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Current View</DialogTitle>
+            <DialogDescription>
+              Save your current column layout, sorting, and visibility settings as a named view for quick access later.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="view-name">View Name *</Label>
+              <Input
+                id="view-name"
+                placeholder="e.g., My Custom View, Status Overview, etc."
+                value={viewName}
+                onChange={(e) => setViewName(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="view-description">Description</Label>
+              <Input
+                id="view-description"
+                placeholder="Brief description of this view..."
+                value={viewDescription}
+                onChange={(e) => setViewDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+              <div className="font-medium">Current Settings:</div>
+              <div className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <div>• {Object.values(columnVisibility).filter(Boolean).length} columns visible</div>
+                <div>
+                  • {table.getState().sorting?.[0] 
+                      ? `Sorted by: ${table.getState().sorting[0].id} (${table.getState().sorting[0].desc ? "desc" : "asc"})`
+                      : "No sorting applied"}
+                </div>
+                <div>• Column order: {columnOrder.length} columns</div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveViewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (viewName.trim()) {
+                  handleSaveViewRemote(viewName, viewDescription, false);
+                  setSaveViewDialogOpen(false);
+                  setViewName("");
+                  setViewDescription("");
+                }
+              }}
+              disabled={!viewName.trim()}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save View
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   );
 }

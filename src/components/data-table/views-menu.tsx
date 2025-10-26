@@ -15,7 +15,7 @@ interface SavedView {
   sortConfig: {
     column: string | null;
     direction: string;
-    type: "alphabetical" | "date";
+    type?: "alphabetical" | "date" | "status";
   };
   createdAt: Date;
 }
