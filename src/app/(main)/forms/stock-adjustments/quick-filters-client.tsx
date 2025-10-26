@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,16 +14,34 @@ interface QuickFiltersClientProps {
 }
 
 export function QuickFiltersClient({ onFilterChange }: QuickFiltersClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [selectedValues, setSelectedValues] = React.useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {};
     quickFilters.forEach((filter) => {
-      defaults[filter.id] = filter.defaultValue ?? "";
+      // Get value from URL params or use default
+      const urlValue = searchParams.get(filter.id);
+      defaults[filter.id] = urlValue ?? filter.defaultValue ?? "";
     });
     return defaults;
   });
 
   const handleValueChange = (filterId: string, value: string) => {
     setSelectedValues((prev) => ({ ...prev, [filterId]: value }));
+    
+    // Update URL params
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== "ALL") {
+      params.set(filterId, value);
+    } else {
+      params.delete(filterId);
+    }
+    
+    // Update URL to trigger server-side filtering
+    router.push(`?${params.toString()}`, { scroll: false });
+    
+    // Call the callback if provided
     onFilterChange?.(filterId, value);
   };
 

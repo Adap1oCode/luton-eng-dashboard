@@ -112,17 +112,17 @@ function TanStackDataTable<T = Record<string, unknown>>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="p-3"
- style={
-   columnWidthsPct?.[header.column.id] != null
-     ? {
-         width: `${columnWidthsPct[header.column.id]}%`,
-         maxWidth: `${columnWidthsPct[header.column.id]}%`,
-         // NEW: never let headers collapse below a readable width
-         minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
-       }
-     : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
- }
+                    className="p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                    style={
+                      columnWidthsPct?.[header.column.id] != null
+                        ? {
+                            width: `${columnWidthsPct[header.column.id]}%`,
+                            maxWidth: `${columnWidthsPct[header.column.id]}%`,
+                            // NEW: never let headers collapse below a readable width
+                            minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
+                          }
+                        : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
+                    }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -394,12 +394,12 @@ function LegacyDataTable<T extends Record<string, unknown>>({
                           >
                             {sortConfig.column === colId ? (
                               sortConfig.direction === "asc" ? (
-                                <ArrowUp className="h-4 w-4" />
+                                <ArrowUp className="h-3 w-3" />
                               ) : (
-                                <ArrowDown className="h-4 w-4" />
+                                <ArrowDown className="h-3 w-3" />
                               )
                             ) : (
-                              <ArrowUpDown className="h-4 w-4" />
+                              <ArrowUpDown className="h-3 w-3" />
                             )}
                           </button>
                         </div>

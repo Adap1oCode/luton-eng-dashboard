@@ -160,8 +160,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
 
-  // Column widths state for resizing (initialize with empty object, will be updated after autoColumnWidthsPct is calculated)
-  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
+  // Column widths state for resizing (preserve widths during re-renders)
+  const columnWidthsRef = React.useRef<Record<string, number>>({});
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(columnWidthsRef.current, tableRef);
+  
+  // Update ref when widths change to preserve them during re-renders
+  React.useEffect(() => {
+    if (Object.keys(columnWidths).length > 0) {
+      columnWidthsRef.current = columnWidths;
+    }
+  }, [columnWidths]);
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);

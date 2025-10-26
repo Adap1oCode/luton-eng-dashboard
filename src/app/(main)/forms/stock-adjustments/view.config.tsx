@@ -71,20 +71,6 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       meta: { routingOnly: true },
     },
     {
-      id: "full_name",
-      accessorKey: "full_name",
-      header: "Name",
-      enableSorting: true,
-      size: 160,
-    },
-    {
-      id: "warehouse",
-      accessorKey: "warehouse",
-      header: "Warehouse",
-      enableSorting: true,
-      size: 160,
-    },
-    {
       id: "tally_card_number",
       accessorKey: "tally_card_number",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card" />,
@@ -111,25 +97,29 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       size: 160,
     },
     {
+      id: "warehouse",
+      accessorKey: "warehouse",
+      header: "Warehouse",
+      enableSorting: true,
+      size: 160,
+    },
+    {
+      id: "full_name",
+      accessorKey: "full_name",
+      header: "Name",
+      enableSorting: true,
+      size: 160,
+    },
+    {
       id: "qty",
       accessorKey: "qty",
       header: "Qty",
       cell: ({ row }) => {
         const qty = row.getValue<number | null>("qty");
         
-        // Show status indicator if quantity exists
+        // Show quantity value without badges
         if (qty !== null && qty !== undefined) {
-          return (
-            <div className="flex items-center gap-2">
-              <span>{qty}</span>
-              <Badge
-                variant="secondary"
-                className={`${qty > 0 ? "bg-green-500" : "bg-orange-500"} hover:bg-opacity-80 text-white text-xs`}
-              >
-                {qty > 0 ? "Active" : "Zero"}
-              </Badge>
-            </div>
-          );
+          return <span>{qty}</span>;
         }
         
         return <span className="text-muted-foreground">—</span>;

@@ -39,11 +39,24 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
   const sp = await resolveSearchParams(props.searchParams);
   const { page, pageSize } = parsePagination(sp, { defaultPage: 1, defaultPageSize: 10, max: 500 });
 
+  // Handle status filter from quick filters
+  const statusFilter = sp.status;
+  const extraQuery: Record<string, any> = { raw: "true" };
+  
+  // Add status filter if specified
+  if (statusFilter && statusFilter !== "ALL") {
+    if (statusFilter === "ACTIVE") {
+      extraQuery.qty_gt = 0; // Quantity greater than 0
+    } else if (statusFilter === "ZERO") {
+      extraQuery.qty_eq = 0; // Quantity equals 0
+    }
+  }
+
   const { rows: domainRows, total } = await fetchResourcePage<any>({
     endpoint: "/api/v_tcm_user_tally_card_entries",
     page,
     pageSize,
-    extraQuery: { raw: "true" },
+    extraQuery,
   });
 
   const rows = (domainRows ?? []).map(toRow);
@@ -58,6 +71,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       quickFiltersSlot={<QuickFiltersClient />}
       enableAdvancedFilters={true}
       showSaveViewButton={false}
+      showExportButton={false}
       showToolbarContainer={false}
     >
       <ResourceTableClient
