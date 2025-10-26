@@ -12,6 +12,7 @@ import ResourceTableClient from "@/components/forms/resource-view/resource-table
 
 import { stockAdjustmentsToolbar, stockAdjustmentsChips, stockAdjustmentsActions } from "./toolbar.config";
 import { stockAdjustmentsViewConfig } from "./view.config";
+import { QuickFiltersClient } from "./quick-filters-client";
 
 // 🧾 Browser tab title for this screen (pairs with root layout title template)
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ function toRow(d: any) {
     location: d?.location ?? null,
     note: d?.note ?? null,
     updated_at: d?.updated_at ?? null,
+    is_active: d?.qty !== null && d?.qty !== undefined && Number(d?.qty) > 0, // Status based on qty
   };
 }
 
@@ -53,6 +55,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       toolbarConfig={stockAdjustmentsToolbar}
       toolbarActions={stockAdjustmentsActions}
       chipConfig={stockAdjustmentsChips}
+      quickFiltersSlot={<QuickFiltersClient />}
       enableAdvancedFilters={true}
       showSaveViewButton={false}
       showToolbarContainer={false}

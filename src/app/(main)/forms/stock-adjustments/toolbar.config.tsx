@@ -8,7 +8,7 @@
 //    (i.e., /api/user_tally_card_entries), not stock-adjustments.
 // -----------------------------------------------------------------------------
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
 import type {
   ToolbarConfig,
   ChipsConfig,
@@ -37,6 +37,13 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       enableWhen: "anySelected",
       requiredAny: ["resource:tcm_user_tally_card_entries:delete"],
     },
+    {
+      id: "exportCsv",
+      label: "Export CSV",
+      icon: "Download",
+      variant: "outline",
+      onClickId: "exportCsv",
+    },
   ],
   right: [
     // Add export/filter/etc. on the right as needed
@@ -56,6 +63,34 @@ export const stockAdjustmentsActions: ActionConfig = {
 };
 
 export const stockAdjustmentsChips: ChipsConfig | undefined = undefined;
+
+// Dynamic toolbar factory - creates toolbar based on active filters/sorting
+export const createStockAdjustmentsToolbar = (hasSorting: boolean, hasFilters: boolean): ToolbarConfig => {
+  const rightButtons = [];
+
+  if (hasSorting) {
+    rightButtons.push({
+      id: "appliedSorting",
+      label: "Sorting Applied",
+      variant: "secondary" as const,
+      onClickId: "clearSorting",
+    });
+  }
+
+  if (hasFilters) {
+    rightButtons.push({
+      id: "appliedFilters",
+      label: "Filter Applied",
+      variant: "secondary" as const,
+      onClickId: "clearFilters",
+    });
+  }
+
+  return {
+    ...stockAdjustmentsToolbar,
+    right: rightButtons,
+  };
+};
 
 // Optional row action menu (wire if needed in your actions column)
 export const stockAdjustmentsActionMenu = [

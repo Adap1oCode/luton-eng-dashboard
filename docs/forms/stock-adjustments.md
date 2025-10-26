@@ -60,6 +60,12 @@ Buttons (permission-gated):
 |--------|-------------|------------|
 | **New Adjustment** | Navigate to create form | `resource:tcm_user_tally_card_entries:create` |
 | **Bulk Delete** | Delete selected rows | `resource:tcm_user_tally_card_entries:delete` |
+| **Export CSV** | Export filtered data to CSV | Public (no permission check) |
+
+**Features:**
+- Export CSV button downloads the current filtered/sorted dataset
+- CSV includes all visible columns
+- Filename format: `stock-adjustments-YYYY-MM-DD-HHMMSS.csv`
 
 Follows consistent test IDs:
 - `data-testid="btn-new"`
@@ -72,17 +78,30 @@ Standardized shared component used for all list pages.
 
 #### Columns
 
-| Column | Header | Sortable | Filterable |
-|--------|--------|----------|------------|
-| **Selection** | Checkbox (first column) | ❌ | ❌ |
-| **Name** | Name | ✅ | ✅ |
-| **Warehouse** | Warehouse | ✅ | ✅ |
-| **Tally Card** | Tally Card # | ✅ | ✅ |
-| **Qty** | Quantity | ✅ | ✅ |
-| **Location** | Location | ✅ | ✅ |
-| **Note** | Note | ❌ | ✅ |
-| **Updated** | Updated | ✅ | ✅ |
-| **Actions** | ⋯ (last column) | ❌ | ❌ |
+| Column | Header | Sortable | Filterable | Special Features |
+|--------|--------|----------|------------|------------------|
+| **Selection** | Checkbox (first column) | ❌ | ❌ | — |
+| **Name** | Name | ✅ | ✅ | — |
+| **Warehouse** | Warehouse | ✅ | ✅ | — |
+| **Tally Card** | Tally Card # | ✅ | ✅ | ✅ **Hyperlink to edit** |
+| **Qty** | Quantity | ✅ | ✅ | ✅ **Status badge** (Active/Zero) |
+| **Location** | Location | ✅ | ✅ | — |
+| **Note** | Note | ❌ | ✅ | — |
+| **Updated** | Updated | ✅ | ✅ | — |
+| **Actions** | ⋯ (last column) | ❌ | ❌ | — |
+
+**Special Column Features:**
+1. **Tally Card Hyperlink**: Clickable links navigate to `/forms/stock-adjustments/edit/{id}` for quick editing
+2. **Qty Status Badge**: 
+   - Green "Active" badge for qty > 0
+   - Orange "Zero" badge for qty = 0
+   - Provides visual status indicator at a glance
+3. **Inline Editing**: 
+   - Quantity column is editable directly in the table
+   - Click on quantity value to enter edit mode
+   - Use check/cancel buttons to save or cancel changes
+   - Validation ensures numeric values only
+   - Changes are saved via API call to update the record
 
 #### Features
 
@@ -112,9 +131,27 @@ Standardized shared component used for all list pages.
 - ✅ **Row selection** (checkbox for bulk actions)
 - ✅ **Row actions menu** (View/Edit/Delete per row)
 - ✅ **Export to CSV** (download visible data)
+- ✅ **Quick Filters** (Status dropdown for fast filtering)
+- ✅ **Inline Editing** (Edit quantity directly in table cells)
+- ✅ **Hyperlink columns** (Quick navigation to edit pages)
+- ✅ **Status badges** (Visual indicators for active/zero quantities)
 - ✅ **URL state persistence** (pagination/filters in URL)
 - ✅ **Responsive design** (mobile-friendly)
 - ✅ **Keyboard navigation** (accessibility)
+
+### 2.4 Quick Filters
+
+Between the toolbar and table, quick filter dropdowns provide fast filtering for common use cases:
+
+- **Status Filter**: 
+  - "All adjustments" (default) - Shows all records
+  - "Active (qty > 0)" - Shows only records with quantity > 0
+  - "Zero quantity" - Shows only records with quantity = 0
+
+**Implementation:**
+- Quick filter configuration is defined in `view.config.tsx` as `quickFilters` array
+- Rendered via `<QuickFiltersClient />` component passed to `PageShell`'s `quickFiltersSlot` prop
+- Filter state is managed client-side with callbacks for server-side filtering
 
 ---
 

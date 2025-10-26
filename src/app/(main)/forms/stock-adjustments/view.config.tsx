@@ -6,6 +6,11 @@
 
 "use client";
 
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import type { InlineEditConfig } from "@/components/data-table/inline-edit-cell";
 import {
   makeActionsColumn,
   type BaseViewConfig,
@@ -18,6 +23,25 @@ import {
   stockAdjustmentsActions,
 } from "./toolbar.config";
 
+// Quick filter type
+export type QuickFilter = {
+  id: string;
+  label: string;
+  type: "text" | "enum";
+  options?: Array<{ value: string; label: string }>;
+  defaultValue?: string;
+};
+
+// Inline edit configurations
+export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
+  qty: {
+    fieldType: "text",
+    placeholder: "Enter quantity",
+    validation: (value) => !isNaN(Number(value)),
+    parseValue: (value) => Number(value),
+  },
+};
+
 // If you later add a Zod schema, infer this type from it.
 export type StockAdjustmentRow = {
   id: string; // routing/selection id (from API/view)
@@ -29,6 +53,7 @@ export type StockAdjustmentRow = {
   note?: string | null;
   updated_at?: string | null; // ISO string from server (fallback if pretty missing)
   updated_at_pretty?: string | null; // human-friendly
+  is_active?: boolean | null; // Status field for visual indicators
 };
 
 function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
@@ -62,7 +87,26 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
     {
       id: "tally_card_number",
       accessorKey: "tally_card_number",
-      header: "Tally Card",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Tally Card" />,
+      cell: ({ row }) => {
+        const id = row.original.id;
+        const tallyCardNumber = row.getValue<string | null>("tally_card_number");
+        
+        // If no tally card number, show as plain text
+        if (!tallyCardNumber) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+
+        // Create hyperlink to edit page
+        return (
+          <Link
+            href={`/forms/stock-adjustments/edit/${id}`}
+            className="font-medium text-blue-600 transition-colors duration-150 hover:text-blue-800 hover:underline"
+          >
+            {tallyCardNumber}
+          </Link>
+        );
+      },
       enableSorting: true,
       size: 160,
     },
@@ -70,11 +114,32 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       id: "qty",
       accessorKey: "qty",
       header: "Qty",
+      cell: ({ row }) => {
+        const qty = row.getValue<number | null>("qty");
+        
+        // Show status indicator if quantity exists
+        if (qty !== null && qty !== undefined) {
+          return (
+            <div className="flex items-center gap-2">
+              <span>{qty}</span>
+              <Badge
+                variant="secondary"
+                className={`${qty > 0 ? "bg-green-500" : "bg-orange-500"} hover:bg-opacity-80 text-white text-xs`}
+              >
+                {qty > 0 ? "Active" : "Zero"}
+              </Badge>
+            </div>
+          );
+        }
+        
+        return <span className="text-muted-foreground">—</span>;
+      },
       meta: {
+        inlineEdit: INLINE_EDIT_CONFIGS.qty,
         /* align handled by cell/renderer if needed */
       },
       enableSorting: true,
-      size: 90,
+      size: 120,
     },
     {
       id: "location",
@@ -106,16 +171,32 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
   ];
 }
 
+// Quick filters for status-based filtering
+export const quickFilters: QuickFilter[] = [
+  {
+    id: "status",
+    label: "Status",
+    type: "enum",
+    options: [
+      { value: "ALL", label: "All adjustments" },
+      { value: "ACTIVE", label: "Active (qty > 0)" },
+      { value: "ZERO", label: "Zero quantity" },
+    ],
+    defaultValue: "ALL",
+  },
+];
+
 export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   resourceKeyForDelete: "tcm_user_tally_card_entries",
   formsRouteSegment: "stock-adjustments", // builds /forms/stock-adjustments/[id]/edit
   idField: "id", // domain id for actions + row keys
   // Keep this minimal local toolbar to avoid regressions if consumers read from viewConfig
   toolbar: { left: undefined, right: [] },
-  quickFilters: [],
+  quickFilters: quickFilters,
   features: {
     rowSelection: true,
     pagination: true,
+    // Inline editing is enabled per-column via meta.inlineEdit
     // other features rely on global defaults; override here if needed
   },
   buildColumns: () => buildColumns(),
