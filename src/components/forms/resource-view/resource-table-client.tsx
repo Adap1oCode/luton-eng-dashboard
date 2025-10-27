@@ -329,7 +329,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             }
             label={label}
             columnOrder={columnOrder}
-            onMouseDownResize={onMouseDownResize}
           />
         );
       }

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
@@ -34,15 +34,6 @@ export function StockAdjustmentsClient({
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "10");
   
-  // Column width state management - persist across data fetches
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const columnWidthsRef = useRef<Record<string, number>>({});
-  
-  // Handle column width changes from ResourceTableClient
-  const handleColumnWidthsChange = useCallback((widths: Record<string, number>) => {
-    setColumnWidths(widths);
-    columnWidthsRef.current = widths;
-  }, []);
   
   // Build extra query parameters for filtering
   const buildExtraQuery = useCallback(() => {
@@ -178,14 +169,6 @@ export function StockAdjustmentsClient({
           page={page}
           pageSize={pageSize}
           showInlineExportButton={false}
-          onColumnWidthsChange={handleColumnWidthsChange}
-          initialColumnWidths={columnWidths}
-          quickFiltersSlot={
-            <QuickFiltersClient
-              onFilterChange={handleFilterChange}
-              currentFilters={{ status: statusFilter || "ALL" }}
-            />
-          }
         />
       </PageShell>
       
