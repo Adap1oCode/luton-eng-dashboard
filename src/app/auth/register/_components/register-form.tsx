@@ -180,7 +180,7 @@ export function RegisterFormV1() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium text-gray-700">Email</FormLabel>
+                  <FormLabel htmlFor="email" className="text-base font-medium text-gray-700">Email</FormLabel>
                   <FormControl>
                     <Input
                       id="email"
@@ -201,7 +201,7 @@ export function RegisterFormV1() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
+                  <FormLabel htmlFor="password" className="text-base font-medium text-gray-700">Password</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -240,7 +240,7 @@ export function RegisterFormV1() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium text-gray-700">Confirm Password</FormLabel>
+                  <FormLabel htmlFor="confirmPassword" className="text-base font-medium text-gray-700">Confirm Password</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
