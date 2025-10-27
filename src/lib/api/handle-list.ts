@@ -52,30 +52,43 @@ export async function listHandler(req: Request, resourceKey: string) {
     const entry = await resolveResource(resourceKey);
 
     const url = new URL(req.url);
-    const { q, page, pageSize, activeOnly, raw } = parseListQuery(url);
-
-    // Extract custom filtering parameters (like qty_gt, qty_eq, etc.)
-    const filters: Record<string, any> = {};
-    for (const [key, value] of url.searchParams.entries()) {
-      // Skip standard parameters that are handled separately
-      if (!['q', 'page', 'pageSize', 'activeOnly', 'raw'].includes(key)) {
-        // Handle numeric filters (qty_gt, qty_eq, etc.)
-        if (key.endsWith('_gt') || key.endsWith('_gte') || key.endsWith('_lt') || key.endsWith('_lte') || key.endsWith('_eq')) {
-          const numValue = Number(value);
-          if (Number.isFinite(numValue)) {
-            filters[key] = numValue;
-          }
-        } else {
-          // Handle other filters as strings
-          filters[key] = value;
-        }
-      }
-    }
+    const parsed = parseListQuery(url);
+    const { q, page, pageSize, activeOnly, raw } = parsed;
 
     const provider = createSupabaseServerProvider(entry.config as any);
 
     // ✅ Scoping is applied inside the provider (server mode) when AUTH_SCOPING_ENABLED is true.
     //    Provider calls getSessionContext() and applies warehouse/ownership scope internally.
+    
+    // Extract filters: structured (filters[col][value/mode]) + numeric (qty_gt) + custom
+    const filters: Record<string, any> = {};
+    const sp = (parsed as any).searchParams as URLSearchParams | undefined;
+    if (sp) {
+      for (const [key, value] of sp.entries()) {
+        // Skip standard list parameters
+        if (['q', 'page', 'pageSize', 'activeOnly', 'raw'].includes(key)) continue;
+        
+        // Structured filters: filters[col][value], filters[col][mode]
+        const m = key.match(/^filters\[(.+?)\]\[(value|mode)\]$/);
+        if (m) {
+          const col = m[1];
+          const kind = m[2] as "value" | "mode";
+          filters[col] = filters[col] || {};
+          filters[col][kind] = value;
+        }
+        // Numeric comparison filters: qty_gt, qty_gte, qty_lt, qty_lte, qty_eq
+        else if (key.endsWith('_gt') || key.endsWith('_gte') || key.endsWith('_lt') || key.endsWith('_lte') || key.endsWith('_eq')) {
+          const numValue = Number(value);
+          if (Number.isFinite(numValue)) {
+            filters[key] = numValue;
+          }
+        }
+        // Other custom filters
+        else {
+          filters[key] = value;
+        }
+      }
+    }
     const { rows, total } = await provider.list({ q, page, pageSize, activeOnly, filters });
 
     // Optional debug logging (safe; separate session fetch used only for logs)
