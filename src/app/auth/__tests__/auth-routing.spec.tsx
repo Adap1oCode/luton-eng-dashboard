@@ -37,7 +37,7 @@ describe("Auth Routing", () => {
 
       // Should have login-specific elements
       expect(screen.getByText("Hello again")).toBeInTheDocument();
-      expect(screen.getByText("Login")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
       expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
       expect(screen.getByLabelText("Password")).toBeInTheDocument();
       
@@ -54,6 +54,10 @@ describe("Auth Routing", () => {
       expect(screen.getByLabelText("Password")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: /remember me/i })).toBeInTheDocument();
+      
+      // Verify form inputs have proper IDs
+      expect(screen.getByRole("textbox", { name: /email/i })).toHaveAttribute("id", "email");
+      expect(screen.getByLabelText("Password")).toHaveAttribute("id", "password");
     });
   });
 
@@ -81,6 +85,11 @@ describe("Auth Routing", () => {
       expect(screen.getByLabelText("Password")).toBeInTheDocument();
       expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /create account/i })).toBeInTheDocument();
+      
+      // Verify form inputs have proper IDs
+      expect(screen.getByRole("textbox", { name: /email/i })).toHaveAttribute("id", "email");
+      expect(screen.getByLabelText("Password")).toHaveAttribute("id", "password");
+      expect(screen.getByLabelText("Confirm Password")).toHaveAttribute("id", "confirmPassword");
     });
   });
 
