@@ -606,16 +606,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return selectId ? [selectId, ...others] : others;
   }, [baseColumns]);
 
-  const {
-    views,
-    currentView,
-    setCurrentViewId,
-    applyView,
-    saveView,
-    updateView,
-    setDefault,
-    hydrateFromRemote,
-  } = useSavedViews(tableId, defaultColumnIds);
+  // Temporarily disable saved views to prevent flickering
+  const views: any[] = [];
+  const currentView = null;
+  const setCurrentViewId = () => {};
+  const applyView = () => {};
+  const saveView = () => {};
+  const updateView = () => {};
+  const setDefault = () => {};
+  const hydrateFromRemote = () => {};
 
   // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
   React.useEffect(() => {

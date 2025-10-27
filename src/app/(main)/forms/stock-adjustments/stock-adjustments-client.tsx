@@ -68,11 +68,13 @@ export function StockAdjustmentsClient({
       return result;
     },
     initialData: { rows: initialData, total: initialTotal },
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent constant refetches
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep data in cache longer
+    staleTime: Infinity, // Never consider data stale - prevent all automatic refetches
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep data in cache much longer
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
     refetchOnMount: false, // Don't refetch on component mount if data exists
-    refetchOnReconnect: true, // Only refetch on network reconnect
+    refetchOnReconnect: false, // Don't refetch on network reconnect
+    refetchInterval: false, // Disable interval refetching
+    refetchIntervalInBackground: false, // Disable background refetching
     retry: (failureCount, error) => {
       // Don't retry on 4xx errors (client errors)
       if (error instanceof Error && error.message.includes('4')) {
