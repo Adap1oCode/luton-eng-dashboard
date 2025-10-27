@@ -44,7 +44,12 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  let session = {};
+  let session: {
+    fullName?: string | null;
+    email?: string | null;
+    roleName?: string | null;
+    avatarUrl?: string | null;
+  } = {};
   try {
     // Add timeout to prevent hanging
     const controller = new AbortController();
