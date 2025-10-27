@@ -73,7 +73,7 @@ export function StockAdjustmentsClient({
     gcTime: 300000, // 5 minutes - keep in cache longer for faster subsequent loads
     refetchOnWindowFocus: false, // Don't refetch on tab switch (reduces unnecessary requests)
     refetchOnMount: false, // Use cached data on mount if available (faster page loads)
-    keepPreviousData: true, // Show old data while fetching new (smoother UX)
+    placeholderData: (previousData) => previousData, // Show old data while fetching new (smoother UX)
     retry: (failureCount, error) => {
       // Don't retry on 4xx errors (client errors)
       if (error instanceof Error && error.message.includes('4')) {
