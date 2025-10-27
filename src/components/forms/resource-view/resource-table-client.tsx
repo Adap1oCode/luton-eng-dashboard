@@ -617,69 +617,24 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const hydrateFromRemote = () => {};
 
   // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
+  // Disabled temporarily to prevent flickering
   React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/saved-views?tableId=${encodeURIComponent(tableId)}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const body = await res.json();
-        if (!cancelled && Array.isArray(body.views)) {
-          hydrateFromRemote(
-            body.views.map((v: any) => ({
-              id: v.id,
-              name: v.name,
-              description: v.description ?? "",
-              isDefault: !!v.isDefault,
-              columnOrder: v.state?.columnOrder ?? defaultColumnIds,
-              visibleColumns: v.state?.visibleColumns ?? Object.fromEntries(defaultColumnIds.map((id: string) => [id, true])),
-              sortConfig: v.state?.sortConfig ?? { column: null, direction: "none" as const, type: "alphabetical" as const },
-              createdAt: v.createdAt ?? new Date().toISOString(),
-            }))
-          );
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    // Saved views functionality temporarily disabled
+    return;
   }, [tableId, hydrateFromRemote, defaultColumnIds]);
 
   // Apply current view to column order/visibility/widths once when table is ready
+  // Disabled temporarily to prevent flickering
   React.useEffect(() => {
-    if (!currentView) return;
-    const ids = currentView.columnOrder?.length ? currentView.columnOrder : defaultColumnIds;
-    initialOrderRef.current = ids;
-    setColumnOrder(ids);
-
-    // visibility
-    const vmap = currentView.visibleColumns ?? Object.fromEntries(ids.map((id) => [id, true]));
-    setColumnVisibility(vmap as any);
-
-    // widths
-    const w = (currentView as any).columnWidthsPct as Record<string, number> | undefined;
-    if (w && Object.keys(w).length) setWidths(w);
+    // Saved views functionality temporarily disabled
+    return;
   }, [currentView, defaultColumnIds, setWidths]);
 
   // Persist state changes into current view snapshot
+  // Disabled temporarily to prevent flickering
   React.useEffect(() => {
-    if (!currentView) return;
-    const snapshot: any = {
-      ...currentView,
-      columnOrder,
-      visibleColumns: columnVisibility,
-      columnWidthsPct: columnWidths,
-      sortConfig: (table.getState().sorting?.[0]
-        ? {
-            column: table.getState().sorting[0].id,
-            direction: table.getState().sorting[0].desc ? "desc" : "asc",
-            type: "alphabetical",
-          }
-        : { column: null, direction: "none", type: "alphabetical" }),
-    };
-    updateView(currentView.id, snapshot);
+    // Saved views functionality temporarily disabled
+    return;
   }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
 
   // ✅ Auto-assign smart percentage widths from data (on-demand only)
@@ -740,7 +695,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sortConfig: state.sortConfig,
           createdAt: new Date().toISOString(),
         };
-        saveView(newView as any);
+        // saveView(newView as any); // Disabled temporarily
         toast("View saved successfully!");
       } catch (err: any) {
         toast.error(`Failed to save view: ${err?.message ?? ""}`);
@@ -803,7 +758,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           body: JSON.stringify({ isDefault: true }),
         });
         if (!res.ok) throw new Error("Failed to set default view");
-        setDefault(viewId);
+        // setDefault(viewId); // Disabled temporarily
         toast("Default view updated!");
       } catch (err: any) {
         toast.error(`Failed to set default: ${err?.message ?? ""}`);
@@ -942,9 +897,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 isDefault: !!v.isDefault,
                 createdAt: new Date(v.createdAt) 
               }))}
-              currentViewId={currentView?.id ?? "default"}
+              currentViewId="default"
               onApplyView={(v) => {
-                applyView(v.id);
+                // applyView(v.id); // Disabled temporarily
                 setColumnOrder(v.columnOrder);
                 setColumnVisibility(v.visibleColumns as any);
                 const w = (v as any).columnWidthsPct;
@@ -956,7 +911,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 const updatedViews = views.filter((v) => v.id !== id);
                 if (updatedViews.length) {
                   const nextDefault = updatedViews.find((v) => v.isDefault) ?? updatedViews[0];
-                  applyView(nextDefault.id);
+                  // applyView(nextDefault.id); // Disabled temporarily
                 }
               }}
               formatDate={(d) => d.toLocaleDateString()}
