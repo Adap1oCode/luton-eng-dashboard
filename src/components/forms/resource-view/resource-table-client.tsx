@@ -592,6 +592,227 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
   const dragIdRef = React.useRef<string | null>(null);
 
+  // -- Saved Views: hydrate & persist state ---------------------------------
+  const tableId = React.useMemo(() => {
+    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
+    return `forms/${routeSegment}`;
+  }, [config]);
+
+  const defaultColumnIds = React.useMemo(() => {
+    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
+    // keep __select first if present
+    const selectId = all.find((id) => id === "__select");
+    const others = all.filter((id) => id && id !== "__select");
+    return selectId ? [selectId, ...others] : others;
+  }, [baseColumns]);
+
+  const {
+    views,
+    currentView,
+    setCurrentViewId,
+    applyView,
+    saveView,
+    updateView,
+    setDefault,
+    hydrateFromRemote,
+  } = useSavedViews(tableId, defaultColumnIds);
+
+  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/saved-views?tableId=${encodeURIComponent(tableId)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (!cancelled && Array.isArray(body.views)) {
+          hydrateFromRemote(
+            body.views.map((v: any) => ({
+              id: v.id,
+              name: v.name,
+              description: v.description ?? "",
+              isDefault: !!v.isDefault,
+              columnOrder: v.state?.columnOrder ?? defaultColumnIds,
+              visibleColumns: v.state?.visibleColumns ?? Object.fromEntries(defaultColumnIds.map((id: string) => [id, true])),
+              sortConfig: v.state?.sortConfig ?? { column: null, direction: "none" as const, type: "alphabetical" as const },
+              createdAt: v.createdAt ?? new Date().toISOString(),
+            }))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId, hydrateFromRemote, defaultColumnIds]);
+
+  // Apply current view to column order/visibility/widths once when table is ready
+  React.useEffect(() => {
+    if (!currentView) return;
+    const ids = currentView.columnOrder?.length ? currentView.columnOrder : defaultColumnIds;
+    initialOrderRef.current = ids;
+    setColumnOrder(ids);
+
+    // visibility
+    const vmap = currentView.visibleColumns ?? Object.fromEntries(ids.map((id) => [id, true]));
+    setColumnVisibility(vmap as any);
+
+    // widths
+    const w = (currentView as any).columnWidthsPct as Record<string, number> | undefined;
+    if (w && Object.keys(w).length) setWidths(w);
+  }, [currentView, defaultColumnIds, setWidths]);
+
+  // Persist state changes into current view snapshot
+  React.useEffect(() => {
+    if (!currentView) return;
+    const snapshot: any = {
+      ...currentView,
+      columnOrder,
+      visibleColumns: columnVisibility,
+      columnWidthsPct: columnWidths,
+      sortConfig: (table.getState().sorting?.[0]
+        ? {
+            column: table.getState().sorting[0].id,
+            direction: table.getState().sorting[0].desc ? "desc" : "asc",
+            type: "alphabetical",
+          }
+        : { column: null, direction: "none", type: "alphabetical" }),
+    };
+    updateView(currentView.id, snapshot);
+  }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
+
+  // ✅ Auto-assign smart percentage widths from data (on-demand only)
+  const autoColumnWidthsPct = React.useMemo(() => {
+    const defaultOverrides = { __select: 3, actions: 8 };
+    const cfg = (config ?? {}) as any; // ← guard `config`
+    const overrides = { ...defaultOverrides, ...(cfg.columnWidthsPct ?? {}) };
+
+    return computeAutoColumnPercents(baseColumns as any[], filteredRows as any[], {
+      sampleRows: 50,
+      // do NOT ignore __select so it participates in layout
+      ignoreIds: ["id", "__expander", "__actions"],
+      overrides,
+      floorPct: 8,
+      capPct: 28,
+    });
+  }, [baseColumns, filteredRows, config]);
+
+  // Provide an explicit Auto-fit action (optional: wire to Columns menu)
+  const autoFitColumns = React.useCallback(() => {
+    const next = autoColumnWidthsPct;
+    if (next && Object.keys(next).length) setWidths(next);
+  }, [autoColumnWidthsPct, setWidths]);
+
+  // Remote view persistence actions
+  const handleSaveViewRemote = React.useCallback(
+    async (name: string, description: string, isDefault: boolean) => {
+      try {
+        const state = {
+          columnOrder,
+          columnVisibility,
+          columnWidthsPct: columnWidths,
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
+          filters,
+        };
+
+        const res = await fetch("/api/saved-views", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tableId, name, description, isDefault, state }),
+        });
+        if (!res.ok) throw new Error("Failed to save view");
+        const body = await res.json();
+        const newView = {
+          id: body.id,
+          name,
+          description: description ?? "",
+          isDefault: !!isDefault,
+          columnOrder,
+          visibleColumns: columnVisibility as Record<string, boolean>,
+          sortConfig: state.sortConfig,
+          createdAt: new Date().toISOString(),
+        };
+        saveView(newView as any);
+        toast("View saved successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to save view: ${err?.message ?? ""}`);
+      }
+    },
+    [tableId, columnOrder, columnVisibility, columnWidths, table, filters, saveView]
+  );
+
+  const handleUpdateViewRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const state = {
+          columnOrder,
+          columnVisibility,
+          columnWidthsPct: columnWidths,
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
+          filters,
+        };
+
+        const res = await fetch(`/api/saved-views/${viewId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state }),
+        });
+        if (!res.ok) throw new Error("Failed to update view");
+        toast("View updated successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to update view: ${err?.message ?? ""}`);
+      }
+    },
+    [columnOrder, columnVisibility, columnWidths, table, filters]
+  );
+
+  const handleDeleteViewRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const res = await fetch(`/api/saved-views/${viewId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete view");
+        toast("View deleted successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to delete view: ${err?.message ?? ""}`);
+      }
+    },
+    []
+  );
+
+  const handleSetDefaultRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const res = await fetch(`/api/saved-views/${viewId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isDefault: true }),
+        });
+        if (!res.ok) throw new Error("Failed to set default view");
+        setDefault(viewId);
+        toast("Default view updated!");
+      } catch (err: any) {
+        toast.error(`Failed to set default: ${err?.message ?? ""}`);
+      }
+    },
+    [setDefault]
+  );
+
   // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu + Export
   const ColumnsAndSortToolbar = React.useMemo(() => {
     const leafColumns = table.getAllLeafColumns().filter(
@@ -798,7 +1019,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         </DropdownMenu>
       </div>
     );
-  }, [table, isResizing, setColumnOrder, dragIdRef, idField]);
+  }, [table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting]);
 
   // ✅ NEW: More Filters Section and client->parent filter mapping
   const MoreFiltersSection = React.useMemo(() => {
@@ -887,227 +1108,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     document.addEventListener("click", onToolbarClick, true);
     return () => document.removeEventListener("click", onToolbarClick, true);
   }, [table]);
-
-  // ✅ Auto-assign smart percentage widths from data (on-demand only)
-  const autoColumnWidthsPct = React.useMemo(() => {
-    const defaultOverrides = { __select: 3, actions: 8 };
-    const cfg = (config ?? {}) as any; // ← guard `config`
-    const overrides = { ...defaultOverrides, ...(cfg.columnWidthsPct ?? {}) };
-
-    return computeAutoColumnPercents(baseColumns as any[], filteredRows as any[], {
-      sampleRows: 50,
-      // do NOT ignore __select so it participates in layout
-      ignoreIds: ["id", "__expander", "__actions"],
-      overrides,
-      floorPct: 8,
-      capPct: 28,
-    });
-  }, [baseColumns, filteredRows, config]);
-
-  // -- Saved Views: hydrate & persist state ---------------------------------
-  const tableId = React.useMemo(() => {
-    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
-    return `forms/${routeSegment}`;
-  }, [config]);
-
-  const defaultColumnIds = React.useMemo(() => {
-    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
-    // keep __select first if present
-    const selectId = all.find((id) => id === "__select");
-    const others = all.filter((id) => id && id !== "__select");
-    return selectId ? [selectId, ...others] : others;
-  }, [baseColumns]);
-
-  const {
-    views,
-    currentView,
-    setCurrentViewId,
-    applyView,
-    saveView,
-    updateView,
-    setDefault,
-    hydrateFromRemote,
-  } = useSavedViews(tableId, defaultColumnIds);
-
-  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/saved-views?tableId=${encodeURIComponent(tableId)}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const body = await res.json();
-        if (!cancelled && Array.isArray(body.views)) {
-          hydrateFromRemote(
-            body.views.map((v: any) => ({
-              id: v.id,
-              name: v.name,
-              description: v.description ?? "",
-              isDefault: !!v.isDefault,
-              columnOrder: v.state?.columnOrder ?? defaultColumnIds,
-              visibleColumns: v.state?.visibleColumns ?? Object.fromEntries(defaultColumnIds.map((id: string) => [id, true])),
-              sortConfig: v.state?.sortConfig ?? { column: null, direction: "none" as const, type: "alphabetical" as const },
-              createdAt: v.createdAt ?? new Date().toISOString(),
-            }))
-          );
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tableId, hydrateFromRemote, defaultColumnIds]);
-
-  // Apply current view to column order/visibility/widths once when table is ready
-  React.useEffect(() => {
-    if (!currentView) return;
-    const ids = currentView.columnOrder?.length ? currentView.columnOrder : defaultColumnIds;
-    initialOrderRef.current = ids;
-    setColumnOrder(ids);
-
-    // visibility
-    const vmap = currentView.visibleColumns ?? Object.fromEntries(ids.map((id) => [id, true]));
-    setColumnVisibility(vmap as any);
-
-    // widths
-    const w = (currentView as any).columnWidthsPct as Record<string, number> | undefined;
-    if (w && Object.keys(w).length) setWidths(w);
-  }, [currentView, defaultColumnIds, setWidths]);
-
-  // Persist state changes into current view snapshot
-  React.useEffect(() => {
-    if (!currentView) return;
-    const snapshot: any = {
-      ...currentView,
-      columnOrder,
-      visibleColumns: columnVisibility,
-      columnWidthsPct: columnWidths,
-      sortConfig: (table.getState().sorting?.[0]
-        ? {
-            column: table.getState().sorting[0].id,
-            direction: table.getState().sorting[0].desc ? "desc" : "asc",
-            type: "alphabetical",
-          }
-        : { column: null, direction: "none", type: "alphabetical" }),
-    };
-    updateView(currentView.id, snapshot);
-  }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
-
-  // Provide an explicit Auto-fit action (optional: wire to Columns menu)
-  const autoFitColumns = React.useCallback(() => {
-    const next = autoColumnWidthsPct;
-    if (next && Object.keys(next).length) setWidths(next);
-  }, [autoColumnWidthsPct, setWidths]);
-
-  // Remote view persistence actions
-  const handleSaveViewRemote = React.useCallback(
-    async (name: string, description: string, isDefault: boolean) => {
-      try {
-        const state = {
-          columnOrder,
-          columnVisibility,
-          columnWidthsPct: columnWidths,
-          sortConfig:
-            table.getState().sorting?.[0]
-              ? {
-                  column: table.getState().sorting[0].id,
-                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
-                  type: "alphabetical",
-                }
-              : { column: null, direction: "none", type: "alphabetical" },
-          filters,
-        };
-
-        const res = await fetch("/api/saved-views", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tableId, name, description, isDefault, state }),
-        });
-        if (!res.ok) throw new Error("Failed to save view");
-        const body = await res.json();
-        const newView = {
-          id: body.id,
-          name,
-          description: description ?? "",
-          isDefault: !!isDefault,
-          columnOrder,
-          visibleColumns: columnVisibility as Record<string, boolean>,
-          sortConfig: state.sortConfig,
-          createdAt: new Date().toISOString(),
-        };
-        saveView(newView as any);
-        toast("View saved successfully!");
-      } catch (err: any) {
-        toast.error(`Failed to save view: ${err?.message ?? ""}`);
-      }
-    },
-    [tableId, columnOrder, columnVisibility, columnWidths, table, filters, saveView]
-  );
-
-  const handleUpdateViewRemote = React.useCallback(
-    async (viewId: string) => {
-      try {
-        const state = {
-          columnOrder,
-          columnVisibility,
-          columnWidthsPct: columnWidths,
-          sortConfig:
-            table.getState().sorting?.[0]
-              ? {
-                  column: table.getState().sorting[0].id,
-                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
-                  type: "alphabetical",
-                }
-              : { column: null, direction: "none", type: "alphabetical" },
-          filters,
-        };
-
-        const res = await fetch(`/api/saved-views/${viewId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state }),
-        });
-        if (!res.ok) throw new Error("Failed to update view");
-        toast("View updated successfully!");
-      } catch (err: any) {
-        toast.error(`Failed to update view: ${err?.message ?? ""}`);
-      }
-    },
-    [columnOrder, columnVisibility, columnWidths, table, filters]
-  );
-
-  const handleDeleteViewRemote = React.useCallback(
-    async (viewId: string) => {
-      try {
-        const res = await fetch(`/api/saved-views/${viewId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete view");
-        toast("View deleted successfully!");
-      } catch (err: any) {
-        toast.error(`Failed to delete view: ${err?.message ?? ""}`);
-      }
-    },
-    []
-  );
-
-  const handleSetDefaultRemote = React.useCallback(
-    async (viewId: string) => {
-      try {
-        const res = await fetch(`/api/saved-views/${viewId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isDefault: true }),
-        });
-        if (!res.ok) throw new Error("Failed to set default view");
-        setDefault(viewId);
-        toast("Default view updated!");
-      } catch (err: any) {
-        toast.error(`Failed to set default: ${err?.message ?? ""}`);
-      }
-    },
-    [setDefault]
-  );
 
   const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
 

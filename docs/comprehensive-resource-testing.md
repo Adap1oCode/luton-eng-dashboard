@@ -4,6 +4,8 @@
 
 We've implemented a comprehensive testing strategy that automatically tests all resources in your application. This ensures that every resource works correctly and prevents regressions during development.
 
+> **CWA Alignment:** This testing strategy follows Clean Web Architecture (CWA) principles. See `docs/testing/cwa-testing-strategy.md` for complete CWA testing guidelines.
+
 ## Test Coverage
 
 ### ✅ **All Resources Tested (11 total)**
@@ -24,6 +26,7 @@ We've implemented a comprehensive testing strategy that automatically tests all 
 
 ### 1. **Resource Resolution Tests** (`src/lib/api/resolve-resource.all-resources.spec.ts`)
 - **59 tests** covering all resources
+- **CWA Layer:** Infrastructure Layer (API resolution and configuration loading)
 - Tests resource configuration loading
 - Tests list operations (pagination, search, raw data)
 - Tests error handling
@@ -31,6 +34,7 @@ We've implemented a comprehensive testing strategy that automatically tests all 
 
 ### 2. **Configuration Validation Tests** (`src/lib/data/resources/all-resources.config.spec.ts`)
 - **127 tests** validating all resource configurations
+- **CWA Layer:** Domain Layer (business rules and configuration validation)
 - Validates required fields (table, select, pk, toDomain)
 - Validates optional fields (search, defaultSort, activeFlag, schema)
 - Validates function implementations
@@ -39,6 +43,7 @@ We've implemented a comprehensive testing strategy that automatically tests all 
 
 ### 3. **API Route Tests** (`src/app/api/[resource]/route.all-resources.spec.ts`)
 - **70 tests** covering all API endpoints
+- **CWA Layer:** Infrastructure Layer (API endpoints and external interfaces)
 - Tests GET operations for all resources
 - Tests pagination, search, sorting, filtering
 - Tests raw data access
@@ -47,16 +52,22 @@ We've implemented a comprehensive testing strategy that automatically tests all 
 
 ## Key Features
 
+### **CWA-Aligned Testing Architecture**
+- **Layer Isolation**: Tests are organized by CWA layers (Domain, Infrastructure)
+- **Configuration-Driven**: Tests validate generic resource configurations
+- **Provider Seam**: Tests ensure data layer abstractions work correctly
+- **Generic Reusability**: Tests validate resource reusability across contexts
+
 ### **Automatic Resource Discovery**
 - Tests automatically discover all resources from the registry
 - No need to manually add tests for new resources
 - Ensures 100% coverage of all resources
 
 ### **Comprehensive Validation**
-- **Configuration validation**: Ensures all resources have valid configs
-- **Function validation**: Tests that all functions work correctly
-- **API validation**: Ensures all resources work through the API
-- **Alias validation**: Confirms aliases work correctly
+- **Configuration validation**: Ensures all resources have valid configs (Domain Layer)
+- **Function validation**: Tests that all functions work correctly (Domain Layer)
+- **API validation**: Ensures all resources work through the API (Infrastructure Layer)
+- **Alias validation**: Confirms aliases work correctly (Infrastructure Layer)
 
 ### **Error Handling**
 - Tests unknown resource handling
@@ -163,31 +174,55 @@ jobs:
 }
 ```
 
-## Future Enhancements
+## CWA Testing Enhancements
 
-### **1. Performance Testing**
-- Add performance benchmarks for large datasets
-- Test memory usage with large result sets
-- Test response times under load
+### **1. Layer-Specific Test Organization**
+- Organize tests by CWA layers (Domain, Application, Infrastructure, Presentation)
+- Create layer-specific test utilities and helpers
+- Implement layer isolation testing patterns
 
-### **2. Security Testing**
-- Test authentication and authorization
+### **2. Configuration-Driven Testing**
+- Test generic components with multiple resource configurations
+- Validate configuration schema and constraints
+- Test configuration impact on behavior and performance
+
+### **3. Provider Seam Testing**
+- Test data layer abstractions (mock → Supabase → IMS)
+- Validate provider contracts and interfaces
+- Test provider transition scenarios
+
+### **4. Performance Testing (CWA-Aligned)**
+- Test generic component performance with various configurations
+- Validate performance characteristics of resource operations
+- Test scalability with large datasets
+
+### **5. Security Testing**
+- Test authentication and authorization at each CWA layer
 - Test input validation and sanitization
 - Test SQL injection prevention
 
-### **3. Integration Testing**
+### **6. Integration Testing**
 - Test with real database connections
 - Test with actual data
-- Test end-to-end workflows
+- Test end-to-end workflows across CWA layers
 
-### **4. Monitoring**
-- Add test result reporting
+### **7. Monitoring**
+- Add test result reporting by CWA layer
 - Track test performance over time
-- Alert on test failures
+- Alert on test failures with layer context
 
 ## Conclusion
 
-This comprehensive testing strategy ensures that all your resources are automatically tested and validated. The 256 tests provide complete coverage of your resource system, preventing regressions and giving you confidence in your code changes.
+This comprehensive testing strategy ensures that all your resources are automatically tested and validated following Clean Web Architecture (CWA) principles. The 256 tests provide complete coverage of your resource system, preventing regressions and giving you confidence in your code changes.
 
 The tests are fast, reliable, and maintainable, making them perfect for both development and CI/CD pipelines. Any new resources you add will be automatically tested, and any changes to existing resources will be validated immediately.
+
+### CWA Compliance
+- ✅ **Layer Isolation**: Tests are organized by CWA layers
+- ✅ **Configuration-Driven**: Generic components tested with multiple configurations  
+- ✅ **Provider Seam**: Data layer abstractions properly tested
+- ✅ **Generic Reusability**: Components tested across different contexts
+- ✅ **Performance-First**: Performance characteristics validated
+
+For complete CWA testing guidelines, see `docs/testing/cwa-testing-strategy.md`.
 

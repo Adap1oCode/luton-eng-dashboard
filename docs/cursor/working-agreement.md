@@ -21,7 +21,7 @@ This document defines the rules Cursor must follow on this project. “Done” m
 
 ---
 
-## Testing & Verification (what “Done” means)
+## Testing & Verification (what "Done" means)
 A change is **not done** unless **all** are true:
 
 1) **Typecheck:** `pnpm typecheck` (tsc --noEmit)  
@@ -29,11 +29,20 @@ A change is **not done** unless **all** are true:
 3) **Production build:** `pnpm build` (Next.js)  
 4) **App boots + smoke E2E:** Start the built app and run Playwright **@smoke** tests against it  
 5) **Unit/Integration:** `pnpm test` (Vitest) passes  
-6) **Vercel Preview:** Deployment is green  
-7) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale
+6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`)
+7) **Vercel Preview:** Deployment is green  
+8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale
 
 **One-command verifier (CI + local pre-push):**  
 `pnpm ci:verify` must succeed. It runs typecheck, lint, build, boots the app, runs unit + smoke e2e.
+
+### CWA Testing Requirements
+All tests must follow Clean Web Architecture principles:
+- **Layer Isolation:** Test each CWA layer (domain, application, infrastructure, presentation) independently
+- **Configuration-Driven:** Test generic components with multiple configurations
+- **Provider Seam:** Test data layer abstractions and provider transitions
+- **Generic Reusability:** Test component reusability across different contexts
+- **Performance-First:** Validate performance characteristics of generic components
 
 ---
 
