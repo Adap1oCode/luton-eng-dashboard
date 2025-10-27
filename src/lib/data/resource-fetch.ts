@@ -22,12 +22,25 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
     ),
   });
 
-  const res = await fetch(`${base}${endpoint}?${qs.toString()}`, {
-    // Enable caching for better performance
-    cache: "force-cache",
-    next: { revalidate: 300 }, // Revalidate every 5 minutes
-    headers: cookieHeader,
-  });
+  let res: Response;
+  try {
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    res = await fetch(`${base}${endpoint}?${qs.toString()}`, {
+      // Enable caching for better performance
+      cache: "force-cache",
+      next: { revalidate: 300 }, // Revalidate every 5 minutes
+      headers: cookieHeader,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+  } catch (error) {
+    console.warn("Resource fetch failed:", error);
+    return { rows: [], total: 0 };
+  }
 
   if (!res.ok) return { rows: [], total: 0 };
 

@@ -44,19 +44,32 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const sessionRes = await fetch(`${baseUrl}/api/me/role`, {
-    cache: "no-store",
-    headers: { cookie: cookieHeader },
-  });
-
-  const session = sessionRes.ok
-    ? ((await sessionRes.json()) as {
+  let session = {};
+  try {
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const sessionRes = await fetch(`${baseUrl}/api/me/role`, {
+      cache: "no-store",
+      headers: { cookie: cookieHeader },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (sessionRes.ok) {
+      session = (await sessionRes.json()) as {
         fullName?: string | null;
         email?: string | null;
         roleName?: string | null;
         avatarUrl?: string | null;
-      })
-    : {};
+      };
+    }
+  } catch (error) {
+    // Silently handle session fetch errors - user will see login form
+    console.warn("Session fetch failed, user will be prompted to login:", error);
+  }
 
   const displayName = session.fullName ?? session.email ?? "User";
   const email = session.email ?? "";
