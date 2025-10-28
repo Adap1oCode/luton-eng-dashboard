@@ -65,3 +65,5 @@ CREATE INDEX IF NOT EXISTS idx_tcm_user_entries_pagination
 --
 -- Expected performance improvement: 5-10x faster queries
 -- ============================================================================
+
+
