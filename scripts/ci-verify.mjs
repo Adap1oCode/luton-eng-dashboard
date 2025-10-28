@@ -81,13 +81,11 @@ function verifyBuildOutput() {
   const keyFiles = [
     join(buildDir, 'BUILD_ID'),
     join(buildDir, 'package.json'),
-    join(serverDir, 'app', 'layout.js'),
-    join(serverDir, 'app', 'page.js'),
   ];
   
   for (const file of keyFiles) {
     if (!existsSync(file)) {
-      log(`${colors.yellow}⚠${colors.reset} Warning: Expected file not found: ${file}`);
+      throw new Error(`Required build file not found: ${file}`);
     } else {
       const stats = statSync(file);
       if (stats.size === 0) {
@@ -97,15 +95,28 @@ function verifyBuildOutput() {
     }
   }
   
-  // Check for HTML files in static directory
-  const staticFiles = join(staticDir, 'chunks', 'pages');
-  if (existsSync(staticFiles)) {
-    const files = require('fs').readdirSync(staticFiles);
-    const htmlFiles = files.filter(f => f.endsWith('.js'));
-    if (htmlFiles.length === 0) {
+  // Check for JavaScript chunks in static directory
+  const chunksDir = join(staticDir, 'chunks');
+  if (existsSync(chunksDir)) {
+    const files = require('fs').readdirSync(chunksDir);
+    const jsFiles = files.filter(f => f.endsWith('.js'));
+    if (jsFiles.length === 0) {
       throw new Error('No JavaScript chunks found in build output');
     }
-    log(`${colors.green}✓${colors.reset} Found ${htmlFiles.length} JavaScript chunks`);
+    log(`${colors.green}✓${colors.reset} Found ${jsFiles.length} JavaScript chunks`);
+    
+    // Check for main app files
+    const mainAppFile = files.find(f => f.startsWith('main-app-'));
+    const frameworkFile = files.find(f => f.startsWith('framework-'));
+    
+    if (mainAppFile) {
+      log(`${colors.green}✓${colors.reset} Main app bundle: ${mainAppFile}`);
+    }
+    if (frameworkFile) {
+      log(`${colors.green}✓${colors.reset} Framework bundle: ${frameworkFile}`);
+    }
+  } else {
+    throw new Error('Static chunks directory not found');
   }
   
   log(`${colors.green}✓${colors.reset} Build output verification passed`);
