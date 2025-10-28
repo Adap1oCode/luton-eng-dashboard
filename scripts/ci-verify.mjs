@@ -8,6 +8,8 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { existsSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -53,6 +55,71 @@ function runCommand(command, args = []) {
   });
 }
 
+function verifyBuildOutput() {
+  log(`\n${colors.blue}▶${colors.reset} Verifying build output...`);
+  
+  const buildDir = join(process.cwd(), '.next');
+  const staticDir = join(buildDir, 'static');
+  const serverDir = join(buildDir, 'server');
+  
+  // Check if .next directory exists
+  if (!existsSync(buildDir)) {
+    throw new Error('Build directory (.next) not found');
+  }
+  
+  // Check if static assets exist
+  if (!existsSync(staticDir)) {
+    throw new Error('Static assets directory not found');
+  }
+  
+  // Check if server files exist
+  if (!existsSync(serverDir)) {
+    throw new Error('Server files directory not found');
+  }
+  
+  // Check for key build files
+  const keyFiles = [
+    join(buildDir, 'BUILD_ID'),
+    join(buildDir, 'package.json'),
+    join(serverDir, 'app', 'layout.js'),
+    join(serverDir, 'app', 'page.js'),
+  ];
+  
+  for (const file of keyFiles) {
+    if (!existsSync(file)) {
+      log(`${colors.yellow}⚠${colors.reset} Warning: Expected file not found: ${file}`);
+    } else {
+      const stats = statSync(file);
+      if (stats.size === 0) {
+        throw new Error(`Build file is empty: ${file}`);
+      }
+      log(`${colors.green}✓${colors.reset} ${file} (${stats.size} bytes)`);
+    }
+  }
+  
+  // Check for HTML files in static directory
+  const staticFiles = join(staticDir, 'chunks', 'pages');
+  if (existsSync(staticFiles)) {
+    const files = require('fs').readdirSync(staticFiles);
+    const htmlFiles = files.filter(f => f.endsWith('.js'));
+    if (htmlFiles.length === 0) {
+      throw new Error('No JavaScript chunks found in build output');
+    }
+    log(`${colors.green}✓${colors.reset} Found ${htmlFiles.length} JavaScript chunks`);
+  }
+  
+  log(`${colors.green}✓${colors.reset} Build output verification passed`);
+}
+
+async function runHealthCheck() {
+  try {
+    verifyBuildOutput();
+    log(`${colors.green}✓${colors.reset} Health check passed - build output is valid`);
+  } catch (err) {
+    throw new Error(`Health check failed: ${err.message}`);
+  }
+}
+
 async function main() {
   log('\n' + '='.repeat(60), colors.bright);
   log('  CI VERIFICATION (Cursor Working Agreement)', colors.bright);
@@ -63,6 +130,7 @@ async function main() {
     { name: 'Lint', command: 'npm', args: ['run', 'lint'] },
     { name: 'Build', command: 'npm', args: ['run', 'build'] },
     { name: 'Unit Tests', command: 'npm', args: ['run', 'test'] },
+    { name: 'Health Check', command: 'runHealthCheck', args: [] },
     // E2E Smoke Tests disabled per user request - they take too long
     // { name: 'E2E Smoke Tests', command: 'npm', args: ['run', 'test:e2e:smoke'] },
   ];
@@ -72,7 +140,11 @@ async function main() {
 
   for (const step of steps) {
     try {
-      await runCommand(step.command, step.args);
+      if (step.command === 'runHealthCheck') {
+        await runHealthCheck();
+      } else {
+        await runCommand(step.command, step.args);
+      }
       passedSteps++;
     } catch (err) {
       log(`\n${colors.red}${'='.repeat(60)}${colors.reset}`, colors.red);
