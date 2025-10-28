@@ -26,21 +26,20 @@ const resources = {
   v_tcm_user_tally_card_entries,
   v_tcm_tally_card_entry_compare,
   v_table_report_combined,
-  inventorySummary,
-  inventoryWarehouse,
-  inventoryUom,
-  inventoryItemCostByWarehouse,
+  
+  // ✅ Renamed to match database table/view names
+  "vw_dashboard_inventory_summary": inventorySummary,
+  "vw_dashboard_inventory_by_warehouse": inventoryWarehouse,
+  "vw_dashboard_inventory_items_by_uom": inventoryUom,
+  "vw_dashboard_inventory_item_cost_by_warehouse": inventoryItemCostByWarehouse,
 
   // ✅ Friendly aliases for business-facing routes
   "stock-adjustments": tcm_user_tally_card_entries,
-  // ✅ Browser-friendly alias for tally cards screens
   "tally-cards": tcm_tally_cards,
-  // ✅ Dashboard-friendly aliases for inventory resources
   "inventory-summary": inventorySummary,
   "inventory-warehouse": inventoryWarehouse,
   "inventory-uom": inventoryUom,
   "inventory-item-cost-by-warehouse": inventoryItemCostByWarehouse,
-  // ✅ DB documentation viewer (admin-only)
   "db-docs": v_table_report_combined,
 };
 
