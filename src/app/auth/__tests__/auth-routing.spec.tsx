@@ -40,7 +40,6 @@ describe("Auth Routing", () => {
       expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
       expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
       expect(screen.getByLabelText("Password")).toBeInTheDocument();
-      
       // Should have register link
       expect(screen.getByText("Don't have an account?")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Register" })).toHaveAttribute("href", "/auth/register");

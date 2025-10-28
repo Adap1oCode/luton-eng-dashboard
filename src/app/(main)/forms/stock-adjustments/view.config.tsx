@@ -22,14 +22,16 @@ import {
   stockAdjustmentsChips,
   stockAdjustmentsActions,
 } from "./toolbar.config";
+import { ROUTE_SEGMENT, API_ENDPOINT, RESOURCE_KEY, PERMISSION_PREFIX, RESOURCE_TITLE } from "./constants";
 
 // Quick filter type
 export type QuickFilter = {
   id: string;
   label: string;
-  type: "text" | "enum";
+  type: "text" | "enum" | "boolean" | "date";
   options?: Array<{ value: string; label: string }>;
   defaultValue?: string;
+  toQueryParam?: (value: string) => Record<string, any>;
 };
 
 // Inline edit configurations
@@ -174,12 +176,17 @@ export const quickFilters: QuickFilter[] = [
       { value: "ZERO", label: "Zero quantity" },
     ],
     defaultValue: "ALL",
+    toQueryParam: (value: string) => {
+      if (value === "ACTIVE") return { qty_gt: 0, qty_not_null: true };
+      if (value === "ZERO") return { qty_eq: 0 };
+      return {};
+    },
   },
 ];
 
 export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
-  resourceKeyForDelete: "tcm_user_tally_card_entries",
-  formsRouteSegment: "stock-adjustments", // builds /forms/stock-adjustments/[id]/edit
+  resourceKeyForDelete: RESOURCE_KEY,
+  formsRouteSegment: ROUTE_SEGMENT, // builds /forms/stock-adjustments/[id]/edit
   idField: "id", // domain id for actions + row keys
   // Keep this minimal local toolbar to avoid regressions if consumers read from viewConfig
   toolbar: { left: undefined, right: [] },
@@ -195,12 +202,20 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
 
 // ---- Bundle export for ultra-minimal page.tsx usage --------------------------
 
-export const title = "Stock Adjustments";
+export const title = RESOURCE_TITLE;
 
+// Bundled config for easy reuse
 export const config = {
-  title,
+  title: RESOURCE_TITLE,
   viewConfig: stockAdjustmentsViewConfig,
   toolbar: stockAdjustmentsToolbar,
   chips: stockAdjustmentsChips,
   actions: stockAdjustmentsActions,
+  quickFilters: quickFilters,
+  // Constants for reuse
+  routeSegment: ROUTE_SEGMENT,
+  apiEndpoint: API_ENDPOINT,
+  resourceKey: RESOURCE_KEY,
+  permissionPrefix: PERMISSION_PREFIX,
 };
+

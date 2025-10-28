@@ -14,7 +14,7 @@ import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import { QuickFiltersClient } from "./quick-filters-client";
 
 interface StockAdjustmentsClientProps {
-  initialData: any[];
+  initialData: StockAdjustmentRow[];
   initialTotal: number;
   initialPage: number;
   initialPageSize: number;

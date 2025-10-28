@@ -7,12 +7,13 @@
 import type { Metadata } from "next";
 
 import { resolveSearchParams, parsePagination, type SPRecord } from "@/lib/next/search-params";
+import { RESOURCE_TITLE, API_ENDPOINT } from "./constants";
 import { StockAdjustmentsClient } from "./stock-adjustments-client";
 import { StockAdjustmentsErrorBoundary } from "./stock-adjustments-error-boundary";
 
 // 🧾 Browser tab title for this screen (pairs with root layout title template)
 export const metadata: Metadata = {
-  title: "Stock Adjustments",
+  title: RESOURCE_TITLE,
 };
 
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
@@ -22,7 +23,6 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
   // ⚡ PERFORMANCE FIX: Remove SSR data fetching to enable instant page render
   // Client component will fetch data using React Query with proper loading states
   // This reduces perceived load time from 30s to <500ms (instant skeleton render)
-  
   return (
     <StockAdjustmentsErrorBoundary>
       <StockAdjustmentsClient

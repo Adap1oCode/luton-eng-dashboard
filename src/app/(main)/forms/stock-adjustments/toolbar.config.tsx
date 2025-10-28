@@ -14,9 +14,10 @@ import type {
   ChipsConfig,
   ActionConfig,
 } from "@/components/forms/shell/toolbar/types";
+import { ROUTE_SEGMENT, RESOURCE_KEY, API_ENDPOINT, PERMISSION_PREFIX } from "./constants";
 
 // Backend resource: user_tally_card_entries
-const BASE_API = "/api/tcm_user_tally_card_entries";
+const BASE_API = API_ENDPOINT;
 
 export const stockAdjustmentsToolbar: ToolbarConfig = {
   left: [
@@ -25,8 +26,8 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       label: "New Adjustment",
       icon: "Plus",
       variant: "default",
-      href: "/forms/stock-adjustments/new",
-      requiredAny: ["resource:tcm_user_tally_card_entries:create"],
+      href: `/forms/${ROUTE_SEGMENT}/new`,
+      requiredAny: [`${PERMISSION_PREFIX}:create`],
     },
     {
       id: "delete",
@@ -35,7 +36,7 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
-      requiredAny: ["resource:tcm_user_tally_card_entries:delete"],
+      requiredAny: [`${PERMISSION_PREFIX}:delete`],
     },
     {
       id: "exportCsv",
@@ -53,11 +54,11 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
 export const stockAdjustmentsActions: ActionConfig = {
   deleteSelected: {
     method: "DELETE",
-    endpoint: `${BASE_API}/bulk-delete`,
+      endpoint: `${API_ENDPOINT}/bulk-delete`,
   },
   exportCsv: {
     method: "GET",
-    endpoint: `${BASE_API}/export`,
+    endpoint: `${API_ENDPOINT}/export`,
     target: "_blank",
   },
 };

@@ -20,7 +20,8 @@
     "test:e2e:smoke": "playwright test --grep @smoke",
     "ci:verify": "node scripts/ci-verify.mjs",
     "gen:schemas": "ts-node --esm scripts/gen-schemas-from-registry.ts",
-    "gen:openapi": "ts-node --esm scripts/gen-openapi-from-registry.ts"
+    "gen:openapi": "ts-node --esm scripts/gen-openapi-from-registry.ts",
+    "gen:screen:interactive": "node scripts/gen-screen-interactive.mjs --dry-run"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
