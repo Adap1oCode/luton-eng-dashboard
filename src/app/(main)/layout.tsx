@@ -25,6 +25,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { QueryProvider } from "@/components/providers/query-provider";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
+import { UI_RULES, shouldHideOnRoute } from "@/config/ui-rules";
 // ✅ Add this import to keep your intended button
 
 // ensure this runs on every request (no static cache)
@@ -68,6 +69,13 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const sidebarCollapsible = await getSidebarCollapsible();
   const contentLayout = await getContentLayout();
 
+  // Determine which global UI elements to show based on current route
+  const fullUrl = h.get('x-url') ?? '';
+  const url = new URL(fullUrl, 'http://localhost'); // required fallback for SSR parsing
+  const currentPath = url.pathname;
+  const showDateToolbar = !shouldHideOnRoute(currentPath, UI_RULES.hideGlobalDateToolbarOn);
+  const showDataViewerButton = !shouldHideOnRoute(currentPath, UI_RULES.hideDataViewerButtonOn);
+
   return (
     <QueryProvider>
       {/* Mount once so any client component can open the Notice dialog */}
@@ -91,7 +99,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                   <SidebarTrigger className="-ml-1" />
                   <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
                   <div className="hidden sm:block">
-                    <SearchDialog />
+                    {showDateToolbar && <SearchDialog />}
                   </div>
                 </div>
 
@@ -129,7 +137,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                     </DropdownMenu>
                   </div>
 
-                  <DataViewerButton />
+                  {showDataViewerButton && <DataViewerButton />}
                 </div>
               </div>
             </header>
