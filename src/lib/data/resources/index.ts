@@ -16,18 +16,19 @@ import inventoryItemCostByWarehouse from "./dashboards/inventory-item-cost-by-wa
 import v_table_report_combined from "./dbdocs/v_table_report_combined.config.ts";
 
 const resources = {
+  // ✅ Database table names (primary keys)
   users,
   warehouses,
   roles,
   role_warehouse_rules,
   tcm_tally_cards,
-  tcm_tally_cards_current,
   tcm_user_tally_card_entries,
-  v_tcm_user_tally_card_entries,
-  v_tcm_tally_card_entry_compare,
-  v_table_report_combined,
   
-  // ✅ Renamed to match database table/view names
+  // ✅ Database view names (primary keys)
+  "v_tcm_tally_cards_current": tcm_tally_cards_current,
+  "v_tcm_user_tally_card_entries": v_tcm_user_tally_card_entries,
+  "v_tcm_tally_card_entry_compare": v_tcm_tally_card_entry_compare,
+  "v_table_report_combined": v_table_report_combined,
   "vw_dashboard_inventory_summary": inventorySummary,
   "vw_dashboard_inventory_by_warehouse": inventoryWarehouse,
   "vw_dashboard_inventory_items_by_uom": inventoryUom,
