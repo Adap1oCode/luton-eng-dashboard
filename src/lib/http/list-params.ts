@@ -36,7 +36,7 @@ export function parseListQuery(url: URL): ListQuery {
   const pageSize = toClampedInt(url.searchParams.get("pageSize"), {
     def: 50,
     min: 1,
-    max: 2000,
+    max: 500,
   });
 
   const activeOnly = toBool(url.searchParams.get("activeOnly"));

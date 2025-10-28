@@ -7,12 +7,13 @@ import type { Metadata } from "next";
 
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
 import { resolveSearchParams, parsePagination, type SPRecord } from "@/lib/next/search-params";
+import { RESOURCE_TITLE, API_ENDPOINT } from "./constants";
 import { StockAdjustmentsClient } from "./stock-adjustments-client";
 import { StockAdjustmentsErrorBoundary } from "./stock-adjustments-error-boundary";
 
 // 🧾 Browser tab title for this screen (pairs with root layout title template)
 export const metadata: Metadata = {
-  title: "Stock Adjustments",
+  title: RESOURCE_TITLE,
 };
 
 function toRow(d: any) {
@@ -51,7 +52,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
   }
 
   const { rows: domainRows, total } = await fetchResourcePage<any>({
-    endpoint: "/api/v_tcm_user_tally_card_entries",
+    endpoint: API_ENDPOINT,
     page,
     pageSize,
     extraQuery,

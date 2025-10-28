@@ -61,13 +61,13 @@ describe('Stock Adjustments Toolbar Config', () => {
     it('should have correct deleteSelected action', () => {
       const deleteAction = stockAdjustmentsActions.deleteSelected
       expect(deleteAction.method).toBe('DELETE')
-      expect(deleteAction.endpoint).toBe('/api/tcm_user_tally_card_entries/bulk-delete')
+      expect(deleteAction.endpoint).toBe('/api/v_tcm_user_tally_card_entries/bulk-delete')
     })
 
     it('should have correct exportCsv action', () => {
       const exportAction = stockAdjustmentsActions.exportCsv
       expect(exportAction.method).toBe('GET')
-      expect(exportAction.endpoint).toBe('/api/tcm_user_tally_card_entries/export')
+      expect(exportAction.endpoint).toBe('/api/v_tcm_user_tally_card_entries/export')
       expect(exportAction.target).toBe('_blank')
     })
   })
@@ -109,10 +109,10 @@ describe('Stock Adjustments Toolbar Config', () => {
 
   describe('API Endpoints', () => {
     it('should use correct base API endpoint', () => {
-      // The BASE_API constant should be '/api/tcm_user_tally_card_entries'
+      // The API_ENDPOINT constant should be '/api/v_tcm_user_tally_card_entries'
       // This is used in the actions configuration
-      expect(stockAdjustmentsActions.deleteSelected.endpoint).toContain('/api/tcm_user_tally_card_entries')
-      expect(stockAdjustmentsActions.exportCsv.endpoint).toContain('/api/tcm_user_tally_card_entries')
+      expect(stockAdjustmentsActions.deleteSelected.endpoint).toContain('/api/v_tcm_user_tally_card_entries')
+      expect(stockAdjustmentsActions.exportCsv.endpoint).toContain('/api/v_tcm_user_tally_card_entries')
     })
   })
 
