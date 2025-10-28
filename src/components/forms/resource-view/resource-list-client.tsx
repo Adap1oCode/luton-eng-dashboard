@@ -265,17 +265,6 @@ export function ResourceListClient<TRow = any>({
           page={page}
           pageSize={pageSize}
           showInlineExportButton={false}
-          onColumnWidthsChange={handleColumnWidthsChange}
-          initialColumnWidths={columnWidths}
-          quickFiltersSlot={
-            quickFilters.length > 0 ? (
-              <QuickFiltersClient
-                onFilterChange={handleFilterChange}
-                currentFilters={currentFilters}
-                quickFilters={quickFilters}
-              />
-            ) : undefined
-          }
         />
       </PageShell>
       

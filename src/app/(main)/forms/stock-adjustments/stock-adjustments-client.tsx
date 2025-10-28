@@ -8,7 +8,7 @@ import ResourceTableClient from "@/components/forms/resource-view/resource-table
 import PageShell from "@/components/forms/shell/page-shell";
 import { FullScreenLoader } from "@/components/ui/enhanced-loader";
 import { BackgroundLoader } from "@/components/ui/background-loader";
-import { stockAdjustmentsViewConfig } from "./view.config";
+import { stockAdjustmentsViewConfig, type StockAdjustmentRow } from "./view.config";
 import { stockAdjustmentsToolbar, stockAdjustmentsActions } from "./toolbar.config";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import { QuickFiltersClient } from "./quick-filters-client";
