@@ -63,7 +63,8 @@ async function main() {
     { name: 'Lint', command: 'npm', args: ['run', 'lint'] },
     { name: 'Build', command: 'npm', args: ['run', 'build'] },
     { name: 'Unit Tests', command: 'npm', args: ['run', 'test'] },
-    { name: 'E2E Smoke Tests', command: 'npm', args: ['run', 'test:e2e:smoke'] },
+    // E2E Smoke Tests disabled per user request - they take too long
+    // { name: 'E2E Smoke Tests', command: 'npm', args: ['run', 'test:e2e:smoke'] },
   ];
 
   let passedSteps = 0;
