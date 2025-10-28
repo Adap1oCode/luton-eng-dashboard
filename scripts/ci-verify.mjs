@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { request } from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -122,12 +123,152 @@ function verifyBuildOutput() {
   log(`${colors.green}✓${colors.reset} Build output verification passed`);
 }
 
+function startApp() {
+  return new Promise((resolve, reject) => {
+    log(`\n${colors.blue}▶${colors.reset} Starting Next.js app for health check...`);
+    
+    const child = spawn('npm', ['run', 'start'], {
+      stdio: 'pipe',
+      shell: true,
+      cwd: process.cwd(),
+    });
+
+    let appReady = false;
+    let output = '';
+    let errorOutput = '';
+
+    child.stdout.on('data', (data) => {
+      const text = data.toString();
+      output += text;
+      // Look for Next.js ready message patterns
+      if (text.includes('Ready in') || text.includes('Local:') || text.includes('started server') || text.includes('ready - started server')) {
+        if (!appReady) {
+          appReady = true;
+          log(`${colors.green}✓${colors.reset} App started successfully`);
+          resolve(child);
+        }
+      }
+    });
+
+    child.stderr.on('data', (data) => {
+      const text = data.toString();
+      errorOutput += text;
+      // Some Next.js messages go to stderr but are not errors
+      if (text.includes('Ready in') || text.includes('Local:') || text.includes('started server')) {
+        if (!appReady) {
+          appReady = true;
+          log(`${colors.green}✓${colors.reset} App started successfully`);
+          resolve(child);
+        }
+      }
+    });
+
+    // Timeout after 30 seconds
+    const timeout = setTimeout(() => {
+      if (!appReady) {
+        child.kill();
+        log(`${colors.red}✗${colors.reset} App failed to start within 30 seconds`);
+        log(`${colors.yellow}Output:${colors.reset}\n${output}`);
+        log(`${colors.yellow}Errors:${colors.reset}\n${errorOutput}`);
+        reject(new Error('App startup timeout'));
+      }
+    }, 30000);
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (!appReady) {
+        log(`${colors.red}✗${colors.reset} App process exited with code ${code}`);
+        log(`${colors.yellow}Output:${colors.reset}\n${output}`);
+        log(`${colors.yellow}Errors:${colors.reset}\n${errorOutput}`);
+        reject(new Error(`App process exited with code ${code}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      log(`${colors.red}✗${colors.reset} Failed to start app: ${err.message}`);
+      reject(err);
+    });
+  });
+}
+
+function testRoute(url, expectedContent = null) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || 3000,
+      path: urlObj.pathname,
+      method: 'GET',
+      timeout: 10000,
+    };
+
+    const req = request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          // Check for basic content validation if expected content provided
+          if (expectedContent && !data.includes(expectedContent)) {
+            reject(new Error(`Route ${url} returned 200 but missing expected content: ${expectedContent}`));
+            return;
+          }
+          log(`${colors.green}✓${colors.reset} ${url} - ${res.statusCode} (${data.length} bytes)`);
+          resolve();
+        } else {
+          reject(new Error(`Route ${url} returned ${res.statusCode}`));
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(new Error(`Failed to connect to ${url}: ${err.message}`));
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`Request to ${url} timed out`));
+    });
+
+    req.end();
+  });
+}
+
 async function runHealthCheck() {
+  let appProcess = null;
+  
   try {
+    // First verify build output
     verifyBuildOutput();
-    log(`${colors.green}✓${colors.reset} Health check passed - build output is valid`);
-  } catch (err) {
-    throw new Error(`Health check failed: ${err.message}`);
+    
+    // Start the app
+    appProcess = await startApp();
+    
+    // Wait a bit for the app to fully initialize
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Test critical routes as per Cursor Working Agreement
+    const routes = [
+      { url: 'http://localhost:3000/', expectedContent: '<!DOCTYPE html>' },
+      { url: 'http://localhost:3000/dashboard/inventory', expectedContent: '<!DOCTYPE html>' },
+    ];
+
+    for (const route of routes) {
+      await testRoute(route.url, route.expectedContent);
+    }
+    
+    log(`${colors.green}✓${colors.reset} All health check routes passed`);
+    
+  } finally {
+    // Clean up: kill the app process
+    if (appProcess) {
+      appProcess.kill();
+      log(`${colors.blue}▶${colors.reset} App process terminated`);
+    }
   }
 }
 

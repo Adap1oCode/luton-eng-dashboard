@@ -45,6 +45,12 @@ interface GeneratorConfig {
   permissionPrefix: string;
   componentName: string;
   
+  // CRUD API Endpoints
+  createEndpoint: string;
+  updateEndpoint: string;
+  deleteEndpoint: string;
+  detailEndpoint: string;
+  
   // Column Configuration (User Input)
   displayColumns: string[];
   columnOrder: string[];
@@ -117,7 +123,7 @@ export default function ScreenGeneratorPage() {
   const [resources, setResources] = useState<string[]>([]);
   const [resourceMetadata, setResourceMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"basic" | "columns" | "filters" | "toolbar" | "features" | "advanced" | "preview">("basic");
+  const [activeTab, setActiveTab] = useState<"basic" | "columns" | "filters" | "toolbar" | "features" | "crud" | "advanced" | "preview">("basic");
   
   // Comprehensive configuration state
   const [config, setConfig] = useState<GeneratorConfig>({
@@ -129,6 +135,12 @@ export default function ScreenGeneratorPage() {
     resourceTitle: "",
     permissionPrefix: "",
     componentName: "",
+    
+    // CRUD API Endpoints
+    createEndpoint: "",
+    updateEndpoint: "",
+    deleteEndpoint: "",
+    detailEndpoint: "",
     
     // Column Configuration
     displayColumns: [],
@@ -233,6 +245,12 @@ export default function ScreenGeneratorPage() {
             resourceTitle: title,
             permissionPrefix: `resource:${config.resourceKey}`,
             componentName: pascal,
+            
+            // CRUD API Endpoints
+            createEndpoint: `/api/${config.resourceKey}`,
+            updateEndpoint: `/api/${config.resourceKey}`,
+            deleteEndpoint: `/api/${config.resourceKey}`,
+            detailEndpoint: `/api/${config.resourceKey}`,
             editRoute: `/forms/${kebab}/{id}/edit`,
             newRoute: `/forms/${kebab}/new`,
             listRoute: `/forms/${kebab}`,
@@ -289,6 +307,13 @@ export default function ScreenGeneratorPage() {
       `src/app/(main)/forms/${config.routeSegment}/constants.ts`,
       `src/app/(main)/forms/${config.routeSegment}/view.config.tsx`,
       `src/app/(main)/forms/${config.routeSegment}/toolbar.config.tsx`,
+      // CRUD pages (config-driven)
+      `src/app/(main)/forms/${config.routeSegment}/new/page.tsx`,
+      `src/app/(main)/forms/${config.routeSegment}/new/${config.routeSegment}-new-client.tsx`,
+      `src/app/(main)/forms/${config.routeSegment}/[id]/page.tsx`,
+      `src/app/(main)/forms/${config.routeSegment}/[id]/${config.routeSegment}-detail-client.tsx`,
+      `src/app/(main)/forms/${config.routeSegment}/[id]/edit/page.tsx`,
+      `src/app/(main)/forms/${config.routeSegment}/[id]/edit/${config.routeSegment}-edit-client.tsx`,
     ];
   }, [config.resourceKey, config.routeSegment]);
 
@@ -317,6 +342,7 @@ export default function ScreenGeneratorPage() {
             { id: "filters", label: "Filters" },
             { id: "toolbar", label: "Toolbar" },
             { id: "features", label: "Features" },
+            { id: "crud", label: "CRUD" },
             { id: "advanced", label: "Advanced" },
             { id: "preview", label: "Preview" },
           ].map((tab) => (
@@ -667,6 +693,108 @@ export default function ScreenGeneratorPage() {
                   />
                   <span>Save View</span>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "crud" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold">CRUD Operations</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">API Endpoints</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Create Endpoint
+                      </label>
+                      <input
+                        type="text"
+                        value={config.createEndpoint}
+                        onChange={(e) => updateConfig({ createEndpoint: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="/api/resource"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Update Endpoint
+                      </label>
+                      <input
+                        type="text"
+                        value={config.updateEndpoint}
+                        onChange={(e) => updateConfig({ updateEndpoint: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="/api/resource"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Delete Endpoint
+                      </label>
+                      <input
+                        type="text"
+                        value={config.deleteEndpoint}
+                        onChange={(e) => updateConfig({ deleteEndpoint: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="/api/resource"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Detail Endpoint
+                      </label>
+                      <input
+                        type="text"
+                        value={config.detailEndpoint}
+                        onChange={(e) => updateConfig({ detailEndpoint: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="/api/resource"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Routes</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">List Route</span>
+                      <code className="text-sm text-gray-600">{config.listRoute || "/forms/resource"}</code>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">New Route</span>
+                      <code className="text-sm text-gray-600">{config.newRoute || "/forms/resource/new"}</code>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">Edit Route</span>
+                      <code className="text-sm text-gray-600">{config.editRoute || "/forms/resource/{id}/edit"}</code>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Permissions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">Create</span>
+                      <code className="text-sm text-gray-600">{config.createPermission || "resource:resource:create"}</code>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">Read</span>
+                      <code className="text-sm text-gray-600">{config.readPermission || "resource:resource:read"}</code>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">Update</span>
+                      <code className="text-sm text-gray-600">{config.updatePermission || "resource:resource:update"}</code>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <span className="font-medium">Delete</span>
+                      <code className="text-sm text-gray-600">{config.deletePermission || "resource:resource:delete"}</code>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
