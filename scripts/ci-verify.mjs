@@ -217,6 +217,11 @@ function testRoute(url, expectedContent = null) {
             reject(new Error(`Route ${url} returned 200 but missing expected content: ${expectedContent}`));
             return;
           }
+          // For API endpoints, just check that we got some response
+          if (url.includes('/api/') && data.length === 0) {
+            reject(new Error(`API endpoint ${url} returned empty response`));
+            return;
+          }
           log(`${colors.green}✓${colors.reset} ${url} - ${res.statusCode} (${data.length} bytes)`);
           resolve();
         } else {
@@ -249,16 +254,23 @@ async function runHealthCheck() {
     appProcess = await startApp();
     
     // Wait a bit for the app to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
     // Test critical routes as per Cursor Working Agreement
     const routes = [
       { url: 'http://localhost:3000/', expectedContent: '<!DOCTYPE html>' },
       { url: 'http://localhost:3000/dashboard/inventory', expectedContent: '<!DOCTYPE html>' },
+      { url: 'http://localhost:3000/forms/stock-adjustments', expectedContent: '<!DOCTYPE html>' },
+      { url: 'http://localhost:3000/api/me/role', expectedContent: null }, // API endpoint
     ];
 
     for (const route of routes) {
-      await testRoute(route.url, route.expectedContent);
+      try {
+        await testRoute(route.url, route.expectedContent);
+      } catch (err) {
+        log(`${colors.red}✗${colors.reset} Route test failed: ${err.message}`);
+        throw err;
+      }
     }
     
     log(`${colors.green}✓${colors.reset} All health check routes passed`);
