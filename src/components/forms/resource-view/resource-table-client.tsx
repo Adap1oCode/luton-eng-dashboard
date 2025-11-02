@@ -579,7 +579,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     sp.set("page", String(nextPage));
     sp.set("pageSize", String(nextSize));
     router.replace(`${pathname}?${sp.toString()}`);
-  }, [pagination, pathname, router, search, page, pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, pathname, router, search, page, pageSize]);
 
   // 🔁 When SSR props change (after navigation), update local pagination state
   React.useEffect(() => {

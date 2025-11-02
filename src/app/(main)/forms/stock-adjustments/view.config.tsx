@@ -23,6 +23,7 @@ import {
   stockAdjustmentsActions,
 } from "./toolbar.config";
 import { ROUTE_SEGMENT, API_ENDPOINT, RESOURCE_KEY, PERMISSION_PREFIX, RESOURCE_TITLE } from "./constants";
+import { statusToQuery } from "./filters";
 
 // Quick filter type
 export type QuickFilter = {
@@ -164,6 +165,9 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
   ];
 }
 
+// Memoize columns at module level to prevent rebuilds on every config access
+const _memoizedColumns = buildColumns();
+
 // Quick filters for status-based filtering
 export const quickFilters: QuickFilter[] = [
   {
@@ -176,11 +180,7 @@ export const quickFilters: QuickFilter[] = [
       { value: "ZERO", label: "Zero quantity" },
     ],
     defaultValue: "ALL",
-    toQueryParam: (value: string) => {
-      if (value === "ACTIVE") return { qty_gt: 0, qty_not_null: true };
-      if (value === "ZERO") return { qty_eq: 0 };
-      return {};
-    },
+    toQueryParam: statusToQuery,
   },
 ];
 
@@ -197,7 +197,7 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
     // Inline editing is enabled per-column via meta.inlineEdit
     // other features rely on global defaults; override here if needed
   },
-  buildColumns: () => buildColumns(),
+  buildColumns: () => _memoizedColumns,
 };
 
 // ---- Bundle export for ultra-minimal page.tsx usage --------------------------
