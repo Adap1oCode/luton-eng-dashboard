@@ -24,7 +24,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
   const { page, pageSize } = parsePagination(sp, { defaultPage: 1, defaultPageSize: 5, max: 500 });
 
   // Handle status filter from quick filters
-  const statusFilter = sp.status;
+  const statusFilter = Array.isArray(sp.status) ? sp.status[0] : sp.status;
   const extraQuery: Record<string, any> = { raw: "true" };
   
   // Add status filter if specified
