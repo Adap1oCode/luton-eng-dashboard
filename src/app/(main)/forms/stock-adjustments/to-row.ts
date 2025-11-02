@@ -1,4 +1,4 @@
-import type { StockAdjustmentRow } from "./view.config";
+import type { StockAdjustmentRow } from "./stock-adjustments.config";
 
 /**
  * Transforms raw API response to StockAdjustmentRow.

@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { stockAdjustmentsViewConfig } from "../view.config";
+import { stockAdjustmentsViewConfig } from "../stock-adjustments.config";
 
-describe("buildColumns memoization", () => {
-  it("returns the same reference on multiple calls", () => {
+describe("buildColumns", () => {
+  it("returns columns with consistent structure on multiple calls", () => {
     const columns1 = stockAdjustmentsViewConfig.buildColumns();
     const columns2 = stockAdjustmentsViewConfig.buildColumns();
 
-    // Should be same reference (memoized)
-    expect(columns1).toBe(columns2);
+    // Columns should have same length and structure (deep equality)
+    // Note: We can't memoize at module level because makeActionsColumn() is client-only
+    expect(columns1.length).toBe(columns2.length);
+    expect(columns1).toEqual(columns2);
   });
 
   it("column IDs are stable and unique", () => {

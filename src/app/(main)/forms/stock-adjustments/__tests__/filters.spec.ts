@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { statusToQuery } from "../filters";
+import { statusToQuery } from "../stock-adjustments.config";
 
 describe("statusToQuery", () => {
   it("maps ACTIVE status to correct query params", () => {
