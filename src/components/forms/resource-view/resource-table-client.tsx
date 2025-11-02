@@ -15,6 +15,7 @@
 import * as React from "react";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   DndContext,
@@ -60,6 +61,8 @@ import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { useSavedViews } from "@/components/data-table/use-saved-views";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
+import { fetchResourcePageClient } from "@/lib/api/client-fetch";
+import { parseListParams, type SPRecord } from "@/lib/next/search-params";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -110,6 +113,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const router = useRouter();
   const search = useSearchParams();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   // 🔑 NEW: Support configurable ID field from view config (e.g., "id" or "entry_id")
   // Moved ABOVE any state initializers that reference it (fixes TS2448/TS2454)
@@ -118,10 +122,123 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
 
-  // 🎯 NEW: Filter out optimistically deleted rows
+  // ⚙️ STEP 1: React Query infrastructure helpers (non-breaking, not used yet)
+  // Extract API endpoint from config - check for apiEndpoint prop first, fallback to resourceKeyForDelete
+  const getApiEndpoint = React.useCallback((): string => {
+    const configWithEndpoint = config as unknown as { apiEndpoint?: string };
+    if (configWithEndpoint.apiEndpoint) {
+      return configWithEndpoint.apiEndpoint;
+    }
+    // Fallback: construct from resourceKeyForDelete (e.g., "tcm_tally_cards" -> "/api/tcm_tally_cards")
+    const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+    return `/api/${resourceKey}`;
+  }, [config]);
+
+  // Build query key for React Query cache
+  // Pattern: [resourceKey, page, pageSize, serializedFilters]
+  const buildQueryKey = React.useCallback((currentPage: number, currentPageSize: number, currentFilters?: Record<string, string>): (string | number)[] => {
+    const resourceKeyRaw = (config as Record<string, unknown>)?.resourceKeyForDelete;
+    const resourceKey = typeof resourceKeyRaw === "string" ? resourceKeyRaw : "resource";
+    const serializedFilters = currentFilters
+      ? Object.keys(currentFilters)
+          .sort()
+          .map((k) => `${encodeURIComponent(k)}:${encodeURIComponent(currentFilters[k])}`)
+          .join("|")
+      : "no-filters";
+    return [resourceKey, currentPage, currentPageSize, serializedFilters];
+  }, [config]);
+
+  // ⚙️ STEP 2: Parse filters from URL and set up React Query (parallel to existing flow)
+  // Parse pagination and filters from URL search params
+  const searchParamsRecord = React.useMemo(() => {
+    const record: SPRecord = {};
+    search.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
+  }, [search]);
+
+  // Extract quickFilterMeta from config.quickFilters for parseListParams
+  const quickFilterMeta = React.useMemo(() => {
+    const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
+    return quickFilters.map((f) => ({ id: f.id, toQueryParam: f.toQueryParam }));
+  }, [config.quickFilters]);
+
+  // Parse current filters from URL
+  const { filters: currentFilters } = parseListParams(searchParamsRecord, quickFilterMeta, {
+    defaultPage: page,
+    defaultPageSize: pageSize,
+    max: 500,
+  });
+
+  // Serialize filters for stable queryKey
+  const serializedFilters = React.useMemo(() => {
+    const keys = Object.keys(currentFilters).sort();
+    return keys.length > 0
+      ? keys.map((key) => `${encodeURIComponent(key)}:${encodeURIComponent(currentFilters[key])}`).join("|")
+      : "no-filters";
+  }, [currentFilters]);
+
+  // Build extraQuery from filters (similar to ResourceListClient pattern)
+  const buildExtraQueryFromFilters = React.useCallback(() => {
+    const extraQuery: Record<string, any> = { raw: "true" };
+    const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
+    
+    quickFilters.forEach((filter) => {
+      const value = currentFilters[filter.id];
+      if (value && filter.toQueryParam) {
+        Object.assign(extraQuery, filter.toQueryParam(value));
+      }
+    });
+    
+    return extraQuery;
+  }, [currentFilters, config.quickFilters]);
+
+  // React Query hook (runs in parallel, but table still uses initialRows for now)
+  const apiEndpoint = React.useMemo(() => getApiEndpoint(), [getApiEndpoint]);
+  const queryKey = React.useMemo(() => buildQueryKey(page, pageSize, currentFilters), [buildQueryKey, page, pageSize, currentFilters]);
+  
+  const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const extraQuery = buildExtraQueryFromFilters();
+      return await fetchResourcePageClient<TRow>({
+        endpoint: apiEndpoint,
+        page,
+        pageSize,
+        extraQuery,
+      });
+    },
+    initialData: { rows: initialRows, total: initialTotal },
+    initialDataUpdatedAt: Date.now(), // Mark SSR data as fresh
+    staleTime: 5 * 60 * 1000, // 5 minutes (matches ResourceListClient)
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: (failureCount, error) => {
+      // Don't retry on 4xx errors
+      if (error instanceof Error && error.message.includes("4")) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // ⚙️ STEP 3: Switch table data source to React Query (with fallback to initialRows)
+  // Get current rows from React Query, fallback to initialRows during loading
+  const currentRows = React.useMemo(() => {
+    return queryData?.rows ?? initialRows;
+  }, [queryData?.rows, initialRows]);
+
+  // Get current total from React Query, fallback to initialTotal during loading
+  const currentTotal = React.useMemo(() => {
+    return queryData?.total ?? initialTotal;
+  }, [queryData?.total, initialTotal]);
+
+  // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
-    return initialRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
-  }, [initialRows, isOptimisticallyDeleted, idField]);
+    return currentRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
+  }, [currentRows, isOptimisticallyDeleted, idField]);
 
   // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
   const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
@@ -170,8 +287,39 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
 
-  // Column widths state for resizing (initialize from active view once hydrated)
-  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize({}, tableRef);
+  // ✅ Initialize column widths from config column `size` values (convert pixels to percentages)
+  // This prevents auto-calculation from changing widths when data refreshes (e.g., after inline edit)
+  const initialColumnWidths = React.useMemo<Record<string, number>>(() => {
+    const widths: Record<string, number> = {};
+    let totalPixels = 0;
+    
+    // First pass: sum all pixel sizes to normalize
+    for (const col of baseColumns) {
+      if (col.id && (col as any).size && typeof (col as any).size === "number") {
+        const size = (col as any).size as number;
+        if (size > 0) {
+          totalPixels += size;
+        }
+      }
+    }
+    
+    // Second pass: convert to percentages
+    if (totalPixels > 0) {
+      for (const col of baseColumns) {
+        if (col.id && (col as any).size && typeof (col as any).size === "number") {
+          const size = (col as any).size as number;
+          if (size > 0) {
+            widths[col.id] = (size / totalPixels) * 100;
+          }
+        }
+      }
+    }
+    
+    return widths;
+  }, [baseColumns]);
+
+  // Column widths state for resizing (initialize from config sizes, then user can override)
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(initialColumnWidths, tableRef);
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
@@ -228,16 +376,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         body: JSON.stringify({ status: editingStatus.value }),
       });
       if (res.ok) {
-        // Avoid route refresh to preserve column state; soft-refresh via revalidation hint
-        // Consumers should invalidate React Query where relevant.
+        // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
+        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+      } else {
+        alert("Failed to update status");
       }
-      else alert("Failed to update status");
     } catch {
       alert("Error updating status");
     } finally {
       setEditingStatus(null);
     }
-  }, [editingStatus, config, router]);
+  }, [editingStatus, config, queryClient]);
 
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
 
@@ -254,23 +403,54 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     if (!editingCell) return;
     try {
       const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
-      const updateData = { [editingCell.columnId]: editingCell.value };
+      const routeSegment = (config as Record<string, unknown>)?.formsRouteSegment ?? "stock-adjustments";
+      
+      // Map column IDs to SCD2 API payload field names
+      // Only qty, location, and note are supported by the SCD2 RPC
+      const supportedColumns = ["qty", "location", "note"];
+      
+      if (!supportedColumns.includes(editingCell.columnId)) {
+        alert(`Column ${editingCell.columnId} is not supported for inline editing`);
+        return;
+      }
 
-      const res = await fetch(`/api/${resourceKey}/${editingCell.rowId}`, {
-        method: "PATCH",
+      // Get current row data to preserve values for fields we're NOT changing
+      // This is critical: SCD2 RPC will SET null values, so we must include current values
+      const currentRow = filteredRows.find((row: any) => (row as any)[idField] === editingCell.rowId);
+      if (!currentRow) {
+        alert("Row not found");
+        return;
+      }
+
+      // Build payload for SCD2 endpoint: include current values for fields we're NOT changing
+      // The API expects qty/location/note (route handler maps to p_qty/p_location/p_note for RPC)
+      const payload: Record<string, any> = {
+        qty: editingCell.columnId === "qty" ? editingCell.value : (currentRow as any).qty ?? null,
+        location: editingCell.columnId === "location" ? editingCell.value : (currentRow as any).location ?? null,
+        note: editingCell.columnId === "note" ? editingCell.value : (currentRow as any).note ?? null,
+      };
+
+      // Use SCD2 endpoint (same as edit page): /api/stock-adjustments/[id]/actions/patch-scd2
+      const res = await fetch(`/api/${routeSegment}/${editingCell.rowId}/actions/patch-scd2`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        alert(`Failed to update ${editingCell.columnId}`);
+      if (res.ok) {
+        // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
+        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Failed to update ${editingCell.columnId}: ${errorData.error?.message || res.statusText}`);
       }
-    } catch {
+    } catch (error) {
+      console.error("Inline edit error:", error);
       alert(`Error updating ${editingCell.columnId}`);
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, config, router]);
+  }, [editingCell, config, queryClient, filteredRows, idField]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -433,7 +613,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       columnFilters,
     },
     manualPagination: true,
-    pageCount: Math.max(1, Math.ceil(initialTotal / Math.max(1, pagination.pageSize))),
+    pageCount: Math.max(1, Math.ceil(currentTotal / Math.max(1, pagination.pageSize))),
     onSortingChange: (updater) => {
       setSorting(updater);
       // Notify parent component about sorting changes
@@ -638,12 +818,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
 
   // ✅ Auto-assign smart percentage widths from data (on-demand only)
+  // NOTE: Only recalculate when columns change, NOT when data changes (uses initialRows, not filteredRows)
+  // This prevents widths from changing when data refreshes after inline edits
   const autoColumnWidthsPct = React.useMemo(() => {
     const defaultOverrides = { __select: 3, actions: 8 };
     const cfg = (config ?? {}) as any; // ← guard `config`
     const overrides = { ...defaultOverrides, ...(cfg.columnWidthsPct ?? {}) };
 
-    return computeAutoColumnPercents(baseColumns as any[], filteredRows as any[], {
+    // Use initialRows (from SSR) to calculate once, not filteredRows which changes on data refresh
+    // This ensures column widths remain stable even when data updates after inline edits
+    return computeAutoColumnPercents(baseColumns as any[], initialRows as any[], {
       sampleRows: 50,
       // do NOT ignore __select so it participates in layout
       ignoreIds: ["id", "__expander", "__actions"],
@@ -651,7 +835,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       floorPct: 8,
       capPct: 28,
     });
-  }, [baseColumns, filteredRows, config]);
+  }, [baseColumns, config, initialRows]); // Only recalculate when columns/config/initialRows change, not filteredRows
 
   // Provide an explicit Auto-fit action (optional: wire to Columns menu)
   const autoFitColumns = React.useCallback(() => {
@@ -767,7 +951,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     [setDefault]
   );
 
-  // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu + Export
+  // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu
+  // Extract bottom toolbar button visibility from config (defaults to true for backward compatibility)
+  // Note: Export CSV is handled by the top action toolbar, not here
+  const bottomToolbarButtons = config.bottomToolbarButtons ?? {};
+  const showViewsButton = bottomToolbarButtons.views !== false;
+  const showColumnsButton = bottomToolbarButtons.columns !== false;
+  const showSortButton = bottomToolbarButtons.sort !== false;
+  const showMoreFiltersButton = bottomToolbarButtons.moreFilters !== false;
+  const showSaveViewButton = bottomToolbarButtons.saveView !== false;
+
   const ColumnsAndSortToolbar = React.useMemo(() => {
     const leafColumns = table.getAllLeafColumns().filter(
       (c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField, // ✅ exclude idField
@@ -878,102 +1071,108 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
     return (
       <div className="flex items-center gap-2">
-        {/* Views dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Layout className="h-4 w-4" />
-              Views
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <ViewsMenu
-              views={views.map((v) => ({ 
-                ...v, 
-                description: v.description ?? "", 
-                isDefault: !!v.isDefault,
-                createdAt: new Date(v.createdAt) 
-              }))}
-              currentViewId="default"
-              onApplyView={(v) => {
-                // applyView(v.id); // Disabled temporarily
-                setColumnOrder(v.columnOrder);
-                setColumnVisibility(v.visibleColumns as any);
-                const w = (v as any).columnWidthsPct;
-                if (w) setWidths(w);
-              }}
-              onDeleteView={(id) => {
-                handleDeleteViewRemote(id);
-                // optimistically remove from local state
-                const updatedViews = views.filter((v) => v.id !== id);
-                if (updatedViews.length) {
-                  const nextDefault = updatedViews.find((v) => v.isDefault) ?? updatedViews[0];
-                  // applyView(nextDefault.id); // Disabled temporarily
-                }
-              }}
-              formatDate={(d) => d.toLocaleDateString()}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Views dropdown - controlled by config */}
+        {showViewsButton && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Layout className="h-4 w-4" />
+                Views
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <ViewsMenu
+                views={views.map((v) => ({ 
+                  ...v, 
+                  description: v.description ?? "", 
+                  isDefault: !!v.isDefault,
+                  createdAt: new Date(v.createdAt) 
+                }))}
+                currentViewId="default"
+                onApplyView={(v) => {
+                  // applyView(v.id); // Disabled temporarily
+                  setColumnOrder(v.columnOrder);
+                  setColumnVisibility(v.visibleColumns as any);
+                  const w = (v as any).columnWidthsPct;
+                  if (w) setWidths(w);
+                }}
+                onDeleteView={(id) => {
+                  handleDeleteViewRemote(id);
+                  // optimistically remove from local state
+                  const updatedViews = views.filter((v) => v.id !== id);
+                  if (updatedViews.length) {
+                    const nextDefault = updatedViews.find((v) => v.isDefault) ?? updatedViews[0];
+                    // applyView(nextDefault.id); // Disabled temporarily
+                  }
+                }}
+                formatDate={(d) => d.toLocaleDateString()}
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        {/* Columns dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Columns
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[320px]">
-            <ColumnsMenu
-              columns={menuColumns}
-              visibleColumns={visibleColumns}
-              displayColumnsCount={displayColumnsCount}
-              isResizing={isResizing}
-              onColumnToggle={onColumnToggle}
-              onShowAll={showAll}
-              onHideAll={hideAll}
-              onResetOrder={() => {
-                if (initialOrderRef.current.length) {
-                  setColumnOrder(initialOrderRef.current);
-                }
-              }}
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-            />
-            {/* Optional: Auto-fit action */}
-            <div className="border-t border-gray-200 p-2 dark:border-gray-700">
-              <Button variant="outline" size="sm" onClick={autoFitColumns}>Auto-fit columns</Button>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Columns dropdown - controlled by config */}
+        {showColumnsButton && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Columns
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[320px]">
+              <ColumnsMenu
+                columns={menuColumns}
+                visibleColumns={visibleColumns}
+                displayColumnsCount={displayColumnsCount}
+                isResizing={isResizing}
+                onColumnToggle={onColumnToggle}
+                onShowAll={showAll}
+                onHideAll={hideAll}
+                onResetOrder={() => {
+                  if (initialOrderRef.current.length) {
+                    setColumnOrder(initialOrderRef.current);
+                  }
+                }}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+              />
+              {/* Optional: Auto-fit action */}
+              <div className="border-t border-gray-200 p-2 dark:border-gray-700">
+                <Button variant="outline" size="sm" onClick={autoFitColumns}>Auto-fit columns</Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        {/* Sort dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4" />
-              Sort
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[260px]">
-            <SortMenu
-              columns={sortColumns}
-              sortConfig={sortConfig as { column: string | null; direction: "asc" | "desc" | "none" }}
-              onSort={onSort}
-              onClearAll={onClearAll}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Sort dropdown - controlled by config */}
+        {showSortButton && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                Sort
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[260px]">
+              <SortMenu
+                columns={sortColumns}
+                sortConfig={sortConfig as { column: string | null; direction: "asc" | "desc" | "none" }}
+                onSort={onSort}
+                onClearAll={onClearAll}
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     );
-  }, [table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting]);
+  }, [table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting, showViewsButton, showColumnsButton, showSortButton]);
 
   // ✅ NEW: More Filters Section and client->parent filter mapping
   const MoreFiltersSection = React.useMemo(() => {
@@ -1063,7 +1262,74 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return () => document.removeEventListener("click", onToolbarClick, true);
   }, [table]);
 
-  const footer = <DataTablePagination table={table} totalCount={initialTotal} />;
+  const footer = <DataTablePagination table={table} totalCount={currentTotal} />;
+
+  // Quick Filters component - reads from config and syncs with URL
+  const QuickFiltersToolbar = React.useMemo(() => {
+    const quickFilters = config.quickFilters ?? [];
+    if (quickFilters.length === 0) return null;
+
+    const currentFilters: Record<string, string> = {};
+    quickFilters.forEach((filter) => {
+      const value = search.get(filter.id);
+      if (value) {
+        currentFilters[filter.id] = value;
+      } else if (filter.defaultValue) {
+        currentFilters[filter.id] = filter.defaultValue;
+      }
+    });
+
+    const handleFilterChange = (filterId: string, value: string) => {
+      const sp = new URLSearchParams(search.toString());
+      
+      // Find the filter config to check defaultValue
+      const filterConfig = quickFilters.find((f) => f.id === filterId);
+      const defaultValue = filterConfig?.defaultValue ?? "ALL";
+      
+      // Remove "ALL" or empty values from URL (uses default from filter config)
+      if (!value || value === "ALL" || value === defaultValue) {
+        sp.delete(filterId);
+      } else {
+        sp.set(filterId, value);
+      }
+      
+      // Reset to page 1 when filter changes
+      sp.set("page", "1");
+      
+      // Update URL and trigger server-side refetch
+      router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
+      router.refresh();
+    };
+
+    return (
+      <div className="flex items-center gap-2">
+        {quickFilters.map((filter) => {
+          if (filter.type === "enum" && filter.options) {
+            return (
+              <div key={filter.id} className="flex items-center gap-2">
+                <label htmlFor={`quick-filter-${filter.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {filter.label}:
+                </label>
+                <select
+                  id={`quick-filter-${filter.id}`}
+                  value={currentFilters[filter.id] ?? filter.defaultValue ?? ""}
+                  onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                  className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  {filter.options.map((option: { value: string; label: string }) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
+  }, [config.quickFilters, search, pathname, router]);
 
   return (
     <DndContext
@@ -1077,33 +1343,35 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         <div className="border-b border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {/* Quick Filters - first item in bottom toolbar */}
+              {QuickFiltersToolbar}
+              {QuickFiltersToolbar && <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />}
               {ColumnsAndSortToolbar}
-              {/* زر More Filters */}
-              <Button
-                variant="outline"
-                onClick={() => setShowMoreFilters(!showMoreFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                {showMoreFilters ? "Hide Filters" : "More Filters"}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* زر Save View */}
-              <Button
-                variant="outline"
-                onClick={() => setSaveViewDialogOpen(true)}
-                className="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
-              >
-                <Save className="h-4 w-4" />
-                Save View
-              </Button>
-              {/* زر Export في أقصى اليمين */}
-              {showInlineExportButton && (
-                <Button variant="outline" onClick={() => exportCSV(table as never, "tally_cards")}>
-                  Export CSV
+              {/* More Filters button - controlled by config */}
+              {showMoreFiltersButton && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMoreFilters(!showMoreFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {showMoreFilters ? "Hide Filters" : "More Filters"}
                 </Button>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Save View button - controlled by config */}
+              {showSaveViewButton && (
+                <Button
+                  variant="outline"
+                  onClick={() => setSaveViewDialogOpen(true)}
+                  className="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                >
+                  <Save className="h-4 w-4" />
+                  Save View
+                </Button>
+              )}
+              {/* Export CSV is handled by the top action toolbar, not here */}
             </div>
           </div>
         </div>
@@ -1119,13 +1387,20 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
-          // ✅ Use resized column widths if available, otherwise fall back to auto-calculated
-          columnWidthsPct={Object.keys(columnWidths).length > 0 ? columnWidths : autoColumnWidthsPct}
+          // ✅ Use config-based initial widths (converted from pixels to %), or user-resized widths
+          // Only fall back to auto-calculated if neither is available
+          columnWidthsPct={
+            Object.keys(columnWidths).length > 0 
+              ? columnWidths 
+              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {})
+          }
           tableContainerRef={tableRef}
           filtersConfig={{
             columns: filterColumns,
-            // Use resized column widths if available, otherwise fall back to auto-calculated
-            columnWidthsPct: Object.keys(columnWidths).length > 0 ? columnWidths : autoColumnWidthsPct,
+            // Use config-based initial widths (converted from pixels to %), or user-resized widths
+            columnWidthsPct: Object.keys(columnWidths).length > 0 
+              ? columnWidths 
+              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {}),
 
             show: showMoreFilters,
             filters,

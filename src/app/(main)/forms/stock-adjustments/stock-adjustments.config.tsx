@@ -88,6 +88,12 @@ export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
     validation: (value) => !isNaN(Number(value)),
     parseValue: (value) => Number(value),
     showBadge: false,
+    formatDisplay: (value: any) => {
+      if (value !== null && value !== undefined) {
+        return String(value);
+      }
+      return "—";
+    },
   },
 };
 
@@ -150,13 +156,7 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       id: "qty",
       accessorKey: "qty",
       header: "Qty",
-      cell: ({ row }) => {
-        const qty = row.getValue<number | null>("qty");
-        if (qty !== null && qty !== undefined) {
-          return <span>{qty}</span>;
-        }
-        return <span className="text-muted-foreground">—</span>;
-      },
+      // No custom cell renderer - ResourceTableClient will use InlineEditCellWrapper when meta.inlineEdit is present
       meta: {
         inlineEdit: INLINE_EDIT_CONFIGS.qty,
       },
@@ -220,6 +220,15 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
     pagination: true,
   },
   buildColumns: () => buildColumns(),
+  // Hide Views and Save View buttons in bottom toolbar
+  bottomToolbarButtons: {
+    views: false,
+    saveView: false,
+    // Keep other buttons visible (columns, sort, moreFilters)
+    columns: true,
+    sort: true,
+    moreFilters: true,
+  },
 };
 
 // -----------------------------------------------------------------------------

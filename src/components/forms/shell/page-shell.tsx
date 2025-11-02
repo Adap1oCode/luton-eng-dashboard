@@ -179,6 +179,14 @@ export default function PageShell({
   const effectiveShowSorting =
     (typeof chipConfig?.sorting === "boolean" ? chipConfig.sorting : showSortingChip) ?? false;
 
+  // Only show Actions + chips block if there's something to render
+  const hasActionsToShow = 
+    effectivePrimary.length > 0 || 
+    effectiveLeft.length > 0 || 
+    effectiveRight.length > 0 || 
+    effectiveShowFilter || 
+    effectiveShowSorting;
+
   return (
     <OptimisticProvider>
       <div className="min-h-screen rounded-2xl border bg-gray-50 dark:bg-gray-900">
@@ -199,8 +207,9 @@ export default function PageShell({
             </div>
           </div>
 
-          {/* Actions + chips block (two rows) */}
-          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          {/* Actions + chips block (two rows) - only render if there's content */}
+          {hasActionsToShow && (
+            <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
             {/* Row 1: primary buttons + chips */}
             <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
               <RenderButtonCluster buttons={effectivePrimary} />
@@ -223,7 +232,8 @@ export default function PageShell({
 
             {/* Row 2: Use Toolbar component with actions support */}
             <Toolbar config={toolbarConfig} actions={toolbarActions} />
-          </div>
+            </div>
+          )}
 
           {/* Toolbar + quick filters + table + footer card */}
           {/* داخل JSX الخاص بمكون PageShell */}

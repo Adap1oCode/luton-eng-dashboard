@@ -62,6 +62,32 @@ export type TableFeatures = {
   viewStorageKey?: string;
 };
 
+/**
+ * Controls visibility of buttons in the bottom toolbar (above table rows).
+ * All buttons default to true for backward compatibility.
+ * 
+ * Note: Export CSV is not included here as it's controlled by the top action toolbar.
+ * 
+ * @example
+ * // Hide Views and Save View buttons
+ * bottomToolbarButtons: {
+ *   views: false,
+ *   saveView: false,
+ * }
+ */
+export type BottomToolbarButtons = {
+  /** Show Views dropdown (saved views menu) */
+  views?: boolean;
+  /** Show Columns dropdown (column visibility/ordering) */
+  columns?: boolean;
+  /** Show Sort dropdown */
+  sort?: boolean;
+  /** Show More Filters button */
+  moreFilters?: boolean;
+  /** Show Save View button */
+  saveView?: boolean;
+};
+
 export type ToolbarButton = {
   id: string;
   label: string;
@@ -251,6 +277,11 @@ export type BaseViewConfig<TRow> = {
    * Optional for backward-compatibility; newer views should set it.
    */
   idField?: keyof TRow | string;
+  /**
+   * Controls visibility of buttons in the bottom toolbar (above table rows).
+   * If not specified, all buttons are shown (backward compatible).
+   */
+  bottomToolbarButtons?: BottomToolbarButtons;
 };
 
 // -------- id helper (once) ----------

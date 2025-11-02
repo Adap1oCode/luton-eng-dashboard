@@ -42,11 +42,13 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
     <PageShell
       title={config.title}
       count={total}
+      // Action Toolbar (New, Delete, Export buttons) - kept visible
       toolbarConfig={config.toolbar}
       toolbarActions={config.actions}
-      chipConfig={config.chips ?? { filter: true, sorting: true }}
-      enableAdvancedFilters={true}
-      showSaveViewButton={false}
+      // Hide chips (filter/sorting badges)
+      chipConfig={{ filter: false, sorting: false }}
+      // AdvancedFilterBar is redundant - bottom toolbar in ResourceTableClient provides all these features
+      enableAdvancedFilters={false}
       showToolbarContainer={false}
     >
       <StockAdjustmentsTableClient

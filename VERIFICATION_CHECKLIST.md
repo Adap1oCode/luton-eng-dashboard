@@ -113,3 +113,5 @@ Remove lines 581-585 (counter code), keep only:
 **Next**: Open PR "Stock Adjustments: 4 safe perf simplifications"
 
 
+
+
