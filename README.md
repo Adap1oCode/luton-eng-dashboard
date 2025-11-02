@@ -1,155 +1,183 @@
-<div align="center">
-  <strong>Next.js Admin Template built with TypeScript & Shadcn UI</strong><br />
-  A modern admin dashboard template using Next.js 15, Tailwind CSS v4, App Router, TypeScript, and Shadcn UI.
-</div>
+# Supabase CLI
 
-<br />
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-<div align="center">
-  <a href="https://next-shadcn-admin-dashboard.vercel.app">View Demo</a>
-</div>
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-<br />
+This repository contains all the functionality for Supabase CLI.
 
-<p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Farhamkhnz%2Fnext-shadcn-admin-dashboard">
-    <img src="https://vercel.com/button" alt="Deploy with Vercel" />
-  </a>
-</p>
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-<br />
+## Getting started
 
-<div align="center">
-  <img src="https://github.com/arhamkhnz/next-shadcn-admin-dashboard/blob/main/media/dashboard.png?version=5" alt="Dashboard Screenshot" width="75%">
-</div>
+### Install the CLI
 
-## My Project Vision
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
-The goal is to create an open-source admin template that includes multiple example screens, prebuilt sections, and thoughtfully designed UI patterns, all supported by a clean architecture and proper project setup.
-
-It aims to serve as a strong starting point for SaaS platforms, internal dashboards, and admin panels, with built-in support for multi-tenancy, RBAC, and feature-based scaling.
-
-## Overview
-
-This project uses `Next.js 15 (App Router)`, `TypeScript`, `Tailwind CSS v4`, and `Shadcn UI` as the main stack.  
-It also includes `Zod` for validation, `ESLint` and `Prettier` for linting and formatting, and `Husky` for pre-commit hooks.  
-
-This will support `React Hook Form`, `Zustand`, `TanStack Table`, and other related utilities, and will be added with upcoming screens. RBAC (Role-Based Access Control) with config-driven UI and multi-tenant UI support are also planned as part of the feature roadmap.
-
-The current version uses the [Tweakcn Tangerine](https://tweakcn.com/) theme for UI.
-
-> Looking for a **Next 14 + Tailwind CSS v3** version instead?  
-> Check out the [`archive/next14-tailwindv3`](https://github.com/arhamkhnz/next-shadcn-admin-dashboard/tree/archive/next14-tailwindv3) branch.  
-> This branch uses a different color theme and is not actively maintained, though I'm trying to keep it updated with the latest changes and screens.
-
-## Screens
-
-✅ Available  
-🚧 Coming Soon
-
-### Dashboards
-- ✅ Default
-- 🚧 CRM
-- 🚧 Analytics
-- 🚧 eCommerce
-- 🚧 Academy
-- 🚧 Logistics
-
-### Pages
-- 🚧 Email
-- 🚧 Chat
-- 🚧 Calendar
-- 🚧 Kanban
-- 🚧 Invoice
-- 🚧 Users
-- 🚧 Roles
-- ✅ Authentication
-
-## Colocation File System Architecture
-
-The project follows a colocation-first file structure using the App Router. Feature-specific pages live alongside their components to maintain separation of concerns and reduce cross-import complexity.
-
-```txt
-src/
-├── app/                      # Next.js App Router entry
-│   ├── (external)/           # Public pages (e.g., marketing, feedback)
-│
-│   ├── (main)/               # Main application layout
-│   │   ├── dashboard/
-│   │   │   ├── layout.tsx    # Shared layout for dashboard routes
-│   │   │   ├── default/      # Default overview dashboard
-│   │   │   │   ├── components/
-│   │   │   │   └── page.tsx
-│   │   │   ├── ecommerce/
-│   │   │   │   ├── components/
-│   │   │   │   └── page.tsx
-│   │   │   ├── email/
-│   │   │   │   ├── components/
-│   │   │   │   └── page.tsx
-│   │   │   ├── users/
-│   │   │   │   ├── components/
-│   │   │   │   └── page.tsx
-│   │   │   ├── profile/
-│   │   │   │   ├── components/
-│   │   │   │   └── page.tsx
-│   ├── auth/                  # Auth section
-│   │   ├── layout.tsx  
-│   │   ├── login/
-│   │   │   ├── components/
-│   │   │   └── page.tsx
-│   │   ├── register/
-│   │   │   ├── components/
-│   │   │   └── page.tsx
-│   │   ├── components/        # Shared auth components (e.g., buttons)
-│
-├── components/
-│   ├── ui/                    # Reusable UI primitives (button, input, etc.)
-│   ├── common/                # Shared layout/global components used across multiple areas
-│
-├── middleware.ts              # Middleware for handling auth/redirects
-├── navigation/                # Navigation config for sidebar
-├── hooks/                     # Custom React hooks
-├── utils/                     # Utility/helper functions
-├── server/                    # Server-only functions and server actions
-├── config/                    # Project-wide configuration (e.g. theme, layout)
-├── constants/                 # Static values like roles, app-level enums, routes, dummy data
+```bash
+npm i supabase --save-dev
 ```
 
-If you want to dive deeper into this architecture pattern, check out [this repo](https://github.com/arhamkhnz/next-colocation-template).
+To install the beta release channel:
 
-## Getting Started
+```bash
+npm i supabase@beta --save-dev
+```
 
-To set up and run this admin dashboard locally, follow these steps:
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/arhamkhnz/next-shadcn-admin-dashboard.git
-   ```
-   
-2. **Install dependencies**
-   ```bash
-    npm install
-   ```
-   > While installing, you may be prompted to use the `--force` or `--legacy-peer-deps` flag.  
-   > This is expected and safe — it’s due to a dependency from the Shadcn registry that references a breaking library version.
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-3. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-Once running, the app will be available at [http://localhost:3000](http://localhost:3000)
+<details>
+  <summary><b>macOS</b></summary>
 
+  Available via [Homebrew](https://brew.sh). To install:
 
----
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-> [!IMPORTANT]  
-> This project is frequently updated. If you’re working from a fork or previously cloned copy, check for the latest changes before syncing. Some updates may include breaking changes.
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
----
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-Feel free to open issues, feature requests, or start a discussion if you'd like to contribute or suggest improvements.
+<details>
+  <summary><b>Windows</b></summary>
 
-**Happy building!**
+  Available via [Scoop](https://scoop.sh). To install:
 
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
 
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```

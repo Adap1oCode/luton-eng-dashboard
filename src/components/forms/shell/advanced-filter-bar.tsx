@@ -53,7 +53,7 @@ type SavedView = {
   sortConfig: {
     column: string | null;
     direction: string; // ViewsMenu expects string, not SortDirection
-    type: "alphabetical" | "date";
+    type?: "alphabetical" | "date" | "status";
   };
   createdAt: Date;
 };

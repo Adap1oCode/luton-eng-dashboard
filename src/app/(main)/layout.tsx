@@ -25,6 +25,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { QueryProvider } from "@/components/providers/query-provider";
 import { getSidebarVariant, getSidebarCollapsible, getContentLayout } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
+import { UI_RULES, shouldHideOnRoute } from "@/config/ui-rules";
 // ✅ Add this import to keep your intended button
 
 // ensure this runs on every request (no static cache)
@@ -44,19 +45,37 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const sessionRes = await fetch(`${baseUrl}/api/me/role`, {
-    cache: "no-store",
-    headers: { cookie: cookieHeader },
-  });
-
-  const session = sessionRes.ok
-    ? ((await sessionRes.json()) as {
+  let session: {
+    fullName?: string | null;
+    email?: string | null;
+    roleName?: string | null;
+    avatarUrl?: string | null;
+  } = {};
+  try {
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const sessionRes = await fetch(`${baseUrl}/api/me/role`, {
+      cache: "no-store",
+      headers: { cookie: cookieHeader },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (sessionRes.ok) {
+      session = (await sessionRes.json()) as {
         fullName?: string | null;
         email?: string | null;
         roleName?: string | null;
         avatarUrl?: string | null;
-      })
-    : {};
+      };
+    }
+  } catch (error) {
+    // Silently handle session fetch errors - user will see login form
+    console.warn("Session fetch failed, user will be prompted to login:", error);
+  }
 
   const displayName = session.fullName ?? session.email ?? "User";
   const email = session.email ?? "";
@@ -67,6 +86,13 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   const sidebarVariant = await getSidebarVariant();
   const sidebarCollapsible = await getSidebarCollapsible();
   const contentLayout = await getContentLayout();
+
+  // Determine which global UI elements to show based on current route
+  const fullUrl = h.get('x-url') ?? '';
+  const url = new URL(fullUrl, 'http://localhost'); // required fallback for SSR parsing
+  const currentPath = url.pathname;
+  const showDateToolbar = !shouldHideOnRoute(currentPath, UI_RULES.hideGlobalDateToolbarOn);
+  const showDataViewerButton = !shouldHideOnRoute(currentPath, UI_RULES.hideDataViewerButtonOn);
 
   return (
     <QueryProvider>
@@ -91,7 +117,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                   <SidebarTrigger className="-ml-1" />
                   <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
                   <div className="hidden sm:block">
-                    <SearchDialog />
+                    {showDateToolbar && <SearchDialog />}
                   </div>
                 </div>
 
@@ -129,7 +155,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                     </DropdownMenu>
                   </div>
 
-                  <DataViewerButton />
+                  {showDataViewerButton && <DataViewerButton />}
                 </div>
               </div>
             </header>

@@ -11,7 +11,7 @@ import React from "react";
 import Link from "next/link";
 
 import FormIsland from "@/components/forms/shell/form-island";
-import FormShell from "@/components/forms/shell/form-shell";
+import FormShellWithLoading from "@/components/forms/shell/form-shell-with-loading";
 import { PermissionGate } from "@/components/auth/permissions-gate";
 
 // IMPORTANT: Align with what FormIsland expects.
@@ -50,6 +50,16 @@ interface ResourceFormSSRPageProps {
     any?: string[];
     all?: string[];
   };
+
+  // Loading states
+  isInitialLoading?: boolean;
+  initialLoadingTitle?: string;
+  initialLoadingDescription?: string;
+  isSubmitting?: boolean;
+  submissionTitle?: string;
+  submissionDescription?: string;
+  isBackgroundLoading?: boolean;
+  backgroundLoadingMessage?: string;
 }
 
 // Safely build a default cancel URL using common fields on EnhancedFormConfig.
@@ -78,12 +88,21 @@ export default function ResourceFormSSRPage({
   hideCancel = false,
   hidePrimary = false,
   primaryButtonPermissions,
+  // Loading props with defaults
+  isInitialLoading = false,
+  initialLoadingTitle = "Loading Form",
+  initialLoadingDescription = "Please wait...",
+  isSubmitting = false,
+  submissionTitle = "Saving Changes",
+  submissionDescription = "Please wait...",
+  isBackgroundLoading = false,
+  backgroundLoadingMessage = "Processing...",
 }: ResourceFormSSRPageProps) {
   const computedCancelHref = cancelHref ?? resolveDefaultCancelHref(config);
   const computedPrimaryLabel = primaryLabel ?? (config as any)?.submitLabel ?? "Save";
 
   return (
-    <FormShell
+    <FormShellWithLoading
       title={title}
       headerTitle={title}
       headerDescription={headerDescription ?? ""}
@@ -119,6 +138,15 @@ export default function ResourceFormSSRPage({
           )
         ),
       }}
+      // Loading props passed to FormShellWithLoading
+      isInitialLoading={isInitialLoading}
+      initialLoadingTitle={initialLoadingTitle}
+      initialLoadingDescription={initialLoadingDescription}
+      isSubmitting={isSubmitting}
+      submissionTitle={submissionTitle}
+      submissionDescription={submissionDescription}
+      isBackgroundLoading={isBackgroundLoading}
+      backgroundLoadingMessage={backgroundLoadingMessage}
     >
       {/* FormIsland is a client component; pass exactly what it expects */}
       <FormIsland
@@ -127,6 +155,6 @@ export default function ResourceFormSSRPage({
         defaults={defaults}
         options={options}
       />
-    </FormShell>
+    </FormShellWithLoading>
   );
 }

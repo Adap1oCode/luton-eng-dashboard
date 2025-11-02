@@ -98,7 +98,7 @@ describe('Stock Adjustments View Config', () => {
       expect(qtyColumn).toBeDefined()
       expect(qtyColumn?.header).toBe('Qty')
       expect(qtyColumn?.enableSorting).toBe(true)
-      expect(qtyColumn?.size).toBe(90)
+      expect(qtyColumn?.size).toBe(120)
 
       // Check location column
       const locationColumn = columns.find(col => col.id === 'location')

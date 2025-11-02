@@ -143,6 +143,47 @@ Virtualize tables if rendering > 500 rows at once (or keep paging).
 
 Stable IDs: prefer real ids from data; avoid generating new ones that break selection state.
 
+---
+
+## Saved Views and Column Stability (Tables)
+
+**Overview:**  
+All table views (e.g., Stock Adjustments, Tally Cards) persist full UI state per user, per table. This ensures columns remain stable across filters, pagination, and background refetches.
+
+**What's Persisted:**
+- `columnOrder` — user's custom column sequence
+- `columnVisibility` — which columns are shown/hidden
+- `columnWidthsPct` — exact percentage widths (never auto-recalculated unless user clicks "Auto-fit")
+- `sortConfig` — active sort column + direction
+- `filters` — optional filter values/modes per column
+- `pagination` — optional page/pageSize preferences
+
+**Storage:**
+- **Primary:** Supabase `user_saved_views` table (per `owner_auth_id`, private only)
+- **Fallback:** LocalStorage (offline/unauthenticated sessions)
+- **Hydration:** On mount, fetch remote views; apply default view automatically
+
+**Key Behaviors:**
+- **Auto-fit columns:** Only runs on first load or when user explicitly clicks "Auto-fit columns" in Columns menu
+- **Inline edits:** Use React Query invalidation or optimistic updates; never `router.refresh()` to preserve table state
+- **Silent refresh:** Background refetch shows subtle spinner; columns/widths/order remain unchanged
+- **Structured filters:** Client sends `filters[col][value]` and `filters[col][mode]`; server applies ilike/eq/neq/startsWith/endsWith
+
+**API Endpoints:**
+- `GET /api/saved-views?tableId=<id>` — list views for current user
+- `POST /api/saved-views` — create new view
+- `PATCH /api/saved-views/:id` — update view (name/description/state/isDefault)
+- `DELETE /api/saved-views/:id` — delete view
+
+**Usage Example:**
+```tsx
+// Table automatically hydrates saved views on mount
+// User can Save/Update/Delete via Views menu
+// "Auto-fit columns" action in Columns menu recalculates widths on demand
+```
+
+---
+
 Adding a new form (checklist)
 Scaffold
 

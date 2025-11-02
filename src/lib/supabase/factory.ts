@@ -216,9 +216,51 @@ export function createSupabaseProvider<T, TInput>(
       }
 
       if (q && cfg.search?.length) query = query.or(buildOrIlike(q, cfg.search));
+      
+      // Filters: structured (filters[col][value/mode]) + numeric (qty_gt) + arrays
       if (isObject(filters)) {
         for (const [k, v] of Object.entries(filters)) {
-          query = Array.isArray(v) ? query.in(k, v as any[]) : query.eq(k, v as any);
+          // Array filters (IN clause)
+          if (Array.isArray(v)) {
+            query = query.in(k, v as any[]);
+          }
+          // Numeric comparison filters (_gt, _gte, _lt, _lte, _eq)
+          else if (k.endsWith('_gt')) {
+            const column = k.slice(0, -3);
+            query = query.gt(column, v as any);
+          } else if (k.endsWith('_gte')) {
+            const column = k.slice(0, -4);
+            query = query.gte(column, v as any);
+          } else if (k.endsWith('_lt')) {
+            const column = k.slice(0, -3);
+            query = query.lt(column, v as any);
+          } else if (k.endsWith('_lte')) {
+            const column = k.slice(0, -4);
+            query = query.lte(column, v as any);
+          } else if (k.endsWith('_eq')) {
+            const column = k.slice(0, -3);
+            query = query.eq(column, v as any);
+          } else if (k.endsWith('_not_null')) {
+            const column = k.slice(0, -8);
+            query = query.not(column, 'is', null);
+          }
+          // Structured filters with mode (from saved views feature)
+          else if (isObject(v) && (v as any).value !== undefined) {
+            const f = v as any;
+            const value = f.value;
+            const mode = (f.mode ?? "contains") as string;
+            if (value == null || value === "") continue;
+            const val = String(value);
+            if (mode === "equals") query = query.eq(k, val);
+            else if (mode === "notEquals") query = query.neq(k, val);
+            else if (mode === "startsWith") query = query.ilike(k, `${val}%`);
+            else if (mode === "endsWith") query = query.ilike(k, `%${val}`);
+            else query = query.ilike(k, `%${val}%`);
+          }
+          // Simple equality filter
+          else {
+            query = query.eq(k, v as any);
+          }
         }
       }
       if (activeOnly && cfg.activeFlag) query = query.eq(cfg.activeFlag, true);

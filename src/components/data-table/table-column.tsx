@@ -56,10 +56,10 @@ export const TableColumn: React.FC<TableColumnProps> = ({
   isLastColumn,
 }) => {
   const getSortIcon = () => {
-    if (sortConfig.column !== id) return <ArrowUpDown className="h-3 w-3" />;
-    if (sortConfig.direction === "asc") return <ArrowUp className="h-3 w-3" />;
-    if (sortConfig.direction === "desc") return <ArrowDown className="h-3 w-3" />;
-    return <ArrowUpDown className="h-3 w-3" />;
+    if (sortConfig.column !== id) return <ArrowUpDown className="h-2.5 w-2.5" />;
+    if (sortConfig.direction === "asc") return <ArrowUp className="h-2.5 w-2.5" />;
+    if (sortConfig.direction === "desc") return <ArrowDown className="h-2.5 w-2.5" />;
+    return <ArrowUpDown className="h-2.5 w-2.5" />;
   };
 
   return (

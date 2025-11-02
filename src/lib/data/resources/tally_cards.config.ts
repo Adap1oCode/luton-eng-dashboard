@@ -18,7 +18,7 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
   table: "tcm_tally_cards",
   pk: "id",
   select:
-    "id, card_uid, tally_card_number, warehouse, warehouse_id, item_number, note, is_active, created_at, snapshot_at, hashdiff",
+    "id, card_uid, tally_card_number, warehouse, warehouse_id, item_number, note, is_active, created_at, snapshot_at, hashdiff, status, owner, quantity",
   search: ["tally_card_number", "warehouse"],
   activeFlag: "is_active",
   defaultSort: { column: "snapshot_at", desc: true },

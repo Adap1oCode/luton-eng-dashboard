@@ -174,7 +174,7 @@ export function LoginFormV1() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-medium text-gray-700">Email Address</FormLabel>
+                  <FormLabel htmlFor="email" className="text-base font-medium text-gray-700">Email Address</FormLabel>
                   <FormControl>
                     <Input
                       id="email"
@@ -199,7 +199,7 @@ export function LoginFormV1() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel className="text-base font-medium text-gray-700">Password</FormLabel>
+                    <FormLabel htmlFor="password" className="text-base font-medium text-gray-700">Password</FormLabel>
                     <span className="text-xs text-gray-500">Leave empty for a magic link</span>
                   </div>
                   <FormControl>

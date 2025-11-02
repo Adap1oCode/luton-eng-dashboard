@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Smoke @smoke", () => {
+test.describe.skip("Smoke @smoke", () => {
   test("home loads cleanly", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (msg) => {

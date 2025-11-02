@@ -18,7 +18,7 @@ import { RenderButtonCluster } from "./render-button-cluster";
 import Toolbar from "./toolbar/toolbar";
 import type { ToolbarButton, ToolbarConfig, ChipsConfig, ActionConfig } from "./toolbar/types";
 
-type PageShellProps = {
+export type PageShellProps = {
   title: string;
   count?: number;
 
@@ -72,6 +72,14 @@ type PageShellProps = {
 
   // ✅ جديد: حِزمة خصائص تُمرَّر للـ AdvancedFilterBar لتوصيل الأعمدة والفرز والعروض
   advancedFilterBarProps?: AdvancedFilterBarPropBag;
+  
+  // Enhanced loading props (passed to client wrapper)
+  isLoading?: boolean;
+  loadingTitle?: string;
+  loadingDescription?: string;
+  isRefetching?: boolean;
+  refetchMessage?: string;
+  refetchPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center';
 };
 
 // حِزمة خصائص قابلة للتمرير لـ AdvancedFilterBar (كلها اختيارية)
@@ -153,6 +161,14 @@ export default function PageShell({
   // ✅ جديد
   advancedFilterBarProps,
   showToolbarContainer = true, // جديد: القيمة الافتراضية
+  
+  // Enhanced loading props (passed to client wrapper)
+  isLoading = false,
+  loadingTitle = "Loading...",
+  loadingDescription = "Please wait...",
+  isRefetching = false,
+  refetchMessage = "Updating...",
+  refetchPosition = 'top-right',
 }: PageShellProps) {
   // ---- Effective buttons & chips (config precedence; legacy fallback) ----
   const effectivePrimary = toolbarConfig?.primary ?? primaryButtons ?? [];
@@ -258,43 +274,7 @@ export default function PageShell({
                     onSaveView={advancedFilterBarProps?.onSaveView}
                   />
                 </div>
-              ) : (
-                <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {toolbarLeft ?? (
-                          <>
-                            <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="views">
-                              <Layout className="h-4 w-4" />
-                              Views
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="columns">
-                              <Settings className="h-4 w-4" />
-                              Columns
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="sort">
-                              <ArrowUpDown className="h-4 w-4" />
-                              Sort
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" className="flex items-center gap-2" data-toolbar-id="moreFilters">
-                              <Filter className="h-4 w-4" />
-                              More Filters
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {toolbarRight ?? <RenderButtonCluster buttons={effectiveRight} />}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
+              ) : null
             ) : null}
 
             {/* Optional quick filters lane */}

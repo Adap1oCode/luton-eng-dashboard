@@ -8,15 +8,16 @@
 //    (i.e., /api/user_tally_card_entries), not stock-adjustments.
 // -----------------------------------------------------------------------------
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
 import type {
   ToolbarConfig,
   ChipsConfig,
   ActionConfig,
 } from "@/components/forms/shell/toolbar/types";
+import { ROUTE_SEGMENT, RESOURCE_KEY, API_ENDPOINT, PERMISSION_PREFIX } from "./constants";
 
 // Backend resource: user_tally_card_entries
-const BASE_API = "/api/tcm_user_tally_card_entries";
+const BASE_API = API_ENDPOINT;
 
 export const stockAdjustmentsToolbar: ToolbarConfig = {
   left: [
@@ -25,8 +26,8 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       label: "New Adjustment",
       icon: "Plus",
       variant: "default",
-      href: "/forms/stock-adjustments/new",
-      requiredAny: ["resource:tcm_user_tally_card_entries:create"],
+      href: `/forms/${ROUTE_SEGMENT}/new`,
+      requiredAny: [`${PERMISSION_PREFIX}:create`],
     },
     {
       id: "delete",
@@ -35,7 +36,14 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
-      requiredAny: ["resource:tcm_user_tally_card_entries:delete"],
+      requiredAny: [`${PERMISSION_PREFIX}:delete`],
+    },
+    {
+      id: "exportCsv",
+      label: "Export CSV",
+      icon: "Download",
+      variant: "outline",
+      onClickId: "exportCsv",
     },
   ],
   right: [
@@ -46,16 +54,44 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
 export const stockAdjustmentsActions: ActionConfig = {
   deleteSelected: {
     method: "DELETE",
-    endpoint: `${BASE_API}/bulk-delete`,
+      endpoint: `${API_ENDPOINT}/bulk-delete`,
   },
   exportCsv: {
     method: "GET",
-    endpoint: `${BASE_API}/export`,
+    endpoint: `${API_ENDPOINT}/export`,
     target: "_blank",
   },
 };
 
 export const stockAdjustmentsChips: ChipsConfig | undefined = undefined;
+
+// Dynamic toolbar factory - creates toolbar based on active filters/sorting
+export const createStockAdjustmentsToolbar = (hasSorting: boolean, hasFilters: boolean): ToolbarConfig => {
+  const rightButtons = [];
+
+  if (hasSorting) {
+    rightButtons.push({
+      id: "appliedSorting",
+      label: "Sorting Applied",
+      variant: "secondary" as const,
+      onClickId: "clearSorting",
+    });
+  }
+
+  if (hasFilters) {
+    rightButtons.push({
+      id: "appliedFilters",
+      label: "Filter Applied",
+      variant: "secondary" as const,
+      onClickId: "clearFilters",
+    });
+  }
+
+  return {
+    ...stockAdjustmentsToolbar,
+    right: rightButtons,
+  };
+};
 
 // Optional row action menu (wire if needed in your actions column)
 export const stockAdjustmentsActionMenu = [

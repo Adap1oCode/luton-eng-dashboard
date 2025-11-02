@@ -35,6 +35,22 @@ test.describe('Stock Adjustments Forms Page', () => {
     
     // Check if Delete button is present (may be disabled)
     await expect(page.locator('button:has-text("Delete")')).toBeVisible()
+    
+    // Check if Export CSV button is present
+    await expect(page.locator('button:has-text("Export CSV")')).toBeVisible()
+  })
+
+  test('should have consolidated table toolbar', async ({ page }) => {
+    // Wait for the table to load
+    await page.waitForSelector('[data-testid="resource-table"]')
+    
+    // Should have Status dropdown in table toolbar
+    await expect(page.locator('text=Status:')).toBeVisible()
+    
+    // Should have table controls in same toolbar
+    await expect(page.locator('button:has-text("Columns")')).toBeVisible()
+    await expect(page.locator('button:has-text("Sort")')).toBeVisible()
+    await expect(page.locator('button:has-text("More Filters")')).toBeVisible()
   })
 
   test('should handle pagination', async ({ page }) => {

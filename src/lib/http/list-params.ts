@@ -7,6 +7,8 @@ export type ListQuery = {
   pageSize: number;
   activeOnly: boolean;
   raw: boolean;
+  // raw URLSearchParams for advanced consumers (e.g., structured filters)
+  // not included in public return to keep tests/back-compat stable
 };
 
 export function toBool(v: string | null | undefined): boolean {
@@ -36,11 +38,19 @@ export function parseListQuery(url: URL): ListQuery {
   const pageSize = toClampedInt(url.searchParams.get("pageSize"), {
     def: 50,
     min: 1,
-    max: 2000,
+    max: 500,
   });
 
   const activeOnly = toBool(url.searchParams.get("activeOnly"));
   const raw = toBool(url.searchParams.get("raw"));
 
-  return { q, page, pageSize, activeOnly, raw };
+  // expose URLSearchParams via hidden property for advanced handlers
+  const out: any = { q, page, pageSize, activeOnly, raw };
+  Object.defineProperty(out, "searchParams", {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: url.searchParams,
+  });
+  return out as ListQuery;
 }

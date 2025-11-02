@@ -25,7 +25,7 @@ export type InventorySummaryInput = {
   total_committed_value: number;
 };
 
-const inventorySummary: ResourceConfig<InventorySummary, InventorySummaryInput> = {
+const inventory_summary: ResourceConfig<InventorySummary, InventorySummaryInput> = {
   table: "vw_dashboard_inventory_summary",
   pk: "total_inventory_records", // Use a field that exists as primary key
   select: "total_inventory_records, unique_item_count, total_available_stock, total_on_order_quantity, total_committed_quantity, out_of_stock_count, total_on_order_value, total_inventory_value, total_committed_value",
@@ -62,7 +62,7 @@ const inventorySummary: ResourceConfig<InventorySummary, InventorySummaryInput> 
   },
 };
 
-export default inventorySummary;
+export default inventory_summary;
 
 // Data fetching function using the view
 export async function getInventorySummary(): Promise<InventorySummary> {

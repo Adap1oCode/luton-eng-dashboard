@@ -28,3 +28,30 @@ export function parsePagination(
   const pageSize = parsePositiveInt(sp.pageSize, defaultPageSize, { min, max });
   return { page, pageSize };
 }
+
+/**
+ * Parse pagination and filters from search params.
+ * Single source of truth for list view param parsing.
+ */
+export function parseListParams(
+  sp: SPRecord,
+  quickFilterMeta: Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }> = [],
+  paginationOpts: { defaultPage?: number; defaultPageSize?: number; max?: number } = {}
+): { page: number; pageSize: number; filters: Record<string, string> } {
+  const { page, pageSize } = parsePagination(sp, {
+    defaultPage: paginationOpts.defaultPage ?? 1,
+    defaultPageSize: paginationOpts.defaultPageSize ?? 5,
+    max: paginationOpts.max ?? 500,
+  });
+  
+  const filters: Record<string, string> = {};
+  quickFilterMeta.forEach(meta => {
+    const rawValue = sp[meta.id];
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+    if (value && typeof value === 'string') {
+      filters[meta.id] = value;
+    }
+  });
+  
+  return { page, pageSize, filters };
+}
