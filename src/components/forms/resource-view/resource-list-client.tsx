@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { parseListParams, type SPRecord } from "@/lib/next/search-params";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
 import { FullScreenLoader } from "@/components/ui/enhanced-loader";
@@ -82,17 +83,21 @@ export function ResourceListClient<TRow = any>({
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Extract current filters and pagination from URL
-  const currentFilters: Record<string, string> = {};
-  quickFilters.forEach(filter => {
-    const value = searchParams.get(filter.id);
-    if (value) {
-      currentFilters[filter.id] = value;
-    }
-  });
+  // Convert client SearchParams to SPRecord for shared parser
+  const searchParamsRecord = useMemo(() => Object.fromEntries(searchParams.entries()) as SPRecord, [searchParams]);
   
-  const page = parseInt(searchParams.get(pageParamKeys.page || "page") || initialPage.toString());
-  const pageSize = parseInt(searchParams.get(pageParamKeys.pageSize || "pageSize") || initialPageSize.toString());
+  // Parse pagination and filters using shared logic
+  const { page, pageSize, filters: currentFilters } = parseListParams(
+    searchParamsRecord,
+    quickFilters.map(f => ({ id: f.id, toQueryParam: f.toQueryParam })), // Extract metadata only
+    { defaultPage: initialPage, defaultPageSize: initialPageSize, max: 500 }
+  );
+  
+  // Serialize filters for stable queryKey
+  const serializedFilters = useMemo(() => {
+    const keys = Object.keys(currentFilters).sort(); // Sort for stability
+    return keys.map(key => `${encodeURIComponent(key)}:${encodeURIComponent(currentFilters[key])}`).join('|');
+  }, [currentFilters]);
   
   // Column width state management - persist across data fetches
   const storageKey = columnWidthsKey || `${routeSegment}-column-widths`;
@@ -146,7 +151,7 @@ export function ResourceListClient<TRow = any>({
 
   // React Query for data fetching with comprehensive error handling
   const { data, error, isLoading, isError, isFetching, refetch } = useQuery({
-    queryKey: [queryKeyBase, page, pageSize, ...Object.values(currentFilters)],
+    queryKey: [queryKeyBase, page, pageSize, serializedFilters || 'no-filters'],
     queryFn: async () => {
       const extraQuery = buildExtraQueryFromFilters();
       
@@ -164,7 +169,10 @@ export function ResourceListClient<TRow = any>({
       return result;
     },
     initialData: { rows: initialData, total: initialTotal },
-    staleTime,
+    initialDataUpdatedAt: Date.now(), // Mark SSR data as fresh
+    staleTime: Math.max(staleTime, 5 * 60 * 1000), // Ensure min 5min for SSR data
+    refetchOnWindowFocus: false, // Explicit disable (reinforces global default)
+    refetchOnReconnect: false, // Explicit disable (reinforces global default)
     retry: (failureCount, error) => {
       // Don't retry on 4xx errors (client errors)
       if (error instanceof Error && error.message.includes('4')) {

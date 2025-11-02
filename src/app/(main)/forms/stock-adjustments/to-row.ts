@@ -19,3 +19,4 @@ export function toRow(d: any): StockAdjustmentRow {
   };
 }
 
+

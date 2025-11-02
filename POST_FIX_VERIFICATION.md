@@ -416,3 +416,4 @@ git checkout HEAD -- src/components/forms/resource-view/resource-table-client.ts
 **If all checks pass**: Proceed with PR  
 **If any check fails**: Stop and report failing step + file:line references
 
+

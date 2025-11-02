@@ -200,6 +200,10 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   buildColumns: () => _memoizedColumns,
 };
 
+// Freeze to prevent mutations and stabilize reference
+Object.freeze(stockAdjustmentsViewConfig);
+Object.freeze(stockAdjustmentsViewConfig.quickFilters); // Freeze nested array
+
 // ---- Bundle export for ultra-minimal page.tsx usage --------------------------
 
 export const title = RESOURCE_TITLE;
@@ -218,4 +222,7 @@ export const config = {
   resourceKey: RESOURCE_KEY,
   permissionPrefix: PERMISSION_PREFIX,
 };
+
+// Freeze config bundle to stabilize reference
+Object.freeze(config);
 

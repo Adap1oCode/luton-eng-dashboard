@@ -107,3 +107,4 @@ All tests are ready to commit with message:
 test(stock-adjustments): add vitest coverage for core fixes
 ```
 
+

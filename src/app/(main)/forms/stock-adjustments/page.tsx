@@ -7,12 +7,12 @@
 import type { Metadata } from "next";
 
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
-import { resolveSearchParams, parsePagination, type SPRecord } from "@/lib/next/search-params";
+import { resolveSearchParams, parseListParams, type SPRecord } from "@/lib/next/search-params";
 import { RESOURCE_TITLE, API_ENDPOINT } from "./constants";
 import { StockAdjustmentsClient } from "./stock-adjustments-client";
 import { StockAdjustmentsErrorBoundary } from "./stock-adjustments-error-boundary";
 import { toRow } from "./to-row";
-import { statusToQuery } from "./filters";
+import { stockAdjustmentsFilterMeta, statusToQuery } from "./filters.meta";
 
 // 🧾 Browser tab title for this screen (pairs with root layout title template)
 export const metadata: Metadata = {
@@ -21,13 +21,11 @@ export const metadata: Metadata = {
 
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
   const sp = await resolveSearchParams(props.searchParams);
-  const { page, pageSize } = parsePagination(sp, { defaultPage: 1, defaultPageSize: 5, max: 500 });
+  const { page, pageSize, filters } = parseListParams(sp, stockAdjustmentsFilterMeta, { defaultPage: 1, defaultPageSize: 5, max: 500 });
 
-  // Handle status filter from quick filters
-  const statusFilter = Array.isArray(sp.status) ? sp.status[0] : sp.status;
+  // Apply status filter transform if present
   const extraQuery: Record<string, any> = { raw: "true" };
-  
-  // Add status filter if specified
+  const statusFilter = filters.status;
   if (statusFilter && statusFilter !== "ALL") {
     Object.assign(extraQuery, statusToQuery(statusFilter));
     console.log(`[Stock Adjustments] Status filter: ${statusFilter}, extraQuery:`, extraQuery);

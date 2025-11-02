@@ -455,9 +455,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
     // ✅ use the same idField consistently for stable keys
-    getRowId: (row: TRow, idx: number, parent?: Row<TRow>) => {
-      const domId = (row as any)[idField] as string | undefined;
-      return domId ?? (row as { id?: string }).id ?? `${parent?.id ?? "row"}_${idx}`;
+    getRowId: (row: TRow, idx: number) => {
+      const id = String((row as any)[idField]);
+      return id || `row_${idx}`;
     },
   });
 
