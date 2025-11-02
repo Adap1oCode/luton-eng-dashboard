@@ -2,7 +2,14 @@
 
 ## One-Time Setup
 
-### Option 1: Interactive Setup (Recommended)
+### Option 1: Interactive Setup with Script (Recommended)
+
+**Windows PowerShell:**
+```powershell
+.\scripts\setup-supabase-cli.ps1
+```
+
+**Mac/Linux:**
 ```bash
 ./scripts/setup-supabase-cli.sh
 ```
@@ -147,7 +154,22 @@ supabase db execute -f scripts/your-migration.sql
 
 ---
 
-## Alternative: Dashboard Execution
+## Alternative Methods
+
+### Option 1: Use Anon Key (Read-Only, Safe!)
+For extracting schema without powerful tokens:
+
+```bash
+node scripts/extract-schema-safely.mjs > schema.txt
+```
+
+**Benefits:**
+- ✅ Uses public anon key (safe to share)
+- ✅ No access token needed
+- ✅ Read-only operations only
+- ✅ Perfect for viewing schema without risk
+
+### Option 2: Dashboard Execution
 
 If CLI issues persist, use the Supabase Dashboard:
 
