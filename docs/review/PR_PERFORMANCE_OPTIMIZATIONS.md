@@ -28,12 +28,18 @@ Optimize the Stock Adjustments table (`/forms/stock-adjustments`) by:
 - `src/components/data-table/use-column-resize.ts`
 - `src/components/data-table/use-saved-views.ts`
 - `src/app/(main)/forms/stock-adjustments/stock-adjustments-table-client.tsx`
+- `src/lib/forms/schema.ts` (TypeScript fix)
 
 ### Files Deleted: 2
 - `src/components/data-table/auto-column-widths.ts` (~150 lines)
 - `src/components/data-table/__tests__/auto-column-widths.spec.ts` (~38 lines)
 
 **Total**: ~430 lines removed, ~645 lines modified
+
+### Critical Bug Fix (Latest)
+- **Fix**: Preserve SSR `initialRows` when React Query fails or returns undefined
+- **Issue**: Data disappeared after client-side query ran if query failed or returned unexpected structure
+- **Solution**: Added explicit error handling in `currentRows`/`currentTotal` fallback logic to always preserve SSR data
 
 ---
 
