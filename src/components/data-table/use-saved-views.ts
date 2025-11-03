@@ -18,6 +18,9 @@ export type SavedView = {
   visibleColumns: Record<string, boolean>;
   sortConfig: SortConfig;
   createdAt: string; // ISO
+  // Pixel-based column widths
+  columnWidthsPx?: Record<string, number>;
+  baselineWidthPx?: number;
 };
 
 export type ViewSnapshot = Omit<SavedView, "id" | "createdAt">;
@@ -53,11 +56,23 @@ function writeStorage(tableId: string, views: SavedView[]) {
 }
 
 export function useSavedViews(tableId: string, defaultColumnIds: string[]) {
+  // ✅ FIX: Start with lightweight defaults, defer localStorage reads to avoid blocking render
+  // Helper to create default view (used in initial state and when no saved views exist)
+  const createDefaultView = useCallback((): SavedView => ({
+    id: "default",
+    name: "Default View",
+    description: "All columns visible, no sorting",
+    isDefault: true,
+    columnOrder: defaultColumnIds,
+    visibleColumns: defaultColumnIds.reduce((acc, id) => ((acc[id] = true), acc), {} as Record<string, boolean>),
+    sortConfig: { column: null, direction: "none", type: "alphabetical" },
+    createdAt: new Date().toISOString(),
+  }), [defaultColumnIds]);
+
+  // Start with default view - non-blocking initial state (no localStorage read)
+  // Use lazy initializer to call createDefaultView only once
   const [views, setViews] = useState<SavedView[]>(() => {
-    // keep local for offline/SSR fallback; remote layer will hydrate
-    const existing = readStorage(tableId);
-    if (existing.length) return existing;
-    const def: SavedView = {
+    const defaultView: SavedView = {
       id: "default",
       name: "Default View",
       description: "All columns visible, no sorting",
@@ -67,18 +82,42 @@ export function useSavedViews(tableId: string, defaultColumnIds: string[]) {
       sortConfig: { column: null, direction: "none", type: "alphabetical" },
       createdAt: new Date().toISOString(),
     };
-    writeStorage(tableId, [def]);
-    return [def];
+    return [defaultView];
   });
+  const [currentViewId, setCurrentViewId] = useState<string>("default");
 
-  const [currentViewId, setCurrentViewId] = useState<string>(() => {
-    const v = readStorage(tableId);
-    const def = v.find((x) => x.isDefault) ?? v[0];
-    return def?.id ?? "default";
-  });
-
+  // Load saved views from localStorage asynchronously (non-blocking)
   useEffect(() => {
-    writeStorage(tableId, views);
+    const existing = readStorage(tableId);
+    if (existing.length > 0) {
+      setViews(existing);
+      const def = existing.find((x) => x.isDefault) ?? existing[0];
+      setCurrentViewId(def?.id ?? "default");
+    } else {
+      // No saved views - persist default view using memoized function
+      writeStorage(tableId, [createDefaultView()]);
+    }
+  }, [tableId, createDefaultView]);
+
+  // Defer localStorage writes to avoid blocking main thread
+  // Use requestIdleCallback if available, otherwise setTimeout as fallback
+  useEffect(() => {
+    // Batch writes by deferring them slightly - prevents rapid-fire writes during state updates
+    let writeTimer: ReturnType<typeof requestIdleCallback> | ReturnType<typeof setTimeout>;
+    
+    if (typeof requestIdleCallback !== "undefined") {
+      writeTimer = requestIdleCallback(() => writeStorage(tableId, views), { timeout: 1000 });
+    } else {
+      writeTimer = setTimeout(() => writeStorage(tableId, views), 0);
+    }
+    
+    return () => {
+      if (typeof requestIdleCallback !== "undefined") {
+        cancelIdleCallback(writeTimer as ReturnType<typeof requestIdleCallback>);
+      } else {
+        clearTimeout(writeTimer as ReturnType<typeof setTimeout>);
+      }
+    };
   }, [tableId, views]);
 
   const currentView = useMemo(

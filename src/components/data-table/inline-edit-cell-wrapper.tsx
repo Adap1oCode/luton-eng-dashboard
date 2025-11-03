@@ -30,16 +30,19 @@ export const InlineEditCellWrapper = <TRow extends { id: string }>({
   const rawValue = row.getValue(columnId);
   const isEditing = editingCell?.rowId === (row.original as { id: string }).id && editingCell?.columnId === columnId;
 
+  // Wrap in container that preserves column width - prevents flicker during edit transitions
   return (
-    <InlineEditCell
-      value={rawValue}
-      isEditing={isEditing}
-      editingValue={editingCell?.value ?? rawValue}
-      config={config}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, columnId, rawValue)}
-      onEditChange={onEditChange}
-      onSave={onSave}
-      onCancel={onCancel}
-    />
+    <div className="w-full min-w-0 max-w-full">
+      <InlineEditCell
+        value={rawValue}
+        isEditing={isEditing}
+        editingValue={editingCell?.value ?? rawValue}
+        config={config}
+        onEditStart={() => onEditStart((row.original as { id: string }).id, columnId, rawValue)}
+        onEditChange={onEditChange}
+        onSave={onSave}
+        onCancel={onCancel}
+      />
+    </div>
   );
 };

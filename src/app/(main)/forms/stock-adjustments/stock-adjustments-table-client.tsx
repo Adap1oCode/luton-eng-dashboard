@@ -7,6 +7,7 @@
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
+import { useMemo } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import type { StockAdjustmentRow } from "./stock-adjustments.config";
@@ -26,14 +27,16 @@ export function StockAdjustmentsTableClient({
   pageSize,
 }: StockAdjustmentsTableClientProps) {
   // Materialize columns in client context (where makeActionsColumn() can execute)
-  const viewConfigWithColumns: BaseViewConfig<StockAdjustmentRow> & {
-    columns?: any[];
-  } = {
-    ...stockAdjustmentsViewConfig,
-    columns: stockAdjustmentsViewConfig.buildColumns(),
-  };
-  // Remove buildColumns function since columns are materialized
-  delete (viewConfigWithColumns as any).buildColumns;
+  // Memoize to prevent unstable reference that triggers unnecessary recalculations
+  const viewConfigWithColumns = useMemo<BaseViewConfig<StockAdjustmentRow> & { columns?: any[] }>(() => {
+    const config = {
+      ...stockAdjustmentsViewConfig,
+      columns: stockAdjustmentsViewConfig.buildColumns(),
+    };
+    // Remove buildColumns function since columns are materialized
+    delete (config as any).buildColumns;
+    return config;
+  }, []); // Empty deps since buildColumns should be pure
 
   return (
     <ResourceTableClient

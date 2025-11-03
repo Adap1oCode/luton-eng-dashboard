@@ -45,7 +45,6 @@ import {
 import { ArrowUpDown, Settings, ChevronDown, SortAsc, SortDesc, Filter, Layout, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import { computeAutoColumnPercents } from "@/components/data-table/auto-column-widths";
 import { ColumnsMenu } from "@/components/data-table/columns-menu";
 import { exportCSV } from "@/components/data-table/csv-export";
 import { DataTable } from "@/components/data-table/data-table";
@@ -59,6 +58,7 @@ import { StatusCellWrapper } from "@/components/data-table/status-cell-wrapper";
 import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { useSavedViews } from "@/components/data-table/use-saved-views";
+import { useContainerResize } from "@/components/data-table/use-container-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
@@ -122,31 +122,61 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
 
+  // ✅ FIX: Extract stable config properties to prevent unnecessary memo recalculations
+  // This ensures memos only update when the actual property values change, not when config object reference changes
+  const configApiEndpoint = React.useMemo(() => {
+    const configWithEndpoint = config as unknown as { apiEndpoint?: string };
+    return configWithEndpoint.apiEndpoint;
+  }, [(config as unknown as { apiEndpoint?: string })?.apiEndpoint]);
+
+  const configResourceKeyForDelete = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.resourceKeyForDelete as string | undefined;
+  }, [(config as Record<string, unknown>)?.resourceKeyForDelete]);
+
+  const configQuickFilters = React.useMemo(() => {
+    return config.quickFilters ?? [];
+  }, [config.quickFilters]);
+
+  const configColumns = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.columns;
+  }, [(config as Record<string, unknown>)?.columns]);
+
+  const configBuildColumns = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.buildColumns;
+  }, [(config as Record<string, unknown>)?.buildColumns]);
+
+  const configFormsRouteSegment = React.useMemo(() => {
+    return (config as any)?.formsRouteSegment ?? "table";
+  }, [(config as any)?.formsRouteSegment]);
+
   // ⚙️ STEP 1: React Query infrastructure helpers (non-breaking, not used yet)
   // Extract API endpoint from config - check for apiEndpoint prop first, fallback to resourceKeyForDelete
   const getApiEndpoint = React.useCallback((): string => {
-    const configWithEndpoint = config as unknown as { apiEndpoint?: string };
-    if (configWithEndpoint.apiEndpoint) {
-      return configWithEndpoint.apiEndpoint;
+    if (configApiEndpoint) {
+      return configApiEndpoint;
     }
     // Fallback: construct from resourceKeyForDelete (e.g., "tcm_tally_cards" -> "/api/tcm_tally_cards")
-    const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+    const resourceKey = configResourceKeyForDelete ?? "tcm_tally_cards";
     return `/api/${resourceKey}`;
-  }, [config]);
+  }, [configApiEndpoint, configResourceKeyForDelete]);
 
   // Build query key for React Query cache
-  // Pattern: [resourceKey, page, pageSize, serializedFilters]
+  // Pattern: [endpoint, page, pageSize, serializedFilters]
+  // Use apiEndpoint (view) instead of resourceKeyForDelete (table) to ensure we invalidate the correct queries
+  // This is critical for SCD2 tables where the view filters duplicates but the table has them
   const buildQueryKey = React.useCallback((currentPage: number, currentPageSize: number, currentFilters?: Record<string, string>): (string | number)[] => {
-    const resourceKeyRaw = (config as Record<string, unknown>)?.resourceKeyForDelete;
-    const resourceKey = typeof resourceKeyRaw === "string" ? resourceKeyRaw : "resource";
+    // Use apiEndpoint for queryKey to match what we actually fetch from (the view, not the table)
+    const endpoint = getApiEndpoint();
+    // Extract the resource name from the endpoint (e.g., "/api/v_tcm_user_tally_card_entries" -> "v_tcm_user_tally_card_entries")
+    const endpointKey = endpoint.replace(/^\/api\//, "");
     const serializedFilters = currentFilters
       ? Object.keys(currentFilters)
           .sort()
           .map((k) => `${encodeURIComponent(k)}:${encodeURIComponent(currentFilters[k])}`)
           .join("|")
       : "no-filters";
-    return [resourceKey, currentPage, currentPageSize, serializedFilters];
-  }, [config]);
+    return [endpointKey, currentPage, currentPageSize, serializedFilters];
+  }, [getApiEndpoint]);
 
   // ⚙️ STEP 2: Parse filters from URL and set up React Query (parallel to existing flow)
   // Parse pagination and filters from URL search params
@@ -160,9 +190,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // Extract quickFilterMeta from config.quickFilters for parseListParams
   const quickFilterMeta = React.useMemo(() => {
-    const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
+    const quickFilters = configQuickFilters as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
     return quickFilters.map((f) => ({ id: f.id, toQueryParam: f.toQueryParam }));
-  }, [config.quickFilters]);
+  }, [configQuickFilters]);
 
   // Parse current filters from URL
   const { filters: currentFilters } = parseListParams(searchParamsRecord, quickFilterMeta, {
@@ -225,15 +255,33 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   });
 
   // ⚙️ STEP 3: Switch table data source to React Query (with fallback to initialRows)
-  // Get current rows from React Query, fallback to initialRows during loading
+  // Get current rows from React Query, fallback to initialRows during loading or when query fails
   const currentRows = React.useMemo(() => {
-    return queryData?.rows ?? initialRows;
-  }, [queryData?.rows, initialRows]);
+    // If query failed or returned undefined, use initialRows (SSR data)
+    if (queryError || !queryData) {
+      return initialRows;
+    }
+    // If queryData exists and has rows array, use it
+    if (Array.isArray(queryData.rows)) {
+      return queryData.rows;
+    }
+    // Fallback to initialRows if queryData structure is unexpected
+    return initialRows;
+  }, [queryData?.rows, queryData, queryError, initialRows]);
 
   // Get current total from React Query, fallback to initialTotal during loading
   const currentTotal = React.useMemo(() => {
-    return queryData?.total ?? initialTotal;
-  }, [queryData?.total, initialTotal]);
+    // If query failed or returned undefined, use initialTotal (SSR data)
+    if (queryError || !queryData) {
+      return initialTotal;
+    }
+    // If queryData exists and has total, use it
+    if (typeof queryData.total === 'number') {
+      return queryData.total;
+    }
+    // Fallback to initialTotal if queryData structure is unexpected
+    return initialTotal;
+  }, [queryData?.total, queryData, queryError, initialTotal]);
 
   // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
@@ -242,13 +290,40 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
   const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
-    const injected = (config as Record<string, unknown>)?.columns;
+    const injected = configColumns;
     if (Array.isArray(injected)) return injected as ColumnDef<TRow, unknown>[];
-    if (typeof (config as Record<string, unknown>)?.buildColumns === "function") {
-      return (config as { buildColumns: (arg: boolean) => ColumnDef<TRow, unknown>[] }).buildColumns(true);
+    if (typeof configBuildColumns === "function") {
+      return (configBuildColumns as (arg: boolean) => ColumnDef<TRow, unknown>[])(true);
     }
     return [];
-  }, [config]);
+  }, [configColumns, configBuildColumns]);
+
+  // -- Saved Views: tableId and defaultColumnIds MUST be declared early to avoid TDZ -----------
+  // These are used by useSavedViews hook and effects, so they must come before any effects that reference them
+  const tableId = React.useMemo(() => {
+    return `forms/${configFormsRouteSegment}`;
+  }, [configFormsRouteSegment]);
+
+  const defaultColumnIds = React.useMemo(() => {
+    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
+    // keep __select first if present
+    const selectId = all.find((id) => id === "__select");
+    const others = all.filter((id) => id && id !== "__select");
+    return selectId ? [selectId, ...others] : others;
+  }, [baseColumns]);
+
+  // Saved Views: hydrate & persist state - declared early to avoid TDZ
+  const {
+    views,
+    currentView,
+    currentViewId,
+    setCurrentViewId,
+    applyView,
+    saveView,
+    updateView,
+    setDefault,
+    hydrateFromRemote,
+  } = useSavedViews(tableId, defaultColumnIds);
 
   // Local TanStack table state
   const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
@@ -286,40 +361,99 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
+  
+  // Store table reference in ref to avoid recreating event listeners when table object changes
+  // Initialize with null since table is created later via useReactTable
+  const tableRefForExport = React.useRef<any>(null);
 
-  // ✅ Initialize column widths from config column `size` values (convert pixels to percentages)
-  // This prevents auto-calculation from changing widths when data refreshes (e.g., after inline edit)
+  // Utility: Create stable signature from column definitions to detect schema changes
+  // Minimal signature: only { id, size, minSize, maxSize } to avoid unnecessary recalculations
+  const columnsSignature = React.useCallback((cols: ColumnDef<TRow, unknown>[]): string => {
+    return JSON.stringify(
+      cols.map((c) => ({
+        id: c.id ?? (c as any).accessorKey,
+        size: (c as any).size,
+        minSize: (c as any).minSize ?? (c.meta as any)?.minPx,
+        maxSize: (c as any).maxSize ?? (c.meta as any)?.maxPx,
+      }))
+    );
+  }, []);
+
+  // Memoize column signature to detect real schema changes
+  const colsSig = React.useMemo(() => columnsSignature(baseColumns), [baseColumns, columnsSignature]);
+
+  // ✅ Initialize column widths (priority: saved px → config px → auto-calc)
+  // Store as pixels, not percentages
   const initialColumnWidths = React.useMemo<Record<string, number>>(() => {
     const widths: Record<string, number> = {};
-    let totalPixels = 0;
-    
-    // First pass: sum all pixel sizes to normalize
+
+    // First priority: Use config `size` values directly as pixels
     for (const col of baseColumns) {
       if (col.id && (col as any).size && typeof (col as any).size === "number") {
         const size = (col as any).size as number;
         if (size > 0) {
-          totalPixels += size;
+          widths[col.id] = size;
         }
       }
     }
-    
-    // Second pass: convert to percentages
-    if (totalPixels > 0) {
-      for (const col of baseColumns) {
-        if (col.id && (col as any).size && typeof (col as any).size === "number") {
-          const size = (col as any).size as number;
-          if (size > 0) {
-            widths[col.id] = (size / totalPixels) * 100;
-          }
-        }
-      }
+
+    // Ensure __select column always has width (from selectionColumn definition)
+    // This ensures the checkbox column gets proper initial width even if not in baseColumns
+    const hasSelectColumn = baseColumns.some((col) => {
+      const id = (col as { id?: string; accessorKey?: string }).id ?? (col as { accessorKey?: string }).accessorKey;
+      return id === "__select" || id === "select";
+    });
+    if (!hasSelectColumn) {
+      widths.__select = 40; // Match selectionColumn size definition
     }
-    
+
     return widths;
-  }, [baseColumns]);
+  }, [colsSig]); // Only recalculate when column schema changes
+
+  // ✅ FIX: Lazy-load container resize observer
+  // Only enable when needed (responsive scaling or when user resizes)
+  // Start disabled to avoid ResizeObserver setup on initial render
+  const [enableContainerResize, setEnableContainerResize] = React.useState(false);
+  
+  // Enable resize observer when:
+  // 1. Current view has baseline (needs responsive scaling)
+  // 2. User starts resizing (onMouseDownResize will enable it)
+  React.useEffect(() => {
+    if (currentView?.baselineWidthPx != null) {
+      setEnableContainerResize(true);
+    }
+  }, [currentView?.baselineWidthPx]);
+  
+  // Track container width for responsive scaling (only when enabled)
+  const containerWidthPx = useContainerResize(tableRef, enableContainerResize);
 
   // Column widths state for resizing (initialize from config sizes, then user can override)
-  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(initialColumnWidths, tableRef);
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize: onMouseDownResizeOriginal } = useColumnResize(
+    initialColumnWidths,
+    tableRef,
+    {
+      getColumnMeta: (columnId: string) => {
+        const col = baseColumns.find((c) => c.id === columnId);
+        if (!col) return null;
+        return {
+          minPx: (col.meta as any)?.minPx ?? (col as any).minSize,
+          maxPx: (col.meta as any)?.maxPx ?? (col as any).maxSize,
+        };
+      },
+    }
+  );
+
+  // ✅ FIX: Wrap resize handler to enable container resize observer on first use
+  const onMouseDownResize = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>, columnId: string) => {
+      // Enable container resize observer on first resize interaction
+      if (!enableContainerResize) {
+        setEnableContainerResize(true);
+      }
+      onMouseDownResizeOriginal(e, columnId);
+    },
+    [enableContainerResize, onMouseDownResizeOriginal]
+  );
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
@@ -328,12 +462,25 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const [editingStatus, setEditingStatus] = React.useState<{ rowId: string; value: string } | null>(null);
 
   // DnD setup for column reordering
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
-
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => initialRows.map((row) => ((row as any)[idField] as string) ?? (row as any).id),
-    [initialRows, idField],
+  // Configure PointerSensor to ignore resize handles and require movement before activation
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before activating drag (prevents accidental drags)
+      },
+      // Ignore pointer events that originate from resize handles
+    }),
+    useSensor(KeyboardSensor)
   );
+
+  // Extract stable row IDs to avoid depending on entire initialRows array reference
+  // Use idField from config to extract IDs, creating stable array only when IDs actually change
+  const dataIds = React.useMemo<UniqueIdentifier[]>(() => {
+    return initialRows.map((row, idx) => {
+      const id = (row as any)[idField];
+      return id ? String(id) : ((row as any).id ? String((row as any).id) : `row_${idx}`);
+    });
+  }, [initialRows, idField]);
 
   // Handle column reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -349,7 +496,16 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    if (isResizing) return; // ignore DnD while resizing
+    if (isResizing) {
+      return; // ignore DnD while resizing
+    }
+    
+    // Check if the drag started from a resize handle
+    const target = event.active.data.current?.originalEvent?.target as HTMLElement | null;
+    if (target?.closest('[data-resize-handle="true"]')) {
+      return; // Ignore drags that originate from resize handles
+    }
+    
     const id = String(event.active.id ?? "");
     // Only set overlay for column drags (ignore row drags)
     if (columnOrder.includes(id)) setActiveColumnId(id);
@@ -377,7 +533,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       });
       if (res.ok) {
         // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
-        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+        // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
+        const endpoint = getApiEndpoint();
+        const endpointKey = endpoint.replace(/^\/api\//, "");
+        queryClient.invalidateQueries({ queryKey: [endpointKey] });
       } else {
         alert("Failed to update status");
       }
@@ -386,7 +545,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     } finally {
       setEditingStatus(null);
     }
-  }, [editingStatus, config, queryClient]);
+  }, [editingStatus, config, queryClient, getApiEndpoint]);
 
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
 
@@ -439,7 +598,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
       if (res.ok) {
         // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
-        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+        // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
+        // This ensures we invalidate queries that fetch from the view (with latest records), not the table (with duplicates)
+        const endpoint = getApiEndpoint();
+        const endpointKey = endpoint.replace(/^\/api\//, "");
+        queryClient.invalidateQueries({ queryKey: [endpointKey] });
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(`Failed to update ${editingCell.columnId}: ${errorData.error?.message || res.statusText}`);
@@ -450,7 +613,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, config, queryClient, filteredRows, idField]);
+  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -480,8 +643,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           />
         </div>
       ),
-      size: 42,
-      meta: { widthPct: 3, minPct: 2, maxPct: 5, minPx: 44 },
+      size: 40,
+      meta: { minPx: 40, maxPx: 48 },
       enableHiding: false,
       enableResizing: false,
       enableSorting: false,
@@ -489,33 +652,44 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     [],
   );
 
+  // ✅ FIX: Split header decoration from base columns to reduce recalculation
+  // Memoized header decoration function (only depends on columnOrder changes)
+  const createHeaderDecoration = React.useCallback(
+    (label: string, columnId: string) => {
+      return (props: any) => (
+        <DecoratedHeader
+          column={
+            props.column as {
+              id: string;
+              getIsSorted: () => false | "asc" | "desc";
+              toggleSorting: (desc?: boolean) => void;
+            }
+          }
+          label={label}
+          columnOrder={columnOrder}
+        />
+      );
+    },
+    [columnOrder],
+  );
+
   // 🎛️ Memoized columns that include decorated headers
+  // Now only recalculates when baseColumns change (header decoration is stable function)
   const columnsWithHeaders = React.useMemo(() => {
     return baseColumns.map((col) => {
       const c: ColumnDef<TRow, unknown> = { ...col };
 
       const header = (col as { header?: string | React.ReactElement | null }).header;
       if (typeof header === "string" || React.isValidElement(header) || header == null) {
-        const label = header ?? (col as { id?: string }).id ?? "";
-        // Assign header as a render function directly
-        c.header = (props) => (
-          <DecoratedHeader
-            column={
-              props.column as {
-                id: string;
-                getIsSorted: () => false | "asc" | "desc";
-                toggleSorting: (desc?: boolean) => void;
-              }
-            }
-            label={label}
-            columnOrder={columnOrder}
-          />
-        );
+        // Extract string label: if header is string use it, otherwise fall back to column id
+        const label = typeof header === "string" ? header : (col as { id?: string }).id ?? "";
+        // Use memoized header decoration function
+        c.header = createHeaderDecoration(label, col.id ?? "");
       }
 
       return c;
     });
-  }, [baseColumns, columnOrder, onMouseDownResize]);
+  }, [baseColumns, createHeaderDecoration]);
 
   // 🧩 Enhance columns: add filter function + inline status editing
   const enhancedColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
@@ -631,7 +805,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    columnResizeMode: "onChange",
+    columnResizeMode: "onEnd", // Only update on resize end, not during drag
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
     // ✅ use the same idField consistently for stable keys
@@ -640,6 +814,68 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       return id || `row_${idx}`;
     },
   });
+
+  // Update table ref immediately after table is created
+  React.useEffect(() => {
+    tableRefForExport.current = table;
+  }, [table]);
+
+  // Extract visible column IDs separately to avoid depending on entire table in renderColumnWidthsPx
+  // Must be defined after table is created but before renderColumnWidthsPx
+  const visibleColumnIds = React.useMemo(() => {
+    return new Set(
+      table.getAllLeafColumns().filter((c) => c.getIsVisible()).map((c) => String(c.id))
+    );
+  }, [table]);
+
+  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
+  React.useEffect(() => {
+    // TODO: Implement remote hydration if needed
+    // hydrateFromRemote(remoteViews);
+  }, [tableId, hydrateFromRemote, defaultColumnIds]);
+
+  // Apply current view to column widths on mount (if saved px widths exist)
+  // Guarded: only runs when currentView and setWidths are available
+  React.useEffect(() => {
+    if (!currentView || !setWidths) return;
+
+    // Use saved px widths if available
+    if (currentView.columnWidthsPx && Object.keys(currentView.columnWidthsPx).length > 0) {
+      setWidths(currentView.columnWidthsPx);
+    }
+  }, [currentView, setWidths]);
+
+  // Calculate responsive scaling for render widths
+  const renderColumnWidthsPx = React.useMemo(() => {
+    const widths: Record<string, number> = {};
+    const baselineWidth = currentView?.baselineWidthPx ?? containerWidthPx ?? null;
+
+    // If we have baseline and container widths, apply responsive scaling
+    if (baselineWidth && containerWidthPx && Object.keys(columnWidths).length > 0) {
+      const scale = Math.max(0.7, Math.min(1.4, containerWidthPx / baselineWidth));
+      for (const [columnId, savedWidthPx] of Object.entries(columnWidths)) {
+        // Skip invisible columns
+        if (!visibleColumnIds.has(columnId)) {
+          continue;
+        }
+        const col = baseColumns.find((c) => c.id === columnId);
+        const minPx = (col?.meta as any)?.minPx ?? (col as any)?.minSize ?? 80;
+        const maxPx = (col?.meta as any)?.maxPx ?? (col as any)?.maxSize;
+        const scaledWidth = Math.round(savedWidthPx * scale);
+        widths[columnId] = maxPx ? Math.min(maxPx, Math.max(minPx, scaledWidth)) : Math.max(minPx, scaledWidth);
+      }
+      return widths;
+    }
+
+    // Otherwise use saved widths directly (or initial widths), but only for visible columns
+    const filtered: Record<string, number> = {};
+    for (const [columnId, width] of Object.entries(columnWidths)) {
+      if (visibleColumnIds.has(columnId)) {
+        filtered[columnId] = width;
+      }
+    }
+    return Object.keys(filtered).length > 0 ? filtered : columnWidths;
+  }, [columnWidths, currentView?.baselineWidthPx, containerWidthPx, baseColumns, visibleColumnIds]);
 
   // ✅ Seed initial column order once the table is ready
   React.useEffect(() => {
@@ -701,9 +937,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             const res = await fetch(`/api/${resourceKey}/${rowId}`, { method: "DELETE" });
             if (res.ok) {
               toast("Item deleted successfully!");
-              // Clear optimistic state and refresh
+              // Clear optimistic state and invalidate React Query cache for subtle refetch
               clearOptimisticState();
-              router.refresh();
+              // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
+              const endpoint = getApiEndpoint();
+              const endpointKey = endpoint.replace(/^\/api\//, "");
+              queryClient.invalidateQueries({ queryKey: [endpointKey] });
             } else {
               // Revert optimistic state on error
               clearOptimisticState();
@@ -746,7 +985,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, [config, router, confirm, markAsDeleted, clearOptimisticState]);
+  }, [config, router, confirm, markAsDeleted, clearOptimisticState, queryClient, getApiEndpoint]);
 
   // 🔄 Keep URL in sync whenever the controlled pagination changes
   React.useEffect(() => {
@@ -772,76 +1011,35 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
   const dragIdRef = React.useRef<string | null>(null);
 
-  // -- Saved Views: hydrate & persist state ---------------------------------
-  const tableId = React.useMemo(() => {
-    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
-    return `forms/${routeSegment}`;
-  }, [config]);
-
-  const defaultColumnIds = React.useMemo(() => {
-    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
-    // keep __select first if present
-    const selectId = all.find((id) => id === "__select");
-    const others = all.filter((id) => id && id !== "__select");
-    return selectId ? [selectId, ...others] : others;
-  }, [baseColumns]);
-
-  // Temporarily disable saved views to prevent flickering
-  const views: any[] = [];
-  const currentView = null;
-  const setCurrentViewId = () => {};
-  const applyView = () => {};
-  const saveView = () => {};
-  const updateView = () => {};
-  const setDefault = () => {};
-  const hydrateFromRemote = () => {};
-
-  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
-  // Disabled temporarily to prevent flickering
+  // Persist width changes when columnWidths change (triggered by custom resize hook)
+  // This bridges our custom resize hook with saved views persistence
+  // Guarded against TDZ: effect only runs when prerequisites exist
   React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [tableId, hydrateFromRemote, defaultColumnIds]);
+    // Early return if prerequisites missing (guard against TDZ)
+    if (!currentViewId || !updateView || containerWidthPx === null || containerWidthPx === undefined) {
+      return;
+    }
+    if (Object.keys(columnWidths).length === 0) {
+      return;
+    }
+    // Debounce persistence to avoid excessive updates (only on resize end, not during drag)
+    const timeoutId = setTimeout(() => {
+      // Ensure baselineWidthPx is initialized if not set (first persistence)
+      const baseline = currentView?.baselineWidthPx ?? containerWidthPx;
+      updateView(currentViewId, {
+        columnWidthsPx: columnWidths,
+        baselineWidthPx: baseline,
+      });
+    }, 500); // Wait 500ms after last resize before persisting
+    return () => clearTimeout(timeoutId);
+  }, [columnWidths, currentViewId, containerWidthPx, updateView, currentView?.baselineWidthPx]);
 
-  // Apply current view to column order/visibility/widths once when table is ready
-  // Disabled temporarily to prevent flickering
-  React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [currentView, defaultColumnIds, setWidths]);
-
-  // Persist state changes into current view snapshot
-  // Disabled temporarily to prevent flickering
-  React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
-
-  // ✅ Auto-assign smart percentage widths from data (on-demand only)
-  // NOTE: Only recalculate when columns change, NOT when data changes (uses initialRows, not filteredRows)
-  // This prevents widths from changing when data refreshes after inline edits
-  const autoColumnWidthsPct = React.useMemo(() => {
-    const defaultOverrides = { __select: 3, actions: 8 };
-    const cfg = (config ?? {}) as any; // ← guard `config`
-    const overrides = { ...defaultOverrides, ...(cfg.columnWidthsPct ?? {}) };
-
-    // Use initialRows (from SSR) to calculate once, not filteredRows which changes on data refresh
-    // This ensures column widths remain stable even when data updates after inline edits
-    return computeAutoColumnPercents(baseColumns as any[], initialRows as any[], {
-      sampleRows: 50,
-      // do NOT ignore __select so it participates in layout
-      ignoreIds: ["id", "__expander", "__actions"],
-      overrides,
-      floorPct: 8,
-      capPct: 28,
-    });
-  }, [baseColumns, config, initialRows]); // Only recalculate when columns/config/initialRows change, not filteredRows
-
-  // Provide an explicit Auto-fit action (optional: wire to Columns menu)
+  // ✅ REMOVED: Auto-fit columns functionality (was using percentage computation)
+  // If needed in future, can reimplement with pixel-based logic
   const autoFitColumns = React.useCallback(() => {
-    const next = autoColumnWidthsPct;
-    if (next && Object.keys(next).length) setWidths(next);
-  }, [autoColumnWidthsPct, setWidths]);
+    // Reapply initial column widths from config as "auto-fit"
+    setWidths(initialColumnWidths);
+  }, [initialColumnWidths, setWidths]);
 
   // Remote view persistence actions
   const handleSaveViewRemote = React.useCallback(
@@ -850,7 +1048,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         const state = {
           columnOrder,
           columnVisibility,
-          columnWidthsPct: columnWidths,
+          columnWidthsPx: columnWidths, // Use px instead of pct
+          baselineWidthPx: containerWidthPx ?? undefined,
           sortConfig:
             table.getState().sorting?.[0]
               ? {
@@ -894,7 +1093,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         const state = {
           columnOrder,
           columnVisibility,
-          columnWidthsPct: columnWidths,
+          columnWidthsPx: columnWidths, // Use px instead of pct
+          baselineWidthPx: containerWidthPx ?? undefined,
           sortConfig:
             table.getState().sorting?.[0]
               ? {
@@ -961,10 +1161,25 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const showMoreFiltersButton = bottomToolbarButtons.moreFilters !== false;
   const showSaveViewButton = bottomToolbarButtons.saveView !== false;
 
+  // Extract sorting state separately to avoid depending on entire table object
+  const currentSorting = React.useMemo(() => {
+    const sortingState = sorting ?? [];
+    return sortingState[0] ?? { id: null, desc: false };
+  }, [sorting]);
+
+  // Extract column metadata separately to reduce table dependency
+  const leafColumnsMetadata = React.useMemo(() => {
+    return table.getAllLeafColumns()
+      .filter((c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField)
+      .map((c) => ({
+        id: String(c.id),
+        isVisible: c.getIsVisible(),
+        canHide: c.getCanHide(),
+        column: c, // Keep reference to column object for toggleVisibility
+      }));
+  }, [table, idField, columnVisibility]); // columnVisibility ensures we recalculate when visibility changes
+
   const ColumnsAndSortToolbar = React.useMemo(() => {
-    const leafColumns = table.getAllLeafColumns().filter(
-      (c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField, // ✅ exclude idField
-    );
     const labelFor = (id: string) => {
       switch (id) {
         case "tally_card_number":
@@ -980,11 +1195,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       }
     };
 
-    const sortingState = table.getState().sorting ?? [];
-    const current = sortingState[0] ?? { id: null, desc: false };
+    const current = currentSorting;
 
-    const showAll = () => leafColumns.forEach((c) => c.toggleVisibility(true));
-    const hideAll = () => leafColumns.forEach((c) => c.toggleVisibility(false));
+    const showAll = () => {
+      leafColumnsMetadata.forEach((meta) => meta.column.toggleVisibility(true));
+    };
+    const hideAll = () => {
+      leafColumnsMetadata.forEach((meta) => meta.column.toggleVisibility(false));
+    };
     const setSort = (columnId: string, dir: "asc" | "desc") => {
       table.setSorting([{ id: columnId, desc: dir === "desc" }]);
     };
@@ -995,13 +1213,13 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       }
     };
 
-    const menuColumns = leafColumns.map((c) => ({
-      id: String(c.id),
-      label: labelFor(String(c.id)),
-      required: !c.getCanHide(),
+    const menuColumns = leafColumnsMetadata.map((meta) => ({
+      id: meta.id,
+      label: labelFor(meta.id),
+      required: !meta.canHide,
     }));
     const visibleColumns: Record<string, boolean> = Object.fromEntries(
-      leafColumns.map((c) => [String(c.id), c.getIsVisible()]),
+      leafColumnsMetadata.map((meta) => [meta.id, meta.isVisible]),
     );
     const displayColumnsCount = Object.values(visibleColumns).filter(Boolean).length;
 
@@ -1030,7 +1248,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     };
 
     const onColumnToggle = (columnId: string, visible: boolean) => {
-      table.getColumn(columnId)?.toggleVisibility(visible);
+      const meta = leafColumnsMetadata.find((m) => m.id === columnId);
+      if (meta) {
+        meta.column.toggleVisibility(visible);
+      }
     };
 
     // أنواع محلية متوافقة مع SortMenu
@@ -1093,11 +1314,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 }))}
                 currentViewId="default"
                 onApplyView={(v) => {
-                  // applyView(v.id); // Disabled temporarily
+                  applyView(v.id);
                   setColumnOrder(v.columnOrder);
                   setColumnVisibility(v.visibleColumns as any);
-                  const w = (v as any).columnWidthsPct;
-                  if (w) setWidths(w);
+                  // Use pixel widths from saved view (legacy pct views should be migrated on load)
+                  const w = (v as any).columnWidthsPx;
+                  if (w && Object.keys(w).length > 0) setWidths(w);
                 }}
                 onDeleteView={(id) => {
                   handleDeleteViewRemote(id);
@@ -1138,6 +1360,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                     setColumnOrder(initialOrderRef.current);
                   }
                 }}
+                onResetWidths={() => {
+                  // Clear saved widths and re-apply config defaults
+                  setWidths(initialColumnWidths);
+                  if (currentViewId && updateView && containerWidthPx) {
+                    // Reset to config defaults and set fresh baseline for future scaling
+                    updateView(currentViewId, {
+                      columnWidthsPx: undefined,
+                      baselineWidthPx: containerWidthPx, // Set fresh baseline for reset state
+                    });
+                  }
+                }}
                 onDragStart={onDragStart}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
@@ -1172,77 +1405,51 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         )}
       </div>
     );
-  }, [table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting, showViewsButton, showColumnsButton, showSortButton]);
+  }, [currentSorting, leafColumnsMetadata, table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting, showViewsButton, showColumnsButton, showSortButton, initialOrderRef, initialColumnWidths, containerWidthPx, currentViewId, updateView, autoFitColumns]);
 
-  // ✅ NEW: More Filters Section and client->parent filter mapping
-  const MoreFiltersSection = React.useMemo(() => {
-    if (!showMoreFilters) return null;
+  // ✅ FIX: Lazy-load More Filters Section - only compute when showMoreFilters is true
+  // Memoize active filter count separately to avoid recalculating when filters change
+  const activeFiltersCount = React.useMemo(() => {
+    return Object.values(filters).filter((filter) => filter.value.trim() !== "").length;
+  }, [filters]);
 
-    // حساب عدد الفلاتر النشطة
-    const activeFiltersCount = Object.values(filters).filter((filter) => filter.value.trim() !== "").length;
+  // Memoize clear all filters handler
+  const clearAllFilters = React.useCallback(() => {
+    setFilters({});
+    if (onClearFilters) {
+      onClearFilters();
+    }
+  }, [onClearFilters]);
 
-    // دالة مسح جميع الفلاتر
-    const clearAllFilters = () => {
-      setFilters({});
-      if (onClearFilters) {
-        onClearFilters();
-      }
-    };
-
-    return (
-      <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => setShowMoreFilters(false)} className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Hide Filters
-            </Button>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {activeFiltersCount > 0 ? (
-                <span>
-                  {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
-                </span>
-              ) : (
-                <span>No filters applied</span>
-              )}
-            </div>
-          </div>
-          {activeFiltersCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-            >
-              Clear all filters
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }, [showMoreFilters, filters]);
+  // Extract column IDs to avoid depending on entire table object
+  const allLeafColumnIds = React.useMemo(() => {
+    return table.getAllLeafColumns().map((c) => ({
+      id: String(c.id),
+      canFilter: c.getCanFilter(),
+    }));
+  }, [table]);
 
   // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
   const filterColumns: FilterColumn[] = React.useMemo(() => {
     // ✅ exclude idField from filter row to avoid "Column with id 'id' does not exist."
-    return table
-      .getAllLeafColumns()
-      .filter((c) => c.id !== idField && c.id !== "id")
-      .map((c) => ({
-        id: String(c.id),
+    return allLeafColumnIds
+      .filter((col) => col.id !== idField && col.id !== "id")
+      .map((col) => ({
+        id: col.id,
         label:
-          c.id === "is_active"
+          col.id === "is_active"
             ? "Status"
-            : c.id === "__select" || c.id === "select"
+            : col.id === "__select" || col.id === "select"
               ? ""
-              : c.id === "actions"
+              : col.id === "actions"
                 ? ""
-                : String(c.id),
-        disableInput: c.id === "actions" || c.id === "__select" || c.id === "select",
+                : col.id,
+        disableInput: col.id === "actions" || col.id === "__select" || col.id === "select",
       }));
-  }, [table, idField]);
+  }, [allLeafColumnIds, idField]);
 
   // استمع لأي ضغطة على زر التولبار العلوي الذي يحمل data-onclick-id="exportCsv"
+  // Use ref to avoid recreating listener when table object changes
   React.useEffect(() => {
     const onToolbarClick = (ev: MouseEvent) => {
       const target = ev.target as Element | null;
@@ -1256,28 +1463,34 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       ev.stopPropagation();
 
       // نفّذ نفس منطق التصدير المستعمل في زر الجدول السفلي
-      exportCSV(table as never, "tally_cards");
+      // Use ref to get current table instance
+      exportCSV(tableRefForExport.current as never, "tally_cards");
     };
     document.addEventListener("click", onToolbarClick, true);
     return () => document.removeEventListener("click", onToolbarClick, true);
-  }, [table]);
+  }, []); // Empty deps - listener never needs to be recreated, uses ref for current table
 
   const footer = <DataTablePagination table={table} totalCount={currentTotal} />;
+
+  // Extract stable filter values from search params (avoid depending on search object reference)
+  const quickFilterValues = React.useMemo(() => {
+    const quickFilters = config.quickFilters ?? [];
+    const values: Record<string, string> = {};
+    quickFilters.forEach((filter) => {
+      const value = search.get(filter.id);
+      if (value) {
+        values[filter.id] = value;
+      } else if (filter.defaultValue) {
+        values[filter.id] = filter.defaultValue;
+      }
+    });
+    return values;
+  }, [config.quickFilters, search]);
 
   // Quick Filters component - reads from config and syncs with URL
   const QuickFiltersToolbar = React.useMemo(() => {
     const quickFilters = config.quickFilters ?? [];
     if (quickFilters.length === 0) return null;
-
-    const currentFilters: Record<string, string> = {};
-    quickFilters.forEach((filter) => {
-      const value = search.get(filter.id);
-      if (value) {
-        currentFilters[filter.id] = value;
-      } else if (filter.defaultValue) {
-        currentFilters[filter.id] = filter.defaultValue;
-      }
-    });
 
     const handleFilterChange = (filterId: string, value: string) => {
       const sp = new URLSearchParams(search.toString());
@@ -1296,9 +1509,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       // Reset to page 1 when filter changes
       sp.set("page", "1");
       
-      // Update URL and trigger server-side refetch
+      // Update URL and invalidate React Query cache for subtle refetch
       router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
-      router.refresh();
+      // Invalidate queries to trigger refetch with new filter params (no full page refresh)
+      const endpoint = getApiEndpoint();
+      const endpointKey = endpoint.replace(/^\/api\//, "");
+      queryClient.invalidateQueries({ queryKey: [endpointKey] });
     };
 
     return (
@@ -1312,7 +1528,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 </label>
                 <select
                   id={`quick-filter-${filter.id}`}
-                  value={currentFilters[filter.id] ?? filter.defaultValue ?? ""}
+                  value={quickFilterValues[filter.id] ?? filter.defaultValue ?? ""}
                   onChange={(e) => handleFilterChange(filter.id, e.target.value)}
                   className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                 >
@@ -1329,7 +1545,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         })}
       </div>
     );
-  }, [config.quickFilters, search, pathname, router]);
+  }, [config.quickFilters, quickFilterValues, pathname, router, getApiEndpoint, queryClient, search]);
 
   return (
     <DndContext
@@ -1376,8 +1592,38 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           </div>
         </div>
 
-        {/* ✅ NEW: قسم More Filters */}
-        {MoreFiltersSection}
+        {/* ✅ FIX: Lazy-load More Filters Section - only render when showMoreFilters is true */}
+        {showMoreFilters && (
+          <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="outline" onClick={() => setShowMoreFilters(false)} className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Hide Filters
+                </Button>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {activeFiltersCount > 0 ? (
+                    <span>
+                      {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
+                    </span>
+                  ) : (
+                    <span>No filters applied</span>
+                  )}
+                </div>
+              </div>
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                >
+                  Clear all filters
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <DataTable
           dndEnabled={enableColumnReordering}
@@ -1387,20 +1633,14 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
-          // ✅ Use config-based initial widths (converted from pixels to %), or user-resized widths
-          // Only fall back to auto-calculated if neither is available
-          columnWidthsPct={
-            Object.keys(columnWidths).length > 0 
-              ? columnWidths 
-              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {})
-          }
+          // ✅ Use responsive pixel widths (with scaling if baseline exists)
+          columnWidthsPx={renderColumnWidthsPx}
           tableContainerRef={tableRef}
+          onMouseDownResize={onMouseDownResize}
           filtersConfig={{
             columns: filterColumns,
-            // Use config-based initial widths (converted from pixels to %), or user-resized widths
-            columnWidthsPct: Object.keys(columnWidths).length > 0 
-              ? columnWidths 
-              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {}),
+            // Use responsive pixel widths for filter row
+            columnWidthsPx: renderColumnWidthsPx,
 
             show: showMoreFilters,
             filters,
