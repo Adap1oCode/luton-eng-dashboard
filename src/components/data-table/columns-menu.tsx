@@ -20,6 +20,7 @@ interface ColumnsMenuProps {
   onShowAll: () => void;
   onHideAll: () => void;
   onResetOrder: () => void;
+  onResetWidths?: () => void;
   onDragStart: (e: React.DragEvent, columnId: string) => void;
   onDragOver: (e: React.DragEvent, columnId: string) => void;
   onDrop: (e: React.DragEvent, columnId: string) => void;
@@ -34,6 +35,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   onShowAll,
   onHideAll,
   onResetOrder,
+  onResetWidths,
   onDragStart,
   onDragOver,
   onDrop,
@@ -51,6 +53,13 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
           Reset Order
         </Button>
       </div>
+      {onResetWidths && (
+        <div className="border-t border-gray-200 p-2 dark:border-gray-700">
+          <Button variant="outline" size="sm" onClick={onResetWidths} className="h-7 w-full text-xs">
+            Reset Widths
+          </Button>
+        </div>
+      )}
 
       <div className="max-h-64 space-y-1 overflow-y-auto p-1">
         {columns.map((column) => (

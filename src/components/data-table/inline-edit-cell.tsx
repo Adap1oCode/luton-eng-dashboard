@@ -96,13 +96,13 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
 }) => {
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full min-w-0">
         {config.fieldType === "text" && (
           <Input
             value={editingValue || ""}
             onChange={(e) => onEditChange(config.parseValue ? config.parseValue(e.target.value) : e.target.value)}
             placeholder={config.placeholder}
-            className="w-48"
+            className="flex-1 min-w-0"
           />
         )}
 
@@ -114,7 +114,7 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
               onEditChange(config.parseValue ? config.parseValue(val) : parsedValue);
             }}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="flex-1 min-w-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -127,10 +127,10 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
           </Select>
         )}
 
-        <Button size="sm" onClick={onSave} className="h-8 w-8 p-0">
+        <Button size="sm" onClick={onSave} className="h-8 w-8 p-0 flex-shrink-0">
           <Check className="h-4 w-4" />
         </Button>
-        <Button size="sm" variant="outline" onClick={onCancel} className="h-8 w-8 p-0">
+        <Button size="sm" variant="outline" onClick={onCancel} className="h-8 w-8 p-0 flex-shrink-0">
           <X className="h-4 w-4" />
         </Button>
       </div>

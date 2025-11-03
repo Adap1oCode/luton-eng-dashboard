@@ -18,6 +18,11 @@ export type SavedView = {
   visibleColumns: Record<string, boolean>;
   sortConfig: SortConfig;
   createdAt: string; // ISO
+  // New px-based column widths (preferred)
+  columnWidthsPx?: Record<string, number>;
+  baselineWidthPx?: number;
+  // Legacy percentage widths (deprecated, kept for migration)
+  columnWidthsPct?: Record<string, number>;
 };
 
 export type ViewSnapshot = Omit<SavedView, "id" | "createdAt">;

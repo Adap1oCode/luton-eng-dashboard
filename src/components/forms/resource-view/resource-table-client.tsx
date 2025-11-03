@@ -59,6 +59,7 @@ import { StatusCellWrapper } from "@/components/data-table/status-cell-wrapper";
 import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { useSavedViews } from "@/components/data-table/use-saved-views";
+import { useContainerResize } from "@/components/data-table/use-container-resize";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
@@ -135,18 +136,22 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   }, [config]);
 
   // Build query key for React Query cache
-  // Pattern: [resourceKey, page, pageSize, serializedFilters]
+  // Pattern: [endpoint, page, pageSize, serializedFilters]
+  // Use apiEndpoint (view) instead of resourceKeyForDelete (table) to ensure we invalidate the correct queries
+  // This is critical for SCD2 tables where the view filters duplicates but the table has them
   const buildQueryKey = React.useCallback((currentPage: number, currentPageSize: number, currentFilters?: Record<string, string>): (string | number)[] => {
-    const resourceKeyRaw = (config as Record<string, unknown>)?.resourceKeyForDelete;
-    const resourceKey = typeof resourceKeyRaw === "string" ? resourceKeyRaw : "resource";
+    // Use apiEndpoint for queryKey to match what we actually fetch from (the view, not the table)
+    const endpoint = getApiEndpoint();
+    // Extract the resource name from the endpoint (e.g., "/api/v_tcm_user_tally_card_entries" -> "v_tcm_user_tally_card_entries")
+    const endpointKey = endpoint.replace(/^\/api\//, "");
     const serializedFilters = currentFilters
       ? Object.keys(currentFilters)
           .sort()
           .map((k) => `${encodeURIComponent(k)}:${encodeURIComponent(currentFilters[k])}`)
           .join("|")
       : "no-filters";
-    return [resourceKey, currentPage, currentPageSize, serializedFilters];
-  }, [config]);
+    return [endpointKey, currentPage, currentPageSize, serializedFilters];
+  }, [config, getApiEndpoint]);
 
   // ⚙️ STEP 2: Parse filters from URL and set up React Query (parallel to existing flow)
   // Parse pagination and filters from URL search params
@@ -250,6 +255,34 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return [];
   }, [config]);
 
+  // -- Saved Views: tableId and defaultColumnIds MUST be declared early to avoid TDZ -----------
+  // These are used by useSavedViews hook and effects, so they must come before any effects that reference them
+  const tableId = React.useMemo(() => {
+    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
+    return `forms/${routeSegment}`;
+  }, [config]);
+
+  const defaultColumnIds = React.useMemo(() => {
+    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
+    // keep __select first if present
+    const selectId = all.find((id) => id === "__select");
+    const others = all.filter((id) => id && id !== "__select");
+    return selectId ? [selectId, ...others] : others;
+  }, [baseColumns]);
+
+  // Saved Views: hydrate & persist state - declared early to avoid TDZ
+  const {
+    views,
+    currentView,
+    currentViewId,
+    setCurrentViewId,
+    applyView,
+    saveView,
+    updateView,
+    setDefault,
+    hydrateFromRemote,
+  } = useSavedViews(tableId, defaultColumnIds);
+
   // Local TanStack table state
   const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -287,39 +320,68 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
 
-  // ✅ Initialize column widths from config column `size` values (convert pixels to percentages)
-  // This prevents auto-calculation from changing widths when data refreshes (e.g., after inline edit)
+  // Utility: Create stable signature from column definitions to detect schema changes
+  // Minimal signature: only { id, size, minSize, maxSize } to avoid unnecessary recalculations
+  const columnsSignature = React.useCallback((cols: ColumnDef<TRow, unknown>[]): string => {
+    return JSON.stringify(
+      cols.map((c) => ({
+        id: c.id ?? (c as any).accessorKey,
+        size: (c as any).size,
+        minSize: (c as any).minSize ?? (c.meta as any)?.minPx,
+        maxSize: (c as any).maxSize ?? (c.meta as any)?.maxPx,
+      }))
+    );
+  }, []);
+
+  // Memoize column signature to detect real schema changes
+  const colsSig = React.useMemo(() => columnsSignature(baseColumns), [baseColumns, columnsSignature]);
+
+  // ✅ Initialize column widths (priority: saved px → config px → auto-calc)
+  // Store as pixels, not percentages
   const initialColumnWidths = React.useMemo<Record<string, number>>(() => {
     const widths: Record<string, number> = {};
-    let totalPixels = 0;
-    
-    // First pass: sum all pixel sizes to normalize
+
+    // First priority: Use config `size` values directly as pixels
     for (const col of baseColumns) {
       if (col.id && (col as any).size && typeof (col as any).size === "number") {
         const size = (col as any).size as number;
         if (size > 0) {
-          totalPixels += size;
+          widths[col.id] = size;
         }
       }
     }
-    
-    // Second pass: convert to percentages
-    if (totalPixels > 0) {
-      for (const col of baseColumns) {
-        if (col.id && (col as any).size && typeof (col as any).size === "number") {
-          const size = (col as any).size as number;
-          if (size > 0) {
-            widths[col.id] = (size / totalPixels) * 100;
-          }
-        }
-      }
+
+    // Ensure __select column always has width (from selectionColumn definition)
+    // This ensures the checkbox column gets proper initial width even if not in baseColumns
+    const hasSelectColumn = baseColumns.some((col) => {
+      const id = (col as { id?: string; accessorKey?: string }).id ?? (col as { accessorKey?: string }).accessorKey;
+      return id === "__select" || id === "select";
+    });
+    if (!hasSelectColumn) {
+      widths.__select = 40; // Match selectionColumn size definition
     }
-    
+
     return widths;
-  }, [baseColumns]);
+  }, [colsSig]); // Only recalculate when column schema changes
+
+  // Track container width for responsive scaling
+  const containerWidthPx = useContainerResize(tableRef, true);
 
   // Column widths state for resizing (initialize from config sizes, then user can override)
-  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(initialColumnWidths, tableRef);
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize } = useColumnResize(
+    initialColumnWidths,
+    tableRef,
+    {
+      getColumnMeta: (columnId: string) => {
+        const col = baseColumns.find((c) => c.id === columnId);
+        if (!col) return null;
+        return {
+          minPx: (col.meta as any)?.minPx ?? (col as any).minSize,
+          maxPx: (col.meta as any)?.maxPx ?? (col as any).maxSize,
+        };
+      },
+    }
+  );
 
   // Track currently dragged column id to render an overlay ghost
   const [activeColumnId, setActiveColumnId] = React.useState<string | null>(null);
@@ -377,7 +439,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       });
       if (res.ok) {
         // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
-        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+        // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
+        const endpoint = getApiEndpoint();
+        const endpointKey = endpoint.replace(/^\/api\//, "");
+        queryClient.invalidateQueries({ queryKey: [endpointKey] });
       } else {
         alert("Failed to update status");
       }
@@ -386,7 +451,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     } finally {
       setEditingStatus(null);
     }
-  }, [editingStatus, config, queryClient]);
+  }, [editingStatus, config, queryClient, getApiEndpoint]);
 
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
 
@@ -439,7 +504,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
       if (res.ok) {
         // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
-        queryClient.invalidateQueries({ queryKey: [resourceKey] });
+        // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
+        // This ensures we invalidate queries that fetch from the view (with latest records), not the table (with duplicates)
+        const endpoint = getApiEndpoint();
+        const endpointKey = endpoint.replace(/^\/api\//, "");
+        queryClient.invalidateQueries({ queryKey: [endpointKey] });
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(`Failed to update ${editingCell.columnId}: ${errorData.error?.message || res.statusText}`);
@@ -450,7 +519,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, config, queryClient, filteredRows, idField]);
+  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -480,8 +549,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           />
         </div>
       ),
-      size: 42,
-      meta: { widthPct: 3, minPct: 2, maxPct: 5, minPx: 44 },
+      size: 40,
+      meta: { minPx: 40, maxPx: 48 },
       enableHiding: false,
       enableResizing: false,
       enableSorting: false,
@@ -631,7 +700,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    columnResizeMode: "onChange",
+    columnResizeMode: "onEnd", // Only update on resize end, not during drag
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
     // ✅ use the same idField consistently for stable keys
@@ -640,6 +709,88 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       return id || `row_${idx}`;
     },
   });
+
+  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
+  React.useEffect(() => {
+    // TODO: Implement remote hydration if needed
+    // hydrateFromRemote(remoteViews);
+  }, [tableId, hydrateFromRemote, defaultColumnIds]);
+
+  // Apply current view to column widths on mount (if saved px widths exist)
+  // Also migrate legacy columnWidthsPct to px if needed
+  // Guarded: only runs when currentView and setWidths are available
+  React.useEffect(() => {
+    if (!currentView || !setWidths) return;
+
+    // Priority 1: Use saved px widths if available
+    if (currentView.columnWidthsPx && Object.keys(currentView.columnWidthsPx).length > 0) {
+      setWidths(currentView.columnWidthsPx);
+      return;
+    }
+
+    // Priority 2: Migrate legacy columnWidthsPct to px (one-time conversion)
+    const legacyPct = (currentView as any).columnWidthsPct;
+    if (legacyPct && Object.keys(legacyPct).length > 0 && containerWidthPx && containerWidthPx > 0) {
+      // Convert percentage widths to pixels using current container width
+      const migratedPx: Record<string, number> = {};
+      for (const [columnId, pctWidth] of Object.entries(legacyPct)) {
+        const col = baseColumns.find((c) => c.id === columnId);
+        const minPx = (col?.meta as any)?.minPx ?? (col as any)?.minSize ?? 80;
+        const maxPx = (col?.meta as any)?.maxPx ?? (col as any)?.maxSize;
+        const pxWidth = Math.round((pctWidth as number / 100) * containerWidthPx);
+        migratedPx[columnId] = maxPx
+          ? Math.min(maxPx, Math.max(minPx, pxWidth))
+          : Math.max(minPx, pxWidth);
+      }
+      if (Object.keys(migratedPx).length > 0) {
+        setWidths(migratedPx);
+        // Persist migrated widths with baseline
+        if (currentViewId && updateView) {
+          updateView(currentViewId, {
+            columnWidthsPx: migratedPx,
+            baselineWidthPx: containerWidthPx,
+          });
+        }
+      }
+    }
+  }, [currentView, setWidths, containerWidthPx, baseColumns, currentViewId, updateView]);
+
+  // Calculate responsive scaling for render widths
+  const renderColumnWidthsPx = React.useMemo(() => {
+    const widths: Record<string, number> = {};
+    const baselineWidth = currentView?.baselineWidthPx ?? containerWidthPx ?? null;
+
+    // Get visible column IDs to skip invisible columns during scaling
+    const visibleColumnIds = new Set(
+      table.getAllLeafColumns().filter((c) => c.getIsVisible()).map((c) => String(c.id))
+    );
+
+    // If we have baseline and container widths, apply responsive scaling
+    if (baselineWidth && containerWidthPx && Object.keys(columnWidths).length > 0) {
+      const scale = Math.max(0.7, Math.min(1.4, containerWidthPx / baselineWidth));
+      for (const [columnId, savedWidthPx] of Object.entries(columnWidths)) {
+        // Skip invisible columns
+        if (!visibleColumnIds.has(columnId)) {
+          continue;
+        }
+        const col = baseColumns.find((c) => c.id === columnId);
+        const minPx = (col?.meta as any)?.minPx ?? (col as any)?.minSize ?? 80;
+        const maxPx = (col?.meta as any)?.maxPx ?? (col as any)?.maxSize;
+        const scaledWidth = Math.round(savedWidthPx * scale);
+        widths[columnId] = maxPx ? Math.min(maxPx, Math.max(minPx, scaledWidth)) : Math.max(minPx, scaledWidth);
+      }
+      return widths;
+    }
+
+    // Otherwise use saved widths directly (or initial widths), but only for visible columns
+    const filtered: Record<string, number> = {};
+    for (const [columnId, width] of Object.entries(columnWidths)) {
+      if (visibleColumnIds.has(columnId)) {
+        filtered[columnId] = width;
+      }
+    }
+    return Object.keys(filtered).length > 0 ? filtered : columnWidths;
+  }, [columnWidths, currentView?.baselineWidthPx, containerWidthPx, baseColumns, table]);
 
   // ✅ Seed initial column order once the table is ready
   React.useEffect(() => {
@@ -772,50 +923,28 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
   const dragIdRef = React.useRef<string | null>(null);
 
-  // -- Saved Views: hydrate & persist state ---------------------------------
-  const tableId = React.useMemo(() => {
-    const routeSegment = (config as any)?.formsRouteSegment ?? "table";
-    return `forms/${routeSegment}`;
-  }, [config]);
-
-  const defaultColumnIds = React.useMemo(() => {
-    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
-    // keep __select first if present
-    const selectId = all.find((id) => id === "__select");
-    const others = all.filter((id) => id && id !== "__select");
-    return selectId ? [selectId, ...others] : others;
-  }, [baseColumns]);
-
-  // Temporarily disable saved views to prevent flickering
-  const views: any[] = [];
-  const currentView = null;
-  const setCurrentViewId = () => {};
-  const applyView = () => {};
-  const saveView = () => {};
-  const updateView = () => {};
-  const setDefault = () => {};
-  const hydrateFromRemote = () => {};
-
-  // Hydrate from remote on mount (fire-and-forget, keep local fallback if unauth)
-  // Disabled temporarily to prevent flickering
+  // Persist width changes when columnWidths change (triggered by custom resize hook)
+  // This bridges our custom resize hook with saved views persistence
+  // Guarded against TDZ: effect only runs when prerequisites exist
   React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [tableId, hydrateFromRemote, defaultColumnIds]);
-
-  // Apply current view to column order/visibility/widths once when table is ready
-  // Disabled temporarily to prevent flickering
-  React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [currentView, defaultColumnIds, setWidths]);
-
-  // Persist state changes into current view snapshot
-  // Disabled temporarily to prevent flickering
-  React.useEffect(() => {
-    // Saved views functionality temporarily disabled
-    return;
-  }, [columnOrder, columnVisibility, columnWidths, table, updateView, currentView]);
+    // Early return if prerequisites missing (guard against TDZ)
+    if (!currentViewId || !updateView || containerWidthPx === null || containerWidthPx === undefined) {
+      return;
+    }
+    if (Object.keys(columnWidths).length === 0) {
+      return;
+    }
+    // Debounce persistence to avoid excessive updates (only on resize end, not during drag)
+    const timeoutId = setTimeout(() => {
+      // Ensure baselineWidthPx is initialized if not set (first persistence)
+      const baseline = currentView?.baselineWidthPx ?? containerWidthPx;
+      updateView(currentViewId, {
+        columnWidthsPx: columnWidths,
+        baselineWidthPx: baseline,
+      });
+    }, 500); // Wait 500ms after last resize before persisting
+    return () => clearTimeout(timeoutId);
+  }, [columnWidths, currentViewId, containerWidthPx, updateView, currentView?.baselineWidthPx]);
 
   // ✅ Auto-assign smart percentage widths from data (on-demand only)
   // NOTE: Only recalculate when columns change, NOT when data changes (uses initialRows, not filteredRows)
@@ -850,7 +979,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         const state = {
           columnOrder,
           columnVisibility,
-          columnWidthsPct: columnWidths,
+          columnWidthsPx: columnWidths, // Use px instead of pct
+          baselineWidthPx: containerWidthPx ?? undefined,
           sortConfig:
             table.getState().sorting?.[0]
               ? {
@@ -894,7 +1024,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         const state = {
           columnOrder,
           columnVisibility,
-          columnWidthsPct: columnWidths,
+          columnWidthsPx: columnWidths, // Use px instead of pct
+          baselineWidthPx: containerWidthPx ?? undefined,
           sortConfig:
             table.getState().sorting?.[0]
               ? {
@@ -1093,10 +1224,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 }))}
                 currentViewId="default"
                 onApplyView={(v) => {
-                  // applyView(v.id); // Disabled temporarily
+                  applyView(v.id);
                   setColumnOrder(v.columnOrder);
                   setColumnVisibility(v.visibleColumns as any);
-                  const w = (v as any).columnWidthsPct;
+                  // Prefer px widths, fallback to legacy pct
+                  const w = (v as any).columnWidthsPx ?? (v as any).columnWidthsPct;
                   if (w) setWidths(w);
                 }}
                 onDeleteView={(id) => {
@@ -1136,6 +1268,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
                 onResetOrder={() => {
                   if (initialOrderRef.current.length) {
                     setColumnOrder(initialOrderRef.current);
+                  }
+                }}
+                onResetWidths={() => {
+                  // Clear saved widths and re-apply config defaults
+                  setWidths(initialColumnWidths);
+                  if (currentViewId && updateView && containerWidthPx) {
+                    // Reset to config defaults and set fresh baseline for future scaling
+                    updateView(currentViewId, {
+                      columnWidthsPx: undefined,
+                      baselineWidthPx: containerWidthPx, // Set fresh baseline for reset state
+                    });
                   }
                 }}
                 onDragStart={onDragStart}
@@ -1220,7 +1363,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         </div>
       </div>
     );
-  }, [showMoreFilters, filters]);
+  }, [showMoreFilters, filters, onClearFilters]);
 
   // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
   const filterColumns: FilterColumn[] = React.useMemo(() => {
@@ -1387,20 +1530,24 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           sensors={sensors}
           sortableId="resource-table"
           renderExpanded={renderExpanded ? (row) => renderExpanded(row.original as TRow) : undefined}
-          // ✅ Use config-based initial widths (converted from pixels to %), or user-resized widths
-          // Only fall back to auto-calculated if neither is available
+          // ✅ Use responsive pixel widths (with scaling if baseline exists)
+          columnWidthsPx={renderColumnWidthsPx}
+          // Legacy percentage support for backward compatibility
           columnWidthsPct={
-            Object.keys(columnWidths).length > 0 
-              ? columnWidths 
-              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {})
+            Object.keys(renderColumnWidthsPx).length === 0 && Object.keys(autoColumnWidthsPct).length > 0
+              ? autoColumnWidthsPct
+              : undefined
           }
           tableContainerRef={tableRef}
           filtersConfig={{
             columns: filterColumns,
-            // Use config-based initial widths (converted from pixels to %), or user-resized widths
-            columnWidthsPct: Object.keys(columnWidths).length > 0 
-              ? columnWidths 
-              : (Object.keys(autoColumnWidthsPct).length > 0 ? autoColumnWidthsPct : {}),
+            // Use responsive pixel widths for filter row
+            columnWidthsPx: renderColumnWidthsPx,
+            // Legacy percentage support
+            columnWidthsPct:
+              Object.keys(renderColumnWidthsPx).length === 0 && Object.keys(autoColumnWidthsPct).length > 0
+                ? autoColumnWidthsPct
+                : undefined,
 
             show: showMoreFilters,
             filters,

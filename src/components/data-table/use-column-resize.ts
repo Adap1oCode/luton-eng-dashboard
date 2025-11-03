@@ -1,16 +1,19 @@
 // src/components/data-table/useColumnResize.ts
 import { MutableRefObject, useCallback, useRef, useState } from "react";
 
-type Widths = Record<string, number>; // percentages
+type Widths = Record<string, number>; // pixel widths
 
 type Options = {
-  /** clamp percentages (inclusive) */
-  minPct?: number;
-  maxPct?: number;
+  /** minimum pixel width (inclusive) */
+  minPx?: number;
+  /** maximum pixel width (inclusive) */
+  maxPx?: number;
+  /** column definitions to extract minPx/maxPx from meta */
+  getColumnMeta?: (columnId: string) => { minPx?: number; maxPx?: number } | null;
 };
 
 export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTMLElement | null>, opts: Options = {}) {
-  const { minPct = 5, maxPct = 80 } = opts;
+  const { minPx: defaultMinPx = 80, maxPx: defaultMaxPx = 800, getColumnMeta } = opts;
 
   const [widths, setWidths] = useState<Widths>(initial);
   const [isResizing, setIsResizing] = useState(false);
@@ -26,9 +29,12 @@ export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTML
       e.preventDefault();
       e.stopPropagation();
 
-      const tableWidth = tableRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+      // Get current column width in pixels from DOM or state
+      const headerEl = e.currentTarget.closest('th');
+      const currentWidthPx = headerEl?.getBoundingClientRect().width ?? (widths[columnId] ?? defaultMinPx);
+      
       startXRef.current = e.clientX;
-      startWidthRef.current = widths && columnId in widths ? widths[columnId] : 10;
+      startWidthRef.current = currentWidthPx;
 
       setIsResizing(true);
       setResizingColumnId(columnId);
@@ -37,12 +43,17 @@ export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTML
         if (!columnId) return;
 
         const deltaX = ev.clientX - startXRef.current;
-        const deltaPct = (deltaX / tableWidth) * 100;
-        const next = Math.max(minPct, Math.min(maxPct, startWidthRef.current + deltaPct));
+        const newWidthPx = startWidthRef.current + deltaX;
+
+        // Get column-specific min/max from meta or use defaults
+        const meta = getColumnMeta?.(columnId);
+        const minPx = meta?.minPx ?? defaultMinPx;
+        const maxPx = meta?.maxPx ?? defaultMaxPx;
+        const clampedWidth = Math.max(minPx, Math.min(maxPx, newWidthPx));
 
         setWidths((prev) => {
-          if (!prev) return { [columnId]: next };
-          return { ...prev, [columnId]: next };
+          if (!prev) return { [columnId]: clampedWidth };
+          return { ...prev, [columnId]: clampedWidth };
         });
 
         document.body.style.cursor = "col-resize";
@@ -61,7 +72,7 @@ export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTML
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     },
-    [tableRef, widths, minPct, maxPct],
+    [tableRef, widths, defaultMinPx, defaultMaxPx, getColumnMeta],
   );
 
   return {

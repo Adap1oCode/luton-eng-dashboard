@@ -71,11 +71,17 @@ interface TanStackDataTableProps<T = Record<string, unknown>> {
   sortableId: string;
   filters?: Record<string, unknown>;
   renderExpanded?: (row: any) => React.ReactNode;
+  // New px-based widths (preferred)
+  columnWidthsPx?: Record<string, number>;
+  // Legacy percentage widths (for backward compatibility during migration)
   columnWidthsPct?: Record<string, number>;
   tableContainerRef?: React.MutableRefObject<HTMLElement | null>;
   onMouseDownResize?: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
   filtersConfig?: {
     columns: FilterColumn[];
+    // New px-based widths for filter row
+    columnWidthsPx?: Record<string, number>;
+    // Legacy percentage widths
     columnWidthsPct?: Record<string, number>;
     show?: boolean;
     search?: string;
@@ -98,7 +104,8 @@ function TanStackDataTable<T = Record<string, unknown>>({
   table,
   dataIds,
   renderExpanded,
-  columnWidthsPct,
+  columnWidthsPx,
+  columnWidthsPct, // Legacy support
   tableContainerRef,
   onMouseDownResize,
   filtersConfig,
@@ -107,7 +114,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
     <SortableContext items={dataIds}>
       <div ref={tableContainerRef as any} className="overflow-x-auto" data-testid="data-table">
         {/* table-fixed makes width styles on th/td actually apply; min-w-max allows horizontal growth */}
-        <Table className="min-w-max table-fixed">
+        <Table className="min-w-max" style={{ tableLayout: "fixed" }}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -116,14 +123,20 @@ function TanStackDataTable<T = Record<string, unknown>>({
                     key={header.id}
                     className="p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 relative"
                     style={
-                      columnWidthsPct?.[header.column.id] != null
+                      columnWidthsPx?.[header.column.id] != null
                         ? {
-                            width: `${columnWidthsPct[header.column.id]}%`,
-                            maxWidth: `${columnWidthsPct[header.column.id]}%`,
-                            // NEW: never let headers collapse below a readable width
-                            minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
+                            width: `${columnWidthsPx[header.column.id]}px`,
+                            minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 80,
+                            maxWidth: (header.column.columnDef as any)?.meta?.maxPx,
                           }
-                        : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
+                        : columnWidthsPct?.[header.column.id] != null
+                          ? {
+                              // Legacy percentage support
+                              width: `${columnWidthsPct[header.column.id]}%`,
+                              maxWidth: `${columnWidthsPct[header.column.id]}%`,
+                              minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
+                            }
+                          : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
                     }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -163,14 +176,20 @@ function TanStackDataTable<T = Record<string, unknown>>({
    key={cell.id}
    className="p-3"
    style={
-     columnWidthsPct?.[cell.column.id] != null
+     columnWidthsPx?.[cell.column.id] != null
        ? {
-           width: `${columnWidthsPct[cell.column.id]}%`,
-           maxWidth: `${columnWidthsPct[cell.column.id]}%`,
-           // NEW: keep body cells in sync with header min
-           minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128,
+           width: `${columnWidthsPx[cell.column.id]}px`,
+           minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 80,
+           maxWidth: (cell.column.columnDef as any)?.meta?.maxPx,
          }
-       : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128 }
+       : columnWidthsPct?.[cell.column.id] != null
+         ? {
+             // Legacy percentage support
+             width: `${columnWidthsPct[cell.column.id]}%`,
+             maxWidth: `${columnWidthsPct[cell.column.id]}%`,
+             minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128,
+           }
+         : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128 }
    }
  >
                         {/* Pure truncation; no tooltip */}
