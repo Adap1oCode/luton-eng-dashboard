@@ -25,10 +25,8 @@ export type FilterColumn = {
 
 type Props = {
   columns: FilterColumn[];
-  // New px-based widths (preferred)
+  // Pixel-based column widths
   columnWidthsPx?: Record<string, number>;
-  // Legacy percentage widths
-  columnWidthsPct?: Record<string, number>;
   show?: boolean;
   search?: string;
   onSearchChange?: (v: string) => void;
@@ -40,7 +38,6 @@ type Props = {
 export function DataTableFilters({
   columns,
   columnWidthsPx,
-  columnWidthsPct, // Legacy support
   show = true,
   search,
   onSearchChange,
@@ -64,9 +61,7 @@ export function DataTableFilters({
             style={
               columnWidthsPx?.[c.id]
                 ? { width: `${columnWidthsPx[c.id]}px` }
-                : columnWidthsPct?.[c.id]
-                  ? { width: `${columnWidthsPct[c.id]}%` }
-                  : undefined
+                : undefined
             }
           >
             {c.disableInput ? (

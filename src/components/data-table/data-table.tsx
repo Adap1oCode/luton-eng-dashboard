@@ -71,18 +71,14 @@ interface TanStackDataTableProps<T = Record<string, unknown>> {
   sortableId: string;
   filters?: Record<string, unknown>;
   renderExpanded?: (row: any) => React.ReactNode;
-  // New px-based widths (preferred)
+  // Pixel-based column widths
   columnWidthsPx?: Record<string, number>;
-  // Legacy percentage widths (for backward compatibility during migration)
-  columnWidthsPct?: Record<string, number>;
   tableContainerRef?: React.MutableRefObject<HTMLElement | null>;
   onMouseDownResize?: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
   filtersConfig?: {
     columns: FilterColumn[];
-    // New px-based widths for filter row
+    // Pixel-based widths for filter row
     columnWidthsPx?: Record<string, number>;
-    // Legacy percentage widths
-    columnWidthsPct?: Record<string, number>;
     show?: boolean;
     search?: string;
     onSearchChange?: (v: string) => void;
@@ -105,7 +101,6 @@ function TanStackDataTable<T = Record<string, unknown>>({
   dataIds,
   renderExpanded,
   columnWidthsPx,
-  columnWidthsPct, // Legacy support
   tableContainerRef,
   onMouseDownResize,
   filtersConfig,
@@ -129,24 +124,15 @@ function TanStackDataTable<T = Record<string, unknown>>({
                             minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 80,
                             maxWidth: (header.column.columnDef as any)?.meta?.maxPx,
                           }
-                        : columnWidthsPct?.[header.column.id] != null
-                          ? {
-                              // Legacy percentage support
-                              width: `${columnWidthsPct[header.column.id]}%`,
-                              maxWidth: `${columnWidthsPct[header.column.id]}%`,
-                              minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128,
-                            }
-                          : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
+                        : { minWidth: (header.column.columnDef as any)?.meta?.minPx ?? 128 }
                     }
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     {/* Custom resize handle - positioned at the actual right edge of the column */}
                     {header.column.getCanResize() && (
-                      <div
-                        className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-500 transition-colors"
-                        onMouseDown={(e) => onMouseDownResize?.(e, header.column.id)}
-                        style={{ userSelect: 'none' }}
-                        data-testid={`resize-handle-${header.column.id}`}
+                      <ResizeHandle
+                        columnId={header.column.id}
+                        onMouseDownResize={onMouseDownResize}
                       />
                     )}
                   </TableHead>
@@ -156,7 +142,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
             {filtersConfig ? (
               <DataTableFilters
                 columns={filtersConfig.columns}
-                columnWidthsPct={filtersConfig.columnWidthsPct}
+                columnWidthsPx={filtersConfig.columnWidthsPx}
                 show={filtersConfig.show ?? true}
                 search={filtersConfig.search}
                 onSearchChange={filtersConfig.onSearchChange}
@@ -182,14 +168,7 @@ function TanStackDataTable<T = Record<string, unknown>>({
            minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 80,
            maxWidth: (cell.column.columnDef as any)?.meta?.maxPx,
          }
-       : columnWidthsPct?.[cell.column.id] != null
-         ? {
-             // Legacy percentage support
-             width: `${columnWidthsPct[cell.column.id]}%`,
-             maxWidth: `${columnWidthsPct[cell.column.id]}%`,
-             minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128,
-           }
-         : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128 }
+       : { minWidth: (cell.column.columnDef as any)?.meta?.minPx ?? 128 }
    }
  >
                         {/* Pure truncation; no tooltip */}
@@ -294,6 +273,63 @@ function DraggableRow<T extends Record<string, unknown>>({
         </TableRow>
       )}
     </>
+  );
+}
+
+// Resize handle component - uses native event listener to intercept events before DnD
+function ResizeHandle({ 
+  columnId, 
+  onMouseDownResize 
+}: { 
+  columnId: string; 
+  onMouseDownResize?: (e: React.MouseEvent<HTMLDivElement>, columnId: string) => void;
+}) {
+  const handleRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handle = handleRef.current;
+    if (!handle || !onMouseDownResize) return;
+
+    // Use native event listener with capture phase to intercept BEFORE DnD
+    const handleMouseDown = (e: MouseEvent) => {
+      // Stop ALL propagation immediately - this happens before DnD sensors can capture
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Create a synthetic React event for the handler
+      const syntheticEvent = {
+        ...e,
+        currentTarget: handle,
+        target: handle,
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+        nativeEvent: e,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      } as unknown as React.MouseEvent<HTMLDivElement>;
+
+      onMouseDownResize(syntheticEvent, columnId);
+    };
+
+    handle.addEventListener('mousedown', handleMouseDown, { capture: true, passive: false });
+
+    return () => {
+      handle.removeEventListener('mousedown', handleMouseDown, { capture: true });
+    };
+  }, [columnId, onMouseDownResize]);
+
+  return (
+    <div
+      ref={handleRef}
+      className="absolute top-0 right-0 z-50 h-full w-1 cursor-col-resize"
+      data-resize-handle="true"
+      style={{ 
+        userSelect: 'none',
+        pointerEvents: 'auto',
+        touchAction: 'none',
+      }}
+    />
   );
 }
 

@@ -35,7 +35,10 @@ export function buildZodFromField(field: FieldDef) {
 
 export function buildSchema(config: FormConfig) {
   const shape: Record<string, z.ZodTypeAny> = {};
-  for (const f of config.fields) {
+  // Support both sections (preferred) and legacy flat fields (backward compatible)
+  const configWithSections = config as FormConfig & { sections?: Array<{ fields: FieldDef[] }> };
+  const allFields = configWithSections.sections?.flatMap((s) => s.fields) ?? config.fields ?? [];
+  for (const f of allFields) {
     shape[f.name] = buildZodFromField(f);
   }
   return z.object(shape);
@@ -43,7 +46,10 @@ export function buildSchema(config: FormConfig) {
 
 export function buildDefaults(config: FormConfig) {
   const defaults: Record<string, any> = {};
-  for (const f of config.fields) {
+  // Support both sections (preferred) and legacy flat fields (backward compatible)
+  const configWithSections = config as FormConfig & { sections?: Array<{ fields: FieldDef[] }> };
+  const allFields = configWithSections.sections?.flatMap((s) => s.fields) ?? config.fields ?? [];
+  for (const f of allFields) {
     if (f.defaultValue !== undefined) defaults[f.name] = f.defaultValue;
     else if (f.kind === "multiselect") defaults[f.name] = [];
     else if (f.kind === "checkbox") defaults[f.name] = false;

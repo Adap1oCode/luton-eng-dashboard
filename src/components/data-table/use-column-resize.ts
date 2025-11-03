@@ -22,12 +22,19 @@ export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTML
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
+  // Store columnId in ref to avoid closure issues
+  const resizingColumnIdRef = useRef<string | null>(null);
+
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, columnId: string) => {
       if (!columnId) return;
 
+      // Stop all event propagation IMMEDIATELY before DnD can capture
       e.preventDefault();
       e.stopPropagation();
+      if (e.nativeEvent) {
+        e.nativeEvent.stopImmediatePropagation();
+      }
 
       // Get current column width in pixels from DOM or state
       const headerEl = e.currentTarget.closest('th');
@@ -35,44 +42,56 @@ export function useColumnResize(initial: Widths, tableRef: MutableRefObject<HTML
       
       startXRef.current = e.clientX;
       startWidthRef.current = currentWidthPx;
+      resizingColumnIdRef.current = columnId;
 
       setIsResizing(true);
       setResizingColumnId(columnId);
 
       const onMove = (ev: MouseEvent) => {
-        if (!columnId) return;
+        const colId = resizingColumnIdRef.current;
+        if (!colId) {
+          // Cleanup if columnId is lost
+          document.removeEventListener("mousemove", onMove, true);
+          document.removeEventListener("mouseup", onUp, true);
+          return;
+        }
+
+        ev.preventDefault();
 
         const deltaX = ev.clientX - startXRef.current;
         const newWidthPx = startWidthRef.current + deltaX;
 
         // Get column-specific min/max from meta or use defaults
-        const meta = getColumnMeta?.(columnId);
+        const meta = getColumnMeta?.(colId);
         const minPx = meta?.minPx ?? defaultMinPx;
         const maxPx = meta?.maxPx ?? defaultMaxPx;
         const clampedWidth = Math.max(minPx, Math.min(maxPx, newWidthPx));
 
         setWidths((prev) => {
-          if (!prev) return { [columnId]: clampedWidth };
-          return { ...prev, [columnId]: clampedWidth };
+          if (!prev) return { [colId]: clampedWidth };
+          return { ...prev, [colId]: clampedWidth };
         });
 
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
       };
 
-      const onUp = () => {
+      const onUp = (ev?: MouseEvent) => {
+        ev?.preventDefault();
         setIsResizing(false);
         setResizingColumnId(null);
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
+        resizingColumnIdRef.current = null;
+        document.removeEventListener("mousemove", onMove, true);
+        document.removeEventListener("mouseup", onUp, true);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       };
 
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
+      // Use capture phase to ensure we get events BEFORE DnD handlers
+      document.addEventListener("mousemove", onMove, { capture: true, passive: false });
+      document.addEventListener("mouseup", onUp, { capture: true, passive: false });
     },
-    [tableRef, widths, defaultMinPx, defaultMaxPx, getColumnMeta],
+    [defaultMinPx, defaultMaxPx, getColumnMeta, widths],
   );
 
   return {
