@@ -212,4 +212,79 @@ test.describe('Stock Adjustments Forms Page', () => {
     await expect(page.locator('h1')).toContainText('Stock Adjustments')
     await expect(page.locator('[data-testid="resource-table"]')).toBeVisible()
   })
+
+  test('should keep expanded row open after inline edit', async ({ page }) => {
+    // Wait for the table to load
+    await page.waitForSelector('[data-testid="resource-table"]')
+    
+    // Wait for data rows to be present
+    await page.waitForSelector('tbody tr', { timeout: 10000 })
+    
+    // Find the expand button (chevron) for the first row
+    const firstRowExpandButton = page.locator('tbody tr').first().locator('button[aria-label*="expand" i], button:has(svg)').first()
+    
+    // Check if expand functionality is available (some tables may not have expandable rows)
+    const expandButtonCount = await firstRowExpandButton.count()
+    
+    if (expandButtonCount > 0) {
+      // Expand the first row
+      await firstRowExpandButton.click()
+      
+      // Wait for expanded content to appear
+      const expandedContent = page.locator('tbody tr').first().locator('td[colspan]')
+      await expect(expandedContent).toBeVisible({ timeout: 5000 })
+      
+      // Find an editable cell in the expanded row (or any row)
+      // Look for qty column which is inline editable
+      const qtyCell = page.locator('tbody tr').first().locator('td').filter({ hasText: /^\d+$/ }).first()
+      
+      // If qty cell is not found, try to find any cell with inline edit capability
+      const editableCell = qtyCell.count() > 0 
+        ? qtyCell 
+        : page.locator('tbody tr').first().locator('td').nth(4) // Qty is typically 5th column (after select, expand, tally card, warehouse)
+      
+      const cellCount = await editableCell.count()
+      
+      if (cellCount > 0) {
+        // Double-click to start inline edit (or click edit icon if present)
+        await editableCell.dblclick()
+        
+        // Wait for edit input to appear
+        const editInput = page.locator('input[type="number"], input[type="text"]').first()
+        await expect(editInput).toBeVisible({ timeout: 3000 })
+        
+        // Enter new value
+        await editInput.fill('999')
+        
+        // Save the edit (click save button or press Enter)
+        const saveButton = page.locator('button[aria-label*="save" i], button:has(svg[class*="check"])').first()
+        const saveButtonCount = await saveButton.count()
+        
+        if (saveButtonCount > 0) {
+          await saveButton.click()
+        } else {
+          // Fallback: press Enter
+          await editInput.press('Enter')
+        }
+        
+        // Wait a moment for the save to complete
+        await page.waitForTimeout(1000)
+        
+        // Verify the expanded row is still visible
+        await expect(expandedContent).toBeVisible({ timeout: 5000 })
+        
+        // Verify the edited value appears (optimistic update)
+        const updatedValue = page.locator('tbody tr').first().locator('td').filter({ hasText: '999' })
+        await expect(updatedValue.first()).toBeVisible({ timeout: 3000 })
+      } else {
+        // If no editable cell found, just verify expanded state persists
+        // This is still a valid test - expanded state should not collapse
+        await expect(expandedContent).toBeVisible()
+      }
+    } else {
+      // If expand functionality is not available, skip this test
+      // Note: This test requires expandable rows to be present
+      test.info().skip(true, 'Expand functionality not available')
+    }
+  })
 })

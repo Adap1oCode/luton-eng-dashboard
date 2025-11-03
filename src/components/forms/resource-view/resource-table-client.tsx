@@ -328,6 +328,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   // Local TanStack table state
   const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
   const [rowSelection, setRowSelection] = React.useState({});
+  // Expanded row state - controlled to persist across data updates
+  const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
   const initialOrderRef = React.useRef<string[]>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
@@ -550,8 +552,10 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
 
   // Generic inline editing handlers
-  const handleInlineEditStart = React.useCallback((rowId: string, columnId: string, currentValue: any) => {
-    setEditingCell({ rowId, columnId, value: currentValue });
+  // For side-by-side pattern: input starts empty (old value displayed separately)
+  const handleInlineEditStart = React.useCallback((rowId: string, columnId: string, _currentValue: any) => {
+    // Note: currentValue is unused - we always start with empty string for side-by-side pattern
+    setEditingCell({ rowId, columnId, value: "" });
   }, []);
 
   const handleInlineEditChange = React.useCallback((value: any) => {
@@ -589,6 +593,28 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         note: editingCell.columnId === "note" ? editingCell.value : (currentRow as any).note ?? null,
       };
 
+      // Build optimistic update payload - only the field being edited
+      const optimisticPayload: Partial<TRow> = {
+        [editingCell.columnId]: editingCell.value,
+      } as Partial<TRow>;
+
+      // Get specific query key for optimistic update and invalidation
+      const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
+      
+      // Optimistically update the cache before API call
+      queryClient.setQueryData(specificQueryKey, (prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          rows: prev.rows.map((r: any) => {
+            const rowId = (r as any)[idField];
+            return rowId === editingCell.rowId
+              ? { ...r, ...optimisticPayload }
+              : r;
+          }),
+        };
+      });
+
       // Use SCD2 endpoint (same as edit page): /api/stock-adjustments/[id]/actions/patch-scd2
       const res = await fetch(`/api/${routeSegment}/${editingCell.rowId}/actions/patch-scd2`, {
         method: "POST",
@@ -597,23 +623,27 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       });
 
       if (res.ok) {
-        // ⚙️ STEP 4: Invalidate React Query to trigger subtle refetch (no full page refresh)
-        // Use the same endpoint key that buildQueryKey uses (view endpoint, not table resourceKey)
-        // This ensures we invalidate queries that fetch from the view (with latest records), not the table (with duplicates)
-        const endpoint = getApiEndpoint();
-        const endpointKey = endpoint.replace(/^\/api\//, "");
-        queryClient.invalidateQueries({ queryKey: [endpointKey] });
+        // Optimistic update already applied, optionally do silent refetch to confirm
+        queryClient.invalidateQueries({ queryKey: specificQueryKey });
       } else {
+        // Rollback optimistic update on API failure
+        queryClient.invalidateQueries({ queryKey: specificQueryKey });
+        
         const errorData = await res.json().catch(() => ({}));
         alert(`Failed to update ${editingCell.columnId}: ${errorData.error?.message || res.statusText}`);
       }
     } catch (error) {
       console.error("Inline edit error:", error);
+      
+      // Rollback optimistic update on error
+      const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
+      queryClient.invalidateQueries({ queryKey: specificQueryKey });
+      
       alert(`Error updating ${editingCell.columnId}`);
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint]);
+  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint, buildQueryKey, page, pageSize, currentFilters]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -785,6 +815,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       columnVisibility,
       pagination,
       columnFilters,
+      expanded,
     },
     manualPagination: true,
     pageCount: Math.max(1, Math.ceil(currentTotal / Math.max(1, pagination.pageSize))),
@@ -800,6 +831,17 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
+    onExpandedChange: (updater) => {
+      setExpanded((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        // TanStack Table ExpandedState can be boolean or Record<string, boolean>
+        // We normalize to Record<string, boolean>
+        if (typeof next === 'boolean') {
+          return next ? {} : {};
+        }
+        return next || {};
+      });
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -809,10 +851,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
     // ✅ use the same idField consistently for stable keys
-    getRowId: (row: TRow, idx: number) => {
-      const id = String((row as any)[idField]);
-      return id || `row_${idx}`;
-    },
+    getRowId: (row: TRow) => String((row as any)[idField]),
   });
 
   // Update table ref immediately after table is created

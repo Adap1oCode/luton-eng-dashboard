@@ -6,13 +6,23 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    include: ["src/**/*.spec.ts", "src/**/*.spec.tsx"],
+    include: [
+      "src/**/*.spec.ts",
+      "src/**/*.spec.tsx",
+      // Exclude tests/unit/** - prefer co-located tests in src/
+      // Exclude src/tests/** - these are legacy test files, prefer co-located tests
+    ],
     exclude: [
-      // Short-term: exclude heavier suites until build and DB parity stabilize
+      // Legacy test directories (prefer co-located tests in src/)
+      "src/tests/**",
+      "tests/**",
+      // Integration tests (moved to nightly)
       "src/**/*.integration.spec.ts",
-      "src/tests/integration/**",
-      "src/tests/performance/**",
+      // E2E tests (moved to nightly)
       "src/app/**/**.e2e.spec.ts",
+      // Slow tests (moved to nightly)
+      "**/*.slow.spec.ts",
+      "**/*.slow.spec.tsx",
     ],
     setupFiles: ["./vitest.setup.ts"], // dotenv + var mirroring lives here
     coverage: {

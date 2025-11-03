@@ -28,10 +28,12 @@ export function StockAdjustmentsTableClient({
 }: StockAdjustmentsTableClientProps) {
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
-  const viewConfigWithColumns = useMemo<BaseViewConfig<StockAdjustmentRow> & { columns?: any[] }>(() => {
+  const viewConfigWithColumns = useMemo<BaseViewConfig<StockAdjustmentRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
     const config = {
       ...stockAdjustmentsViewConfig,
       columns: stockAdjustmentsViewConfig.buildColumns(),
+      // Explicitly preserve apiEndpoint from viewConfig (VIEW endpoint, not TABLE)
+      apiEndpoint: stockAdjustmentsViewConfig.apiEndpoint,
     };
     // Remove buildColumns function since columns are materialized
     delete (config as any).buildColumns;

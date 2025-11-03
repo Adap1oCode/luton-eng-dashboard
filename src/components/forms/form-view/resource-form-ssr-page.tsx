@@ -115,10 +115,7 @@ export default function ResourceFormSSRPage({
           ),
         primary: hidePrimary ? null : (
           primaryButtonPermissions ? (
-            <PermissionGate 
-              any={primaryButtonPermissions.any} 
-              all={primaryButtonPermissions.all}
-            >
+            <PermissionGate any={primaryButtonPermissions.any} all={primaryButtonPermissions.all}>
               <button
                 form={formId}
                 type="submit"

@@ -29,6 +29,7 @@ export const InlineEditCellWrapper = <TRow extends { id: string }>({
 }: InlineEditCellWrapperProps<TRow>) => {
   const rawValue = row.getValue(columnId);
   const isEditing = editingCell?.rowId === (row.original as { id: string }).id && editingCell?.columnId === columnId;
+  const rowId = (row.original as { id: string }).id;
 
   // Wrap in container that preserves column width - prevents flicker during edit transitions
   return (
@@ -36,9 +37,9 @@ export const InlineEditCellWrapper = <TRow extends { id: string }>({
       <InlineEditCell
         value={rawValue}
         isEditing={isEditing}
-        editingValue={editingCell?.value ?? rawValue}
+        editingValue={editingCell?.value ?? ""}
         config={config}
-        onEditStart={() => onEditStart((row.original as { id: string }).id, columnId, rawValue)}
+        onEditStart={() => onEditStart(rowId, columnId, rawValue)}
         onEditChange={onEditChange}
         onSave={onSave}
         onCancel={onCancel}

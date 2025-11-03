@@ -213,6 +213,7 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
   resourceKeyForDelete: RESOURCE_KEY,
   formsRouteSegment: ROUTE_SEGMENT,
   idField: "id",
+  apiEndpoint: API_ENDPOINT, // VIEW endpoint for list/view-all screen (not TABLE endpoint)
   toolbar: { left: undefined, right: [] },
   quickFilters: quickFilters,
   features: {

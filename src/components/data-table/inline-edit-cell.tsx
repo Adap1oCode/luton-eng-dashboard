@@ -94,15 +94,49 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
   onCancel,
   disabled = false,
 }) => {
+  const displayValue = formatDisplayValue(value, config);
+  const badgeVariant = getDefaultBadgeVariant(value, config.options);
+  const badgeClassName = getDefaultBadgeClassName(value, config.options);
+
+  // ROBUST SOLUTION: Side-by-side pattern
+  // - Keep display value visible (read-only) when editing
+  // - Show empty input next to it that gets focus
+  // - Input never unmounts, so no focus issues
+  // - Clear UX: user sees old value + new value being typed
+
   if (isEditing) {
     return (
       <div className="flex items-center gap-2 w-full min-w-0">
+        {/* Display the current value (read-only) - user can see what they're changing */}
+        <span className="text-muted-foreground text-sm flex-shrink-0">
+          {config.showBadge !== false ? (
+            <Badge variant={badgeVariant} className={`px-2 py-1 text-xs ${badgeClassName}`}>
+              {displayValue}
+            </Badge>
+          ) : (
+            displayValue
+          )}
+        </span>
+
+        {/* Input for new value - starts empty, auto-focuses, never unmounts */}
         {config.fieldType === "text" && (
           <Input
+            autoFocus
             value={editingValue || ""}
-            onChange={(e) => onEditChange(config.parseValue ? config.parseValue(e.target.value) : e.target.value)}
-            placeholder={config.placeholder}
+            onChange={(e) => {
+              onEditChange(config.parseValue ? config.parseValue(e.target.value) : e.target.value);
+            }}
+            placeholder={config.placeholder || "Enter new value"}
             className="flex-1 min-w-0"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSave();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                onCancel();
+              }
+            }}
           />
         )}
 
@@ -137,10 +171,7 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
     );
   }
 
-  const displayValue = formatDisplayValue(value, config);
-  const badgeVariant = getDefaultBadgeVariant(value, config.options);
-  const badgeClassName = getDefaultBadgeClassName(value, config.options);
-
+  // Display mode - not editing
   return (
     <div className="group flex items-center justify-start gap-2">
       {config.showBadge !== false ? (

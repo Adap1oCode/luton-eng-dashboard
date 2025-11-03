@@ -33,6 +33,8 @@ export default function FormIsland({
   autoSaveMessage = "Saving draft...",
   isValidating = false,
   validationMessage = "Validating...",
+  // Callback to notify parent of submission state (for optimistic UI)
+  onSubmittingChange,
 }: {
   config: EnhancedFormConfig;
   defaults: Record<string, any>;
@@ -46,10 +48,17 @@ export default function FormIsland({
   autoSaveMessage?: string;
   isValidating?: boolean;
   validationMessage?: string;
+  // Callback to notify parent of submission state
+  onSubmittingChange?: (isSubmitting: boolean) => void;
 }) {
   const router = useRouter();
   const notice = useNotice();
   const [submitting, setSubmitting] = React.useState(false);
+
+  // Notify parent of submission state changes (for optimistic UI)
+  React.useEffect(() => {
+    onSubmittingChange?.(submitting);
+  }, [submitting, onSubmittingChange]);
 
   return (
     <>
