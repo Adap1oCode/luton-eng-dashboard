@@ -471,3 +471,7 @@ describe("clampColumnWidth", () => {
 - `src/lib/next/search-params.ts`: ≥80% lines
 - `src/lib/data/projects.ts`: ≥80% lines
 
+
+
+
+

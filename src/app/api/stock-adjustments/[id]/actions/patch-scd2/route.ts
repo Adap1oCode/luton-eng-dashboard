@@ -27,6 +27,8 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
 
   const sb = await createSupabaseServerClient();
 
+  // Extract only the fields we need, excluding any legacy user_id field
+  // The RPC function handles setting updated_by_user_id internally based on session context
   const { data, error } = await (sb as any).rpc("fn_user_entry_patch_scd2", {
     p_id: id,
     p_qty: payload?.qty ?? null,

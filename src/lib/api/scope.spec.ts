@@ -118,7 +118,7 @@ describe("applyOwnershipScopeToSupabase", () => {
     mockQB = createMockQB();
   });
 
-  it("bypasses when mode is not 'self'", () => {
+  it("bypasses when cfg is undefined", () => {
     const cfg = undefined;
     const ctx = { userId: "user1", permissions: [] };
     const result = applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
@@ -172,6 +172,45 @@ describe("applyOwnershipScopeToSupabase", () => {
     const result = applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
     expect(result).toBe(mockQB);
     expect(mockQB.eq).not.toHaveBeenCalled();
+  });
+
+  describe("role_family mode", () => {
+    it("applies filter when roleFamily is provided", () => {
+      const cfg = { mode: "role_family" as const, column: "role_family" };
+      const ctx = { userId: "user1", permissions: [], roleFamily: "STORE_OFFICER" };
+      applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
+      expect(mockQB.eq).toHaveBeenCalledWith("role_family", "STORE_OFFICER");
+    });
+
+    it("returns empty filter when roleFamily is null", () => {
+      const cfg = { mode: "role_family" as const, column: "role_family" };
+      const ctx = { userId: "user1", permissions: [], roleFamily: null };
+      applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
+      expect(mockQB.eq).toHaveBeenCalledWith("role_family", "__NO_ROLE_FAMILY__");
+    });
+
+    it("returns empty filter when roleFamily is undefined", () => {
+      const cfg = { mode: "role_family" as const, column: "role_family" };
+      const ctx = { userId: "user1", permissions: [] };
+      applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
+      expect(mockQB.eq).toHaveBeenCalledWith("role_family", "__NO_ROLE_FAMILY__");
+    });
+
+    it("bypasses when bypass permission present", () => {
+      const cfg = {
+        mode: "role_family" as const,
+        column: "role_family",
+        bypassPermissions: ["admin:read:any"],
+      };
+      const ctx = {
+        userId: "user1",
+        permissions: ["admin:read:any"],
+        roleFamily: "STORE_OFFICER",
+      };
+      const result = applyOwnershipScopeToSupabase(mockQB, cfg, ctx);
+      expect(result).toBe(mockQB);
+      expect(mockQB.eq).not.toHaveBeenCalled();
+    });
   });
 });
 

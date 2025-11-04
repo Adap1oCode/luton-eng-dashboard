@@ -197,6 +197,7 @@ export function createSupabaseProvider<T, TInput>(
           // Prefer effective app user id (impersonation-safe); fall back to legacy alias
           userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
           permissions: ctx.permissions,
+          roleFamily: (ctx as any).effectiveUser?.roleFamily ?? null,
         });
 
         debugAuth({

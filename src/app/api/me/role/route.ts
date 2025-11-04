@@ -41,6 +41,7 @@ type BuiltContext = {
   email: string | null;
   roleName: string | null;
   roleCode: string | null;
+  roleFamily: string | null; // role_family from roles table
 
   permissions: string[];
   permissionDetails: Array<{ key: string; description: string | null }>;
@@ -72,28 +73,30 @@ async function buildContextForUserRow(
   if (roleId) {
     const { data: roleRow, error: roleErr } = await supabase
       .from("roles")
-      .select("id, role_name, role_code")
+      .select("id, role_name, role_code, role_family")
       .eq("id", roleId)
       .maybeSingle<RoleRow>();
     if (roleErr) throw new Error(`role_query_failed: ${roleErr.message}`);
     role = roleRow ?? null;
   }
 
-  // —— Derive final roleName / roleCode with safe fallbacks ——
+  // —— Derive final roleName / roleCode / roleFamily with safe fallbacks ——
   // Prefer explicit role row, else fallback to user's stored role_code
   let roleName: string | null = role?.role_name ?? null;
   let roleCodeOut: string | null = role?.role_code ?? me.role_code ?? null;
+  let roleFamily: string | null = (role as any)?.role_family ?? null;
 
   // If role_id is null but we have a role_code, resolve a display name by code.
-  if (!roleName && roleCodeOut) {
+  if ((!roleName || !roleFamily) && roleCodeOut) {
     const { data: byCode, error: byCodeErr } = await supabase
       .from("roles")
-      .select("role_name, role_code")
+      .select("role_name, role_code, role_family")
       .eq("role_code", roleCodeOut)
-      .maybeSingle<{ role_name: string | null; role_code: string | null }>();
+      .maybeSingle<{ role_name: string | null; role_code: string | null; role_family: string | null }>();
     if (!byCodeErr && byCode) {
       roleName = byCode.role_name ?? roleName;
       roleCodeOut = byCode.role_code ?? roleCodeOut;
+      roleFamily = byCode.role_family ?? roleFamily;
     }
   }
   // ————————————————————————————————————————————————————————————————
@@ -159,6 +162,7 @@ async function buildContextForUserRow(
     email: me.email ?? null,
     roleName,
     roleCode: roleCodeOut,
+    roleFamily,
 
     permissions: permList,
     permissionDetails,
@@ -314,6 +318,7 @@ export async function GET(req: NextRequest) {
       email: effectiveCtx.email,
       roleName: effectiveCtx.roleName,
       roleCode: effectiveCtx.roleCode,
+      roleFamily: effectiveCtx.roleFamily,
       permissions: effectiveCtx.permissions,
     },
 

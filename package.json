@@ -4,7 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "node scripts/kill-ports.mjs && next dev",
+    "dev:3000": "cross-env PORT=3000 node scripts/kill-ports.mjs && cross-env PORT=3000 next dev -p 3000",
+    "dev:3001": "cross-env PORT=3001 node scripts/kill-ports.mjs && cross-env PORT=3001 next dev -p 3001",
+    "dev:check": "node scripts/wait-on-dev.mjs",
+    "dev:ok": "concurrently -s first \"node scripts/kill-ports.mjs\" \"next dev\" \"node scripts/wait-on-dev.mjs\"",
+    "dev:ok:strict": "concurrently -s first \"node scripts/kill-ports.mjs\" \"next dev\" \"cross-env RUN_TYPECHECK=true node scripts/wait-on-dev.mjs\"",
+    "dev:3000:ok": "cross-env PORT=3000 concurrently -s first \"node scripts/kill-ports.mjs\" \"next dev -p 3000\" \"node scripts/wait-on-dev.mjs\"",
+    "dev:3001:ok": "cross-env PORT=3001 concurrently -s first \"node scripts/kill-ports.mjs\" \"next dev -p 3001\" \"node scripts/wait-on-dev.mjs\"",
     "build": "next build --no-lint",
     "start": "next start -p 3000",
     "format": "prettier --write .",
@@ -120,6 +127,8 @@
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/parser": "^8.26.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",
     "eslint-plugin-import": "^2.31.0",
@@ -133,6 +142,7 @@
     "globals": "^15.15.0",
     "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "kill-port": "^2.0.1",
     "lint-staged": "^15.5.2",
     "msw": "^2.11.5",
     "postcss": "^8.5.5",
@@ -144,6 +154,7 @@
     "tw-animate-css": "^1.3.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.34.0",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "wait-on": "^9.0.1"
   }
 }

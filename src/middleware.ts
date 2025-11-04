@@ -124,7 +124,7 @@ if (!user && !isPublicExact) {
   if (user && (pathname === "/" || isAuthPage)) {
     const requestedNext = safeNext(searchParams.get("next"));
     const url = req.nextUrl.clone();
-    url.pathname = requestedNext || "/dashboard";
+    url.pathname = requestedNext || "/forms/stock-adjustments";
     url.search = "";
     const redirectRes = NextResponse.redirect(url);
     return withDebugHeaders(redirectRes, {

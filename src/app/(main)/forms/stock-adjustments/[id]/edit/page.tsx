@@ -9,7 +9,10 @@ import React from "react";
 import { notFound } from "next/navigation";
 
 import ResourceFormSSRPage from "@/components/forms/form-view/resource-form-ssr-page";
+import EditWithTabs from "@/components/history/edit-with-tabs";
+import FormIsland from "@/components/forms/shell/form-island";
 import { getRecordForEdit } from "@/lib/forms/get-record-for-edit";
+import { resolveResource } from "@/lib/api/resolve-resource";
 
 import { stockAdjustmentCreateConfig } from "../../new/form.config";
 
@@ -42,6 +45,16 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     submitLabel: "Update",
   };
 
+  // Resolve resource config to get history UI config
+  let historyUI;
+  try {
+    const resolved = await resolveResource(resourceKey);
+    historyUI = resolved.config.history?.ui;
+  } catch (err) {
+    // If resource resolution fails, historyUI will be undefined (graceful degradation)
+    console.warn("Failed to resolve resource for history config:", err);
+  }
+
   return (
     <ResourceFormSSRPage
       title="Edit Stock Adjustment"
@@ -55,6 +68,20 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
       primaryButtonPermissions={{
         any: ["resource:tcm_user_tally_card_entries:update"]
       }}
-    />
+    >
+      <EditWithTabs
+        resourceKey={resourceKey}
+        recordId={id}
+        formNode={
+          <FormIsland
+            formId={formId}
+            config={transportConfig}
+            defaults={prep.defaults ?? {}}
+            options={prep.options ?? {}}
+          />
+        }
+        historyUI={historyUI}
+      />
+    </ResourceFormSSRPage>
   );
 }

@@ -127,6 +127,13 @@ export type OwnershipScopeCfg =
       column: string;
       /** Any of these permissions bypass the self-only restriction (e.g., admin/read:any). */
       bypassPermissions?: string[];
+    }
+  | {
+      mode: "role_family";
+      /** Column that holds the role family (typically "role_family") */
+      column: string;
+      /** Any of these permissions bypass the role_family-only restriction (e.g., admin/read:any). */
+      bypassPermissions?: string[];
     };
 
 /* =========================================================================================
@@ -180,6 +187,63 @@ export type RelationSpec =
   | OneToManyRelationSpec
   | ManyToOneRelationSpec;
 
+/* =========================================================================================
+   HISTORY CONFIG — SCD2 (Slowly Changing Dimension Type 2) tracking configuration.
+   Allows any resource to enable history tracking by configuring the source and projection.
+========================================================================================= */
+
+/**
+ * History configuration for SCD2 (Slowly Changing Dimension Type 2) tracking.
+ * 
+ * Scoping behavior:
+ * - If history.scope.ownership is omitted, use parent list ownership scope exactly.
+ * - If parent list is "self" + bypassPermissions, history uses the same "self unless bypass".
+ * - Ownership truly mirrors list: self-only users only see their changes; users with bypass see all.
+ * - Warehouse scope mirrors list behavior exactly (no overrides).
+ * 
+ * Ordering:
+ * - Results are ordered by projection.orderBy.column (default: updated_at DESC)
+ * - Tie-breaker: id DESC for stable ordering
+ * - Current record is included in results (same anchorColumn value)
+ */
+export type HistoryConfig = {
+  enabled: boolean;
+  source?: {
+    /**
+     * Configurable history resource: specify which resource/view to query for history.
+     * This allows using a view (e.g., v_tcm_user_tally_card_entries) that has user-friendly
+     * information (full_name, warehouse) instead of the base table that only has IDs.
+     * If omitted, defaults to the same resource as the list (current resource config).
+     */
+    historyResource?: string; // resource key to use for history (e.g., 'v_tcm_user_tally_card_entries')
+    
+    tableOrView?: string;      // default: resolved from historyResource or same as list source (cfg.table)
+    idColumn?: string;         // default: resolved from historyResource or same as list id (cfg.pk)
+    anchorColumn: string;      // REQUIRED, e.g. 'tally_card_number' (must exist in history resource)
+    warehouseColumn?: string;  // if resource is warehouse-scoped (defaults from historyResource config)
+  };
+  scope?: {
+    // Reuse list semantics; if omitted, mirror list defaults for this resource
+    ownership?: {
+      mode: 'self' | 'any';
+      column?: string; // e.g. 'user_id' when mode==='self'
+      bypassPermissions?: string[]; // e.g. ['entries:read:any','admin:read:any']
+    };
+    warehouse?: {
+      mode: 'column' | 'all';
+      column?: string; // e.g. 'warehouse_id'
+    };
+  };
+  projection?: {
+    columns: string[]; // e.g. ['updated_at','updated_at_pretty','user_id','full_name','qty','location','note','warehouse']
+    orderBy?: { column: string; direction: 'asc' | 'desc' }; // default: updated_at desc
+  };
+  ui?: {
+    columns?: Array<{ key: string; label: string; width?: number; format?: 'date'|'text'|'number' }>;
+    tabBadgeCount?: boolean; // show "X versions" count on the History tab
+  };
+};
+
 /** ResourceConfig (pk is single-column only at this layer) */
 export type ResourceConfig<T, TInput> = {
   table: string;
@@ -200,6 +264,9 @@ export type ResourceConfig<T, TInput> = {
   /** Optional scoping descriptors consumed by generic handlers */
   warehouseScope?: WarehouseScopeCfg;
   ownershipScope?: OwnershipScopeCfg;
+  
+  /** Optional history (SCD2) configuration */
+  history?: HistoryConfig;
 };
 
 /* =========================================================================================

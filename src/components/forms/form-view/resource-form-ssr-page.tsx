@@ -60,6 +60,9 @@ interface ResourceFormSSRPageProps {
   submissionDescription?: string;
   isBackgroundLoading?: boolean;
   backgroundLoadingMessage?: string;
+
+  // Optional children to override default FormIsland rendering (e.g., for tabs wrapper)
+  children?: React.ReactNode;
 }
 
 // Safely build a default cancel URL using common fields on EnhancedFormConfig.
@@ -97,9 +100,15 @@ export default function ResourceFormSSRPage({
   submissionDescription = "Please wait...",
   isBackgroundLoading = false,
   backgroundLoadingMessage = "Processing...",
+  children,
 }: ResourceFormSSRPageProps) {
   const computedCancelHref = cancelHref ?? resolveDefaultCancelHref(config);
   const computedPrimaryLabel = primaryLabel ?? (config as any)?.submitLabel ?? "Save";
+
+  // Default content: FormIsland (backward compatible)
+  const defaultContent = (
+    <FormIsland formId={formId} config={config} defaults={defaults} options={options} />
+  );
 
   return (
     <FormShellWithLoading
@@ -145,13 +154,8 @@ export default function ResourceFormSSRPage({
       isBackgroundLoading={isBackgroundLoading}
       backgroundLoadingMessage={backgroundLoadingMessage}
     >
-      {/* FormIsland is a client component; pass exactly what it expects */}
-      <FormIsland
-        formId={formId}
-        config={config}
-        defaults={defaults}
-        options={options}
-      />
+      {/* Use children if provided (e.g., tabs wrapper), otherwise default FormIsland */}
+      {children ?? defaultContent}
     </FormShellWithLoading>
   );
 }

@@ -65,16 +65,29 @@ export function applyWarehouseScopeToSupabase(
 /**
  * Apply ownership scope:
  * - mode: "self" => eq(column, userId) unless a bypass permission is present
+ * - mode: "role_family" => eq(column, roleFamily) unless a bypass permission is present
  */
 export function applyOwnershipScopeToSupabase(
   qb: FilterableQB,
   cfg: OwnershipScopeCfg,
-  ctx: { userId: string; permissions: string[] }
+  ctx: { userId: string; permissions: string[]; roleFamily?: string | null }
 ): FilterableQB {
-  if (!cfg || cfg.mode !== "self") return qb;
+  if (!cfg) return qb;
 
   const bypass = cfg.bypassPermissions?.some((p) => ctx.permissions.includes(p));
   if (bypass) return qb;
 
-  return qb.eq(cfg.column, ctx.userId);
+  if (cfg.mode === "self") {
+    return qb.eq(cfg.column, ctx.userId);
+  }
+
+  if (cfg.mode === "role_family") {
+    if (!ctx.roleFamily) {
+      // No role family means no access (empty result)
+      return qb.eq(cfg.column, "__NO_ROLE_FAMILY__");
+    }
+    return qb.eq(cfg.column, ctx.roleFamily);
+  }
+
+  return qb;
 }

@@ -39,7 +39,7 @@ describe('Stock Adjustments API Integration', () => {
         pk: 'id',
         toDomain: (row: any) => row,
         warehouseScope: { mode: 'column', column: 'warehouse_id' },
-        ownershipScope: { mode: 'self', column: 'user_id' }
+        ownershipScope: { mode: 'role_family', column: 'role_family' }
       }
 
       resolveResource.mockResolvedValue({
@@ -307,7 +307,7 @@ describe('Stock Adjustments API Integration', () => {
           select: '*', 
           pk: 'id', 
           toDomain: (row: any) => row,
-          ownershipScope: { mode: 'self', column: 'user_id' }
+          ownershipScope: { mode: 'role_family', column: 'role_family' }
         },
         allowRaw: true
       })

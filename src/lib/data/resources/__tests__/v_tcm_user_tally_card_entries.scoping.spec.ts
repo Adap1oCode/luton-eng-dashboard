@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import tcm_user_tally_card_entries from "../v_tcm_user_tally_card_entries.config";
 
 describe("v_tcm_user_tally_card_entries resource config scoping", () => {
-  it("includes user_id in select string (required for ownership scoping)", () => {
+  it("includes role_family in select string (required for ownership scoping)", () => {
     const select = tcm_user_tally_card_entries.select;
 
-    expect(select).toContain("user_id");
+    expect(select).toContain("role_family");
   });
 
   it("includes warehouse_id in select string (required for warehouse scoping)", () => {
@@ -18,8 +18,8 @@ describe("v_tcm_user_tally_card_entries resource config scoping", () => {
     const ownershipScope = tcm_user_tally_card_entries.ownershipScope;
 
     expect(ownershipScope).toBeDefined();
-    expect(ownershipScope?.mode).toBe("self");
-    expect(ownershipScope?.column).toBe("user_id");
+    expect(ownershipScope?.mode).toBe("role_family");
+    expect(ownershipScope?.column).toBe("role_family");
     expect(ownershipScope?.bypassPermissions).toBeDefined();
     expect(Array.isArray(ownershipScope?.bypassPermissions)).toBe(true);
   });
@@ -36,13 +36,14 @@ describe("v_tcm_user_tally_card_entries resource config scoping", () => {
     const select = tcm_user_tally_card_entries.select;
 
     // Must include both scoping columns
-    expect(select).toMatch(/\buser_id\b/);
+    expect(select).toMatch(/\brole_family\b/);
     expect(select).toMatch(/\bwarehouse_id\b/);
     
     // Also verify other essential fields
     expect(select).toContain("id");
     expect(select).toContain("full_name");
     expect(select).toContain("warehouse"); // Display field
+    expect(select).toContain("user_id"); // Updater alias (still present for display)
   });
 
   it("scoping configuration matches select fields", () => {
@@ -54,6 +55,10 @@ describe("v_tcm_user_tally_card_entries resource config scoping", () => {
     expect(select).toContain(warehouseCol);
   });
 });
+
+
+
+
 
 
 

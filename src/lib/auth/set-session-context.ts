@@ -29,6 +29,7 @@ export type SessionContext = {
     email: string | null;
     roleName: string | null;
     roleCode: string | null;
+    roleFamily: string | null; // role_family from roles table
     permissions: string[]; // flattened permission keys
   };
 
