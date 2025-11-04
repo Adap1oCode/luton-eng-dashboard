@@ -277,12 +277,12 @@ export const GET = withLogging(
             historyOwnershipScope ??
             config.ownershipScope;
 
-          if (ownershipScope) {
-            query = applyOwnershipScopeToSupabase(query, ownershipScope, {
+          if (ownershipScope && ownershipScope !== undefined && 'mode' in ownershipScope && (ownershipScope.mode === "self" || ownershipScope.mode === "role_family")) {
+            query = applyOwnershipScopeToSupabase(query, ownershipScope as { mode: "self" | "role_family"; column: string; bypassPermissions?: string[] }, {
               userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
               permissions: ctx.permissions,
               roleFamily: (ctx as any).effectiveUser?.roleFamily ?? null,
-            });
+            }) as any;
           }
         } catch (sessionError: any) {
           // If session context fails (e.g., no auth session), log but continue without scoping

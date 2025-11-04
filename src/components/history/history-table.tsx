@@ -91,7 +91,7 @@ export default function HistoryTable({ resourceKey, recordId, columnsConfig, que
             if (col.format === "number") {
               return <span className="text-sm">{formatNumberValue(value)}</span>;
             }
-            return <span className="text-sm">{value ?? "-"}</span>;
+            return <span className="text-sm">{String(value ?? "-")}</span>;
           },
         };
       }),
