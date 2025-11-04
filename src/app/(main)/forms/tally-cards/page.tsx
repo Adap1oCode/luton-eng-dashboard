@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// FILE: src/app/(main)/forms/stock-adjustments/page.tsx
+// FILE: src/app/(main)/forms/tally-cards/page.tsx
 // TYPE: Server Component (SSR)
 // PURPOSE: Server-side data fetching with direct ResourceTableClient rendering
 // PATTERN: PageShell + ResourceTableClient (aligned with users/products screens)
@@ -10,9 +10,9 @@ import PageShell from "@/components/forms/shell/page-shell";
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
 import { resolveSearchParams, parseListParams, type SPRecord } from "@/lib/next/search-params";
 
-import { config, stockAdjustmentsFilterMeta, statusToQuery } from "./stock-adjustments.config";
+import { config, tallyCardsFilterMeta, statusToQuery } from "./tally-cards.config";
 import { toRow } from "./to-row";
-import { StockAdjustmentsTableClient } from "./stock-adjustments-table-client";
+import { TallyCardsTableClient } from "./tally-cards-table-client";
 
 export const metadata: Metadata = {
   title: config.title,
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
   const sp = await resolveSearchParams(props.searchParams);
-  const { page, pageSize, filters } = parseListParams(sp, stockAdjustmentsFilterMeta, { defaultPage: 1, defaultPageSize: 50, max: 500 });
+  const { page, pageSize, filters } = parseListParams(sp, tallyCardsFilterMeta, { defaultPage: 1, defaultPageSize: 50, max: 500 });
 
   // Apply status filter transform if present
   const extraQuery: Record<string, any> = { raw: "true" };
@@ -51,7 +51,7 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
       enableAdvancedFilters={false}
       showToolbarContainer={false}
     >
-      <StockAdjustmentsTableClient
+      <TallyCardsTableClient
         initialRows={rows}
         initialTotal={total}
         page={page}

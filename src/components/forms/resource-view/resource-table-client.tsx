@@ -1027,15 +1027,28 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   }, [config, router, confirm, markAsDeleted, clearOptimisticState, queryClient, getApiEndpoint]);
 
   // 🔄 Keep URL in sync whenever the controlled pagination changes
+  // Also ensure URL uses the server's default pageSize (50) if URL has old value (10) or is missing
   React.useEffect(() => {
     const nextPage = pagination.pageIndex + 1;
     const nextSize = pagination.pageSize;
     const curPage = Number(search.get("page") ?? String(page));
     const curSize = Number(search.get("pageSize") ?? String(pageSize));
-    if (curPage === nextPage && curSize === nextSize) return;
+    
+    // If URL has old default (10) or is missing, use server's default (50)
+    // This ensures the URL is updated to reflect the new default
+    const urlSize = search.get("pageSize");
+    const urlSizeNum = urlSize ? Number(urlSize) : null;
+    const shouldUpdateSize = urlSizeNum === null || urlSizeNum === 10;
+    
+    // Use server's default (50) if URL has old value or is missing, otherwise use current pagination
+    const finalSize = shouldUpdateSize ? pageSize : nextSize;
+    
+    // Only update if page changed, size changed, or we need to update from old default
+    if (curPage === nextPage && curSize === finalSize && !shouldUpdateSize) return;
+    
     const sp = new URLSearchParams(search.toString());
     sp.set("page", String(nextPage));
-    sp.set("pageSize", String(nextSize));
+    sp.set("pageSize", String(finalSize));
     router.replace(`${pathname}?${sp.toString()}`);
   }, [pagination.pageIndex, pagination.pageSize, pathname, router, search, page, pageSize]);
 

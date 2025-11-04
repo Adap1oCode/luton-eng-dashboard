@@ -25,6 +25,7 @@ const resources = {
   tcm_user_tally_card_entries,
   v_tcm_user_tally_card_entries,
   v_tcm_tally_card_entry_compare,
+  v_tcm_tally_cards_current: tcm_tally_cards_current,
   v_table_report_combined,
   inventory_summary,
   inventoryWarehouse,

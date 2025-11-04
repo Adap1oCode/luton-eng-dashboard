@@ -6,10 +6,10 @@ const tcm_tally_cards_current: ResourceConfig<TcmTallyCard, unknown> = {  // ⬅
   table: "v_tcm_tally_cards_current",
   pk: "id",
   select:
-    "id, card_uid, tally_card_number, warehouse_id, item_number, note, is_active, created_at, snapshot_at",
-search: ["tally_card_number"],
+    "id, card_uid, tally_card_number, warehouse_id, warehouse_name, item_number, note, is_active, created_at, snapshot_at, updated_at, updated_at_pretty",
+  search: ["tally_card_number"],
   activeFlag: "is_active",
-  defaultSort: { column: "snapshot_at", desc: true },
+  defaultSort: { column: "tally_card_number", desc: false },
 
   toDomain: (row: unknown) => row as TcmTallyCard,
 
@@ -19,11 +19,14 @@ search: ["tally_card_number"],
       card_uid: { type: "uuid" },
       tally_card_number: { type: "text" },
       warehouse_id: { type: "uuid" },
+      warehouse_name: { type: "text", readonly: true },
       item_number: { type: "bigint" },
       note: { type: "text", nullable: true },
       is_active: { type: "bool" },
       created_at: { type: "timestamp", nullable: true },
       snapshot_at: { type: "timestamp" },
+      updated_at: { type: "timestamp", nullable: true, readonly: true },
+      updated_at_pretty: { type: "text", nullable: true, readonly: true },
     },
   },
 };
