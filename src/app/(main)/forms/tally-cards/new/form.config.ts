@@ -6,7 +6,13 @@ import type { FormConfig } from "@/lib/forms/types";
 export const formSchema = z.object({
   tally_card_number: z.string().min(1, "Tally Card Number is required"),
   warehouse_id: z.string().uuid("Valid warehouse ID is required"),
-  item_number: z.number().int().positive("Item number must be a positive integer"),
+  item_number: z.union([z.string(), z.number()]).refine(
+    (val) => {
+      const num = typeof val === "string" ? Number(val) : val;
+      return Number.isInteger(num) && num > 0;
+    },
+    { message: "Item number must be a positive integer" }
+  ),
   note: z.string().optional(),
   is_active: z.boolean().optional().default(true),
 });
@@ -15,7 +21,7 @@ export const formSchema = z.object({
 export const defaultValues = {
   tally_card_number: "",
   warehouse_id: "",
-  item_number: 0,
+  item_number: "", // Empty string for select dropdown
   note: "",
   is_active: true,
 };
@@ -85,9 +91,10 @@ export const tallyCardCreateConfig: FormConfig & {
     {
       name: "item_number",
       label: "Item Number",
-      kind: "number",
+      kind: "select",
       required: true,
-      placeholder: "e.g. 12345",
+      placeholder: "Select item number",
+      optionsKey: "items",
     },
     {
       name: "note",
@@ -130,9 +137,10 @@ export const tallyCardCreateConfig: FormConfig & {
         {
           name: "item_number",
           label: "Item Number",
-          kind: "number",
+          kind: "select",
           required: true,
-          placeholder: "e.g. 12345",
+          placeholder: "Select item number",
+          optionsKey: "items",
         },
         {
           name: "is_active",

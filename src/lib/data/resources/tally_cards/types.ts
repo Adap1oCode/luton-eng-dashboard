@@ -25,7 +25,7 @@ export interface TallyCardInput {
   warehouse_id: string;
   warehouse?: string | null; // warehouse name/code for display
   tally_card_number: string;
-  item_number: number;
+  item_number: number | string; // Accept both number and string (string from dropdown)
   note?: string | null;
   is_active?: boolean;
   snapshot_at?: string | null;

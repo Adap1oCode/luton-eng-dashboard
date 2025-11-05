@@ -116,6 +116,7 @@ export function DynamicForm({
   });
 
   // Normalize nulls → "" for text/textarea and keep numbers as-is
+  // Convert number values to strings for select fields (dropdowns use string option values)
   function normalizeDefaults(vals: Record<string, any>) {
     const out: Record<string, any> = { ...vals };
     const allFields: FieldDef[] = config.sections?.flatMap((s) => s.fields) ?? config.fields ?? [];
@@ -127,16 +128,23 @@ export function DynamicForm({
         else if (f.kind === "number")
           out[f.name] = undefined; // show empty number input
         else out[f.name] = ""; // text/textarea/select/date
+      } else if (f.kind === "select" && typeof v === "number") {
+        // Convert number to string for select dropdowns (option values are strings)
+        out[f.name] = String(v);
       }
     }
     return out;
   }
 
   // ✅ Ensure RHF picks up incoming defaults on first mount and client-side nav
+  const defaultsRef = React.useRef(defaults);
   React.useEffect(() => {
-    methods.reset(normalizeDefaults(defaults));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(defaults)]);
+    // Only reset if defaults reference actually changed (avoids expensive JSON.stringify on every render)
+    if (defaultsRef.current !== defaults) {
+      defaultsRef.current = defaults;
+      methods.reset(normalizeDefaults(defaults));
+    }
+  }, [defaults, methods]);
 
   const [submitting, setSubmitting] = React.useState(false);
 

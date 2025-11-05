@@ -43,7 +43,8 @@ export const tcmTallyCardsConfig = {
     tally_card_number: i.tally_card_number,
     warehouse_id: i.warehouse_id,
     warehouse: i.warehouse ?? null,
-    item_number: i.item_number,
+    // Convert item_number from string (dropdown) or number to number for DB
+    item_number: typeof i.item_number === "string" ? Number(i.item_number) : i.item_number,
     note: i.note ?? null,
     is_active: i.is_active ?? true,
     status: i.status ?? null,

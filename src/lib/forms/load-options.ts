@@ -74,11 +74,11 @@ export async function loadOptions(keys: string[]): Promise<ResolvedOptions> {
         });
 
         // Transform to Option[] format
-        // CRITICAL: id must be UUID, label is for display only
+        // CRITICAL: id is converted to string (UUID or bigint), label is for display only
         const options: Option[] = provider.transform
           ? rows.map(provider.transform)
           : rows.map((row: any) => {
-              const id = String(row[provider.idField]); // UUID - saved to database
+              const id = String(row[provider.idField]); // Convert to string (UUID or bigint) - saved to database
               
               // Handle labelField as string or function
               let label: string;

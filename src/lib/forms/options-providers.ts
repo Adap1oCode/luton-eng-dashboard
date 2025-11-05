@@ -13,7 +13,7 @@ import type { Option } from "./types";
 export type OptionProviderConfig = {
   /** Resource key to fetch from (e.g., "warehouses") */
   resourceKey: string;
-  /** Field to use as option.id (must be UUID for foreign keys) */
+  /** Field to use as option.id (UUID or bigint - will be converted to string for dropdown) */
   idField: string;
   /** Field to use as option.label, or function to generate label */
   labelField: string | ((row: any) => string);
@@ -37,6 +37,16 @@ export const OPTIONS_PROVIDERS: Record<string, OptionProviderConfig> = {
     filter: { is_active: true }, // Only show active warehouses
     sort: { column: "code", desc: false }, // Sort by code
     // Future: Could combine code + name like: labelField: (w) => `${w.code} - ${w.name}`
+  },
+  items: {
+    resourceKey: "inventory-unique", // Uses friendly alias
+    idField: "item_number", // bigint - saved to item_number field
+    labelField: (row: any) => {
+      const itemNum = String(row.item_number ?? "");
+      const desc = row.description ? ` - ${row.description}` : "";
+      return `${itemNum}${desc}`;
+    },
+    sort: { column: "item_number", desc: false }, // Sort by item_number ascending
   },
 } as const;
 
