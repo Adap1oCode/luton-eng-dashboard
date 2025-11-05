@@ -5,6 +5,8 @@ import FormShell from "@/components/forms/shell/form-shell";
 import { PermissionGate } from "@/components/auth/permissions-gate";
 import { ensureSections, getAllFields } from "@/lib/forms/config-normalize";
 import { buildDefaults } from "@/lib/forms/schema";
+import { extractOptionsKeys } from "@/lib/forms/extract-options-keys";
+import { loadOptions } from "@/lib/forms/load-options";
 
 import { tallyCardCreateConfig } from "./form.config";
 
@@ -23,7 +25,12 @@ export default async function NewTallyCardPage() {
   };
 
   const formId = "tally-card-form";
-  const options = {};
+  
+  // Extract optionsKeys from form config and load options server-side
+  const optionsKeys = extractOptionsKeys(tallyCardCreateConfig);
+  console.log(`[NewTallyCardPage] Extracted optionsKeys:`, optionsKeys);
+  const options = await loadOptions(optionsKeys);
+  console.log(`[NewTallyCardPage] Loaded options:`, Object.keys(options).map(k => ({ key: k, count: options[k]?.length ?? 0 })));
 
   // Return server-rendered shell with client form island
   // Note: in Next.js App Router, this async component can directly return JSX

@@ -42,9 +42,25 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
     return { rows: [], total: 0 };
   }
 
-  if (!res.ok) return { rows: [], total: 0 };
+  if (!res.ok) {
+    console.error(`[fetchResourcePage] API error for ${endpoint}:`, {
+      status: res.status,
+      statusText: res.statusText,
+      url: `${base}${endpoint}?${qs.toString()}`,
+    });
+    return { rows: [], total: 0 };
+  }
 
   const payload: any = (await res.json()) ?? {};
+  console.log(`[fetchResourcePage] Response for ${endpoint}:`, {
+    hasRows: !!payload.rows,
+    hasData: !!payload.data,
+    rowsCount: payload.rows?.length ?? 0,
+    dataCount: payload.data?.length ?? 0,
+    total: payload.total ?? payload.count,
+    payloadKeys: Object.keys(payload),
+  });
+  
   const rows = (payload.rows ?? payload.data ?? []) as T[];
   const totalCandidate = Number(payload.total ?? payload.count);
   const total = Number.isFinite(totalCandidate) ? totalCandidate : rows.length;

@@ -7,6 +7,7 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import SectionCard from "@/components/forms/shell/section-card";
 import { buildSchema } from "@/lib/forms/schema";
+import OptionsFlowDebug from "@/components/debug/options-flow-debug";
 
 import { DynamicField, type FieldDef, type Option } from "./dynamic-field";
 
@@ -117,6 +118,37 @@ function gridColsClass(columns: number) {
 }
 
 function SectionBody({ section, options }: { section: SectionDef; options: ResolvedOptions }) {
+  // Enhanced debug logging with object reference tracking
+  React.useEffect(() => {
+    const fieldsWithOptions = section.fields.filter(f => f.optionsKey);
+    if (fieldsWithOptions.length > 0) {
+      console.log(`[SectionBody] 🔍 Received options prop for section "${section.key}":`, {
+        optionsReference: options,
+        optionsKeys: Object.keys(options ?? {}),
+        optionsFull: options,
+        optionsStringified: JSON.stringify(options ?? {}).substring(0, 200),
+        hasWarehouses: 'warehouses' in (options ?? {}),
+        warehousesLength: options?.warehouses?.length ?? 0,
+        warehousesIsArray: Array.isArray(options?.warehouses),
+        fieldsNeedingOptions: fieldsWithOptions.map(f => ({ name: f.name, optionsKey: f.optionsKey })),
+        resolvedOptions: fieldsWithOptions.map(f => {
+          const optKey = f.optionsKey;
+          const optValue = optKey ? options?.[optKey] : undefined;
+          return { 
+            field: f.name, 
+            optionsKey: optKey, 
+            found: optKey ? (options?.[optKey] !== undefined) : false,
+            valueType: typeof optValue,
+            valueIsArray: Array.isArray(optValue),
+            valueLength: Array.isArray(optValue) ? optValue.length : 'not-array',
+            valueSample: Array.isArray(optValue) ? optValue.slice(0, 2) : optValue,
+            fullValue: optValue
+          };
+        })
+      });
+    }
+  }, [section, options]);
+
   const columns = clamp(section.layout?.columns ?? 3, 1, 4);
   const fill = section.layout?.fill ?? "row";
 
@@ -129,17 +161,54 @@ function SectionBody({ section, options }: { section: SectionDef; options: Resol
     span: clamp(f.span ?? 1, 1, columns),
   }));
 
+  // Find fields with optionsKey for debugging
+  const fieldsWithOptions = prepared.filter(f => f.optionsKey);
+  
   return (
-    <div className={gridColsClass(columns)}>
-      {prepared.map((f) => {
-        const startCls = colStartClass(f.column);
-        const spanCls = colSpanClass(f.span);
-        return (
-          <div key={f.name} className={["space-y-0", startCls, spanCls].join(" ")}>
-            <DynamicField field={f} options={f.optionsKey ? options[f.optionsKey] : undefined} />
+    <div>
+      {/* DEBUG: Show what SectionBody receives and passes to fields */}
+      {fieldsWithOptions.length > 0 && (
+        <div className="mb-4 rounded-lg border-2 border-purple-500 bg-purple-50 p-4">
+          <h4 className="font-bold text-purple-700 mb-2">🔍 SectionBody - Field Options Lookup</h4>
+          {fieldsWithOptions.map((f) => {
+            const fieldOptions = f.optionsKey ? options?.[f.optionsKey] : undefined;
+            return (
+              <div key={f.name} className="mb-3 p-2 bg-white rounded border">
+                <div className="font-semibold">Field: "{f.name}" (optionsKey: "{f.optionsKey}")</div>
+                <div className="text-sm grid grid-cols-2 gap-1 mt-1">
+                  <div><strong>Found in options:</strong> {f.optionsKey ? (f.optionsKey in (options ?? {}) ? "✅ YES" : "❌ NO") : "N/A"}</div>
+                  <div><strong>Options Type:</strong> {typeof fieldOptions}</div>
+                  <div><strong>Is Array:</strong> {Array.isArray(fieldOptions) ? "✅ YES" : "❌ NO"}</div>
+                  <div><strong>Length:</strong> {Array.isArray(fieldOptions) ? fieldOptions.length : "N/A"}</div>
+                  <div className="col-span-2">
+                    <strong>Sample (first 2):</strong>
+                    <pre className="text-xs bg-gray-100 p-1 rounded mt-1 overflow-auto max-h-20">
+                      {JSON.stringify(Array.isArray(fieldOptions) ? fieldOptions.slice(0, 2) : fieldOptions, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="mt-2 p-2 bg-white rounded border">
+            <strong>All Options Keys Available:</strong> {Object.keys(options ?? {}).join(", ") || "none"}
           </div>
-        );
-      })}
+        </div>
+      )}
+      
+      <div className={gridColsClass(columns)}>
+        {prepared.map((f) => {
+          const startCls = colStartClass(f.column);
+          const spanCls = colSpanClass(f.span);
+          const fieldOptions = f.optionsKey ? options?.[f.optionsKey] : undefined;
+          
+          return (
+            <div key={f.name} className={["space-y-0", startCls, spanCls].join(" ")}>
+              <DynamicField field={f} options={fieldOptions} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -161,6 +230,20 @@ export function DynamicForm({
   hideInternalActions?: boolean;
   onCancel?: () => void;
 }) {
+  // Debug logging for options
+  React.useEffect(() => {
+    console.log(`[DynamicForm] Received options:`, {
+      keys: Object.keys(options ?? {}),
+      fullObject: options,
+      counts: Object.keys(options ?? {}).map(k => ({ 
+        key: k, 
+        count: Array.isArray(options?.[k]) ? options[k].length : typeof options?.[k],
+        type: Array.isArray(options?.[k]) ? 'array' : typeof options?.[k],
+        sample: Array.isArray(options?.[k]) ? options[k].slice(0, 2) : options?.[k]
+      }))
+    });
+  }, [options]);
+
   const schema = React.useMemo(() => buildSchema(config as any), [config]);
 
   const methods = useForm({
@@ -218,8 +301,63 @@ export function DynamicForm({
           },
         ];
 
+  // CRITICAL: Use ref to track last known good options with warehouses
+  // This ensures warehouses persist even if options prop is recreated with only {id}
+  const lastGoodOptionsRef = React.useRef<ResolvedOptions>({});
+  
+  // Update ref if current options has warehouses (runs on mount and when options change)
+  React.useEffect(() => {
+    if (options?.warehouses && Array.isArray(options.warehouses) && options.warehouses.length > 0) {
+      lastGoodOptionsRef.current = options;
+    }
+  }, [options]);
+  
+  // CRITICAL: Memoize stable options that merges current options with preserved warehouses
+  // This ensures warehouses are never lost even if options prop changes unexpectedly
+  const stableOptions = React.useMemo(() => {
+    const currentOptions = options ?? {};
+    const lastGood = lastGoodOptionsRef.current;
+    
+    // If current options has warehouses, use it and update ref
+    if (currentOptions.warehouses && Array.isArray(currentOptions.warehouses) && currentOptions.warehouses.length > 0) {
+      return currentOptions;
+    }
+    
+    // If current options doesn't have warehouses but lastGood does, merge them
+    if (lastGood.warehouses && Array.isArray(lastGood.warehouses) && lastGood.warehouses.length > 0) {
+      return { ...currentOptions, warehouses: lastGood.warehouses };
+    }
+    
+    // Otherwise return current options as-is
+    return currentOptions;
+  }, [options]);
+
+  // Enhanced debugging: Log right before passing to SectionBody
+  React.useEffect(() => {
+    console.log(`[DynamicForm] 🔍 About to pass options to SectionBody:`, {
+      optionsReference: options,
+      stableOptionsReference: stableOptions,
+      optionsKeys: Object.keys(options ?? {}),
+      stableOptionsKeys: Object.keys(stableOptions ?? {}),
+      hasWarehouses: 'warehouses' in (options ?? {}),
+      stableHasWarehouses: 'warehouses' in (stableOptions ?? {}),
+      warehousesLength: options?.warehouses?.length ?? 0,
+      stableWarehousesLength: stableOptions?.warehouses?.length ?? 0,
+      optionsStringified: JSON.stringify(options ?? {}).substring(0, 200),
+      stableOptionsStringified: JSON.stringify(stableOptions ?? {}).substring(0, 200),
+      areSameReference: options === stableOptions,
+    });
+  }, [options, stableOptions]);
+
   return (
     <FormProvider {...methods}>
+      {/* DEBUG: Show options in DynamicForm */}
+      <OptionsFlowDebug 
+        stage="DynamicForm → SectionBody" 
+        options={stableOptions}
+        warehouses={stableOptions?.warehouses}
+      />
+      
       <form
         id={id}
         onSubmit={methods.handleSubmit(async (vals) => {
@@ -241,7 +379,7 @@ export function DynamicForm({
             defaultOpen={section.defaultOpen ?? true}
             headerRight={section.headerRight}
           >
-            <SectionBody section={section} options={options} />
+            <SectionBody section={section} options={stableOptions} />
           </SectionCard>
         ))}
 
