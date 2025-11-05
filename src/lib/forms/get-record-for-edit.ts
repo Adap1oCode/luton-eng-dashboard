@@ -47,6 +47,6 @@ export async function getRecordForEdit(cfgInput: any, resourceKey: string, id: s
     method: "PATCH" as const,
     action: `/api/${resourceKey}/${id}`,
     submitLabel: "Update",
-    options: { id },
+    options: {}, // Options are loaded separately via loadOptions(), not here
   };
 }

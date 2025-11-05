@@ -28,9 +28,7 @@ export default async function NewTallyCardPage() {
   
   // Extract optionsKeys from form config and load options server-side
   const optionsKeys = extractOptionsKeys(tallyCardCreateConfig);
-  console.log(`[NewTallyCardPage] Extracted optionsKeys:`, optionsKeys);
   const options = await loadOptions(optionsKeys);
-  console.log(`[NewTallyCardPage] Loaded options:`, Object.keys(options).map(k => ({ key: k, count: options[k]?.length ?? 0 })));
 
   // Return server-rendered shell with client form island
   // Note: in Next.js App Router, this async component can directly return JSX
