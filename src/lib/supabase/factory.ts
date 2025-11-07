@@ -244,6 +244,13 @@ export function createSupabaseProvider<T, TInput>(
           } else if (k.endsWith('_not_null')) {
             const column = k.slice(0, -8);
             query = query.not(column, 'is', null);
+          } else if (k.endsWith('_is_null')) {
+            const column = k.slice(0, -7);
+            query = query.is(column, null);
+          } else if (k.endsWith('_is_null_or_empty')) {
+            const column = k.slice(0, -17);
+            // Check for null OR empty string using Supabase PostgREST or() syntax
+            query = query.or(`${column}.is.null,${column}.eq.`);
           }
           // Structured filters with mode (from saved views feature)
           else if (isObject(v) && (v as any).value !== undefined) {

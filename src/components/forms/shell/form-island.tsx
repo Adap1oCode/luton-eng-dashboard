@@ -74,14 +74,25 @@ export default function FormIsland({
         defaults={defaults}
         options={options}
         hideInternalActions={hideInternalActions}
+        children={undefined} // Children can be passed via config or wrapper
         onSubmit={async (values) => {
           // Guard against accidental double submit without relying on a `disabled` prop
           if (submitting) return;
           setSubmitting(true);
           try {
+            // Pre-process values: if multi_location is true, clear parent location/qty
+            const processedValues = { ...values };
+            if (processedValues.multi_location) {
+              processedValues.location = null;
+              processedValues.qty = null;
+            } else {
+              // If single location, clear locations array
+              processedValues.locations = [];
+            }
+
             const result =
               typeof config.submit === "function"
-                ? await config.submit(values)
+                ? await config.submit(processedValues)
                 : await (async () => {
                     // Prefer explicit transport from server; fallback to generic POST /api/forms/:key
                     const method = config.method ?? "POST";
@@ -90,7 +101,7 @@ export default function FormIsland({
                     const res = await fetch(action, {
                       method,
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(values),
+                      body: JSON.stringify(processedValues),
                     });
 
                     if (!res.ok) {

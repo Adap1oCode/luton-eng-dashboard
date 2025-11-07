@@ -33,7 +33,6 @@ describe("buildColumns", () => {
     expect(ids).toContain("full_name");
     expect(ids).toContain("qty");
     expect(ids).toContain("location");
-    expect(ids).toContain("note");
     expect(ids).toContain("updated_at_pretty");
   });
 
@@ -55,8 +54,8 @@ describe("buildColumns", () => {
     const columns = stockAdjustmentsViewConfig.buildColumns();
     const ids = columns.map((col) => (col as { id?: string }).id);
 
-    // Should have: id, tally_card_number, warehouse, full_name, qty, location, note, updated_at_pretty, actions
-    expect(ids.length).toBeGreaterThanOrEqual(9);
+    // Should have: id, tally_card_number, warehouse, full_name, qty, location, updated_at_pretty, actions
+    expect(ids.length).toBeGreaterThanOrEqual(8);
   });
 });
 

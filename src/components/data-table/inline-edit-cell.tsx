@@ -38,6 +38,11 @@ interface InlineEditCellProps {
   disabled?: boolean;
 }
 
+// Check if value is null or empty (for showing NONE badge)
+const isValueEmpty = (value: any): boolean => {
+  return value === null || value === undefined || value === "" || (typeof value === "number" && isNaN(value));
+};
+
 const getDefaultBadgeVariant = (value: any, options?: InlineEditOption[]) => {
   if (options) {
     const option = options.find((opt) => opt.value === value);
@@ -52,7 +57,12 @@ const getDefaultBadgeVariant = (value: any, options?: InlineEditOption[]) => {
   return "default";
 };
 
-const getDefaultBadgeClassName = (value: any, options?: InlineEditOption[]) => {
+const getDefaultBadgeClassName = (value: any, options?: InlineEditOption[], config?: InlineEditConfig) => {
+  // Check if value is null/empty - show red NONE badge
+  if (isValueEmpty(value) && config?.fieldType === "text") {
+    return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-800";
+  }
+
   if (options) {
     const option = options.find((opt) => opt.value === value);
     return option?.className || "";
@@ -94,9 +104,10 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
   onCancel,
   disabled = false,
 }) => {
-  const displayValue = formatDisplayValue(value, config);
+  const isEmpty = isValueEmpty(value);
+  const displayValue = isEmpty && config.fieldType === "text" ? "NONE" : formatDisplayValue(value, config);
   const badgeVariant = getDefaultBadgeVariant(value, config.options);
-  const badgeClassName = getDefaultBadgeClassName(value, config.options);
+  const badgeClassName = getDefaultBadgeClassName(value, config.options, config);
 
   // ROBUST SOLUTION: Side-by-side pattern
   // - Keep display value visible (read-only) when editing
@@ -127,7 +138,7 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
               onEditChange(config.parseValue ? config.parseValue(e.target.value) : e.target.value);
             }}
             placeholder={config.placeholder || "Enter new value"}
-            className="flex-1 min-w-0"
+            className="flex-1 min-w-0 border-[1px] shadow-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -172,9 +183,12 @@ export const InlineEditCell: React.FC<InlineEditCellProps> = ({
   }
 
   // Display mode - not editing
+  // Show badge if: value is empty (NONE badge) OR config.showBadge is true
+  const shouldShowBadge = isEmpty || config.showBadge !== false;
+  
   return (
     <div className="group flex items-center justify-start gap-2">
-      {config.showBadge !== false ? (
+      {shouldShowBadge ? (
         <Badge variant={badgeVariant} className={`px-2 py-1 text-xs ${badgeClassName}`}>
           {displayValue}
         </Badge>

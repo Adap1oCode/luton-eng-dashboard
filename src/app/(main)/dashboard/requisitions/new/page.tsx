@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Option {
   value: string | number;
   label: string;
+  // For two-column display
+  itemNumber?: string;
+  description?: string;
 }
 
 interface SearchableSelectProps {
@@ -23,6 +26,8 @@ interface SearchableSelectProps {
   placeholder?: string;
   className?: string;
   searchPlaceholder?: string;
+  twoColumn?: boolean; // Enable two-column display (Item Number | Description)
+  searchFields?: "label" | "both"; // Search only label or both itemNumber and description
 }
 
 // --- The Component ---
@@ -33,13 +38,24 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   placeholder = "Select option...",
   className = "",
   searchPlaceholder = "Search...",
+  twoColumn = false,
+  searchFields = "label",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter options based on the search term
-  const filteredOptions = options.filter((option) => option.label.toLowerCase().includes(searchTerm.toLowerCase()));
+  // If searchFields is "both", search in both itemNumber and description
+  const filteredOptions = options.filter((option) => {
+    const searchLower = searchTerm.toLowerCase();
+    if (searchFields === "both" && (option.itemNumber || option.description)) {
+      const itemNumMatch = option.itemNumber?.toLowerCase().includes(searchLower) ?? false;
+      const descMatch = option.description?.toLowerCase().includes(searchLower) ?? false;
+      return itemNumMatch || descMatch;
+    }
+    return option.label.toLowerCase().includes(searchLower);
+  });
 
   // Find the currently selected option to display its label
   const selectedOption = options.find((option) => option.value === value);
@@ -66,7 +82,11 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         className={`w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-left focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 ${className}`}
       >
         <span className={selectedOption ? "text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption
+            ? twoColumn && (selectedOption.itemNumber || selectedOption.description)
+              ? `${selectedOption.itemNumber || ""}${selectedOption.description ? ` - ${selectedOption.description}` : ""}`
+              : selectedOption.label
+            : placeholder}
         </span>
       </button>
       <ChevronDown
@@ -89,6 +109,12 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             </div>
           </div>
           <div className="max-h-60 overflow-y-auto">
+            {twoColumn && filteredOptions.length > 0 && (
+              <div className="sticky top-0 z-10 grid grid-cols-2 gap-4 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <div>Item Number</div>
+                <div>Description</div>
+              </div>
+            )}
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => (
                 <button
@@ -105,8 +131,15 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                       : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
-                  <span>{option.label}</span>
-                  {option.value === value && <Check className="h-4 w-4" />}
+                  {twoColumn && (option.itemNumber || option.description) ? (
+                    <div className="grid grid-cols-2 gap-4 flex-1">
+                      <div className="text-left">{option.itemNumber || ""}</div>
+                      <div className="text-left">{option.description || ""}</div>
+                    </div>
+                  ) : (
+                    <span>{option.label}</span>
+                  )}
+                  {option.value === value && <Check className="h-4 w-4 ml-2 flex-shrink-0" />}
                 </button>
               ))
             ) : (
@@ -176,7 +209,6 @@ const RequisitionOrderForm = () => {
   const [description, setDescription] = useState("SINGLE SEAT RECEPTION");
   const [altNumber, setAltNumber] = useState("");
 
-  // Mock inventory data
   // Available item numbers for dropdown
   const availableItemNumbers = [
     { value: "506103737645", label: "506103737645 - COIL CLAMP" },

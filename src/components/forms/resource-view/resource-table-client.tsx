@@ -73,7 +73,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ViewsMenu } from "@/components/data-table/views-menu";
 
-type FilterMode = "contains" | "equals" | "startsWith" | "endsWith";
+type FilterMode = "contains" | "startsWith" | "endsWith" | "equals" | "notEquals";
 
 type ResourceTableClientProps<TRow extends { id: string }> = {
   config: BaseViewConfig<TRow>;
@@ -201,19 +201,106 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     max: 500,
   });
 
-  // Serialize filters for stable queryKey
-  const serializedFilters = React.useMemo(() => {
-    const keys = Object.keys(currentFilters).sort();
-    return keys.length > 0
-      ? keys.map((key) => `${encodeURIComponent(key)}:${encodeURIComponent(currentFilters[key])}`).join("|")
-      : "no-filters";
-  }, [currentFilters]);
+  // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
+  const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
+    const injected = configColumns;
+    if (Array.isArray(injected)) return injected as ColumnDef<TRow, unknown>[];
+    if (typeof configBuildColumns === "function") {
+      return (configBuildColumns as (arg: boolean) => ColumnDef<TRow, unknown>[])(true);
+    }
+    return [];
+  }, [configColumns, configBuildColumns]);
+
+  // -- Saved Views: tableId and defaultColumnIds MUST be declared early to avoid TDZ -----------
+  // These are used by useSavedViews hook and effects, so they must come before any effects that reference them
+  const tableId = React.useMemo(() => {
+    return `forms/${configFormsRouteSegment}`;
+  }, [configFormsRouteSegment]);
+
+  const defaultColumnIds = React.useMemo(() => {
+    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
+    // keep __select first if present
+    const selectId = all.find((id) => id === "__select");
+    const others = all.filter((id) => id && id !== "__select");
+    return selectId ? [selectId, ...others] : others;
+  }, [baseColumns]);
+
+  // Saved Views: hydrate & persist state - declared early to avoid TDZ
+  const {
+    views,
+    currentView,
+    currentViewId,
+    setCurrentViewId,
+    applyView,
+    saveView,
+    updateView,
+    setDefault,
+    hydrateFromRemote,
+  } = useSavedViews(tableId, defaultColumnIds);
+
+  // Local TanStack table state
+  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
+  const [rowSelection, setRowSelection] = React.useState({});
+  // Expanded row state - controlled to persist across data updates
+  const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
+  const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
+  const initialOrderRef = React.useRef<string[]>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    tally_card_number: true,
+    item_number: true,
+    is_active: true,
+    warehouse: true,
+    // make sure routing id is hidden from the start
+    [idField]: false,
+  });
+
+  // ✅ Filters state tied to DataTableFilters
+  // Initialize filters from URL search params (filters[columnId][value] and filters[columnId][mode])
+  const initialFilters = React.useMemo<Record<string, ColumnFilterState>>(() => {
+    const parsed: Record<string, ColumnFilterState> = {};
+    search.forEach((value, key) => {
+      // Parse structured filter format: filters[columnId][value] and filters[columnId][mode]
+      const match = key.match(/^filters\[(.+?)\]\[(value|mode)\]$/);
+      if (match) {
+        const columnId = match[1];
+        const kind = match[2] as "value" | "mode";
+        if (!parsed[columnId]) {
+          parsed[columnId] = { value: "", mode: "contains" as FilterMode };
+        }
+        if (kind === "value") {
+          parsed[columnId].value = value;
+        } else if (kind === "mode") {
+          // Validate mode is a valid FilterMode, default to "contains" if not
+          const validModes: FilterMode[] = ["contains", "startsWith", "endsWith", "equals", "notEquals"];
+          parsed[columnId].mode = validModes.includes(value as FilterMode) ? (value as FilterMode) : "contains";
+        }
+      }
+    });
+    // Only return filters that have a value (empty filters are not useful)
+    const filtered: Record<string, ColumnFilterState> = {};
+    Object.entries(parsed).forEach(([columnId, filterState]) => {
+      if (filterState.value && filterState.value.trim() !== "") {
+        filtered[columnId] = filterState;
+      }
+    });
+    return filtered;
+  }, [search]);
+
+  const [filters, setFilters] = React.useState<Record<string, ColumnFilterState>>(initialFilters);
+  
+  // Ref to track if we're updating filters from URL (to prevent feedback loops)
+  const isUpdatingFromUrlRef = React.useRef(false);
+  const columnFilters = React.useMemo(() => {
+    return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
+  }, [filters]);
 
   // Build extraQuery from filters (similar to ResourceListClient pattern)
+  // Must be declared after filters state is initialized
   const buildExtraQueryFromFilters = React.useCallback(() => {
     const extraQuery: Record<string, any> = { raw: "true" };
     const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
     
+    // Add quick filters (status, etc.)
     quickFilters.forEach((filter) => {
       const value = currentFilters[filter.id];
       if (value && filter.toQueryParam) {
@@ -221,13 +308,36 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       }
     });
     
+    // Add column filters (from "More Filters") - these must be sent to server for full dataset filtering
+    Object.entries(filters).forEach(([columnId, filterState]) => {
+      if (filterState?.value && filterState.value.trim() !== "") {
+        // Use structured filter format: filters[columnId][value] and filters[columnId][mode]
+        // Default mode is "contains" if not specified
+        const mode = filterState.mode || "contains";
+        extraQuery[`filters[${columnId}][value]`] = filterState.value;
+        extraQuery[`filters[${columnId}][mode]`] = mode;
+      }
+    });
+    
     return extraQuery;
-  }, [currentFilters, config.quickFilters]);
+  }, [currentFilters, config.quickFilters, filters]);
 
   // React Query hook (runs in parallel, but table still uses initialRows for now)
   const apiEndpoint = React.useMemo(() => getApiEndpoint(), [getApiEndpoint]);
-  const queryKey = React.useMemo(() => buildQueryKey(page, pageSize, currentFilters), [buildQueryKey, page, pageSize, currentFilters]);
-  
+  // Include column filters in queryKey so React Query refetches when they change
+  // Must be declared after filters state is initialized
+  const queryKey = React.useMemo(() => {
+    // Build a combined filter object for queryKey
+    const combinedFilters: Record<string, string> = { ...currentFilters };
+    Object.entries(filters).forEach(([columnId, filterState]) => {
+      if (filterState?.value) {
+        // Include column filters in queryKey
+        combinedFilters[`col_${columnId}`] = `${filterState.value}:${filterState.mode || "contains"}`;
+      }
+    });
+    return buildQueryKey(page, pageSize, combinedFilters);
+  }, [buildQueryKey, page, pageSize, currentFilters, filters]);
+
   const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
     queryKey,
     queryFn: async () => {
@@ -287,65 +397,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const filteredRows = React.useMemo(() => {
     return currentRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
   }, [currentRows, isOptimisticallyDeleted, idField]);
-
-  // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
-  const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
-    const injected = configColumns;
-    if (Array.isArray(injected)) return injected as ColumnDef<TRow, unknown>[];
-    if (typeof configBuildColumns === "function") {
-      return (configBuildColumns as (arg: boolean) => ColumnDef<TRow, unknown>[])(true);
-    }
-    return [];
-  }, [configColumns, configBuildColumns]);
-
-  // -- Saved Views: tableId and defaultColumnIds MUST be declared early to avoid TDZ -----------
-  // These are used by useSavedViews hook and effects, so they must come before any effects that reference them
-  const tableId = React.useMemo(() => {
-    return `forms/${configFormsRouteSegment}`;
-  }, [configFormsRouteSegment]);
-
-  const defaultColumnIds = React.useMemo(() => {
-    const all = baseColumns.map((c) => String((c as any).id ?? (c as any).accessorKey ?? ""));
-    // keep __select first if present
-    const selectId = all.find((id) => id === "__select");
-    const others = all.filter((id) => id && id !== "__select");
-    return selectId ? [selectId, ...others] : others;
-  }, [baseColumns]);
-
-  // Saved Views: hydrate & persist state - declared early to avoid TDZ
-  const {
-    views,
-    currentView,
-    currentViewId,
-    setCurrentViewId,
-    applyView,
-    saveView,
-    updateView,
-    setDefault,
-    hydrateFromRemote,
-  } = useSavedViews(tableId, defaultColumnIds);
-
-  // Local TanStack table state
-  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
-  const [rowSelection, setRowSelection] = React.useState({});
-  // Expanded row state - controlled to persist across data updates
-  const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
-  const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
-  const initialOrderRef = React.useRef<string[]>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    tally_card_number: true,
-    item_number: true,
-    is_active: true,
-    warehouse: true,
-    // make sure routing id is hidden from the start
-    [idField]: false,
-  });
-
-  // ✅ Filters state tied to DataTableFilters
-  const [filters, setFilters] = React.useState<Record<string, ColumnFilterState>>({});
-  const columnFilters = React.useMemo(() => {
-    return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
-  }, [filters]);
 
   // ✅ Controlled pagination (0-based index)
   const [pagination, setPagination] = React.useState({
@@ -846,7 +897,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    // ✅ Disable client-side filtering - all filtering happens server-side on full dataset
+    // getFilteredRowModel: getFilteredRowModel(), // Removed - filters are applied server-side
+    manualFiltering: true, // Explicitly mark filtering as manual (server-side)
     columnResizeMode: "onEnd", // Only update on resize end, not during drag
     enableRowSelection: true,
     enableColumnResizing: enableColumnResizing,
@@ -1059,6 +1112,134 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       return prev.pageIndex === next.pageIndex && prev.pageSize === next.pageSize ? prev : next;
     });
   }, [page, pageSize]);
+
+  // 🔄 Sync filters FROM URL when search params change (handles back/forward navigation)
+  // This runs when URL changes externally (e.g., browser back/forward)
+  React.useEffect(() => {
+    // Skip if we're currently updating from URL (prevent feedback loop)
+    if (isUpdatingFromUrlRef.current) {
+      return;
+    }
+
+    const urlFilters: Record<string, ColumnFilterState> = {};
+    search.forEach((value, key) => {
+      const match = key.match(/^filters\[(.+?)\]\[(value|mode)\]$/);
+      if (match) {
+        const columnId = match[1];
+        const kind = match[2] as "value" | "mode";
+        if (!urlFilters[columnId]) {
+          urlFilters[columnId] = { value: "", mode: "contains" as FilterMode };
+        }
+        if (kind === "value") {
+          urlFilters[columnId].value = value;
+        } else if (kind === "mode") {
+          const validModes: FilterMode[] = ["contains", "startsWith", "endsWith", "equals", "notEquals"];
+          urlFilters[columnId].mode = validModes.includes(value as FilterMode) ? (value as FilterMode) : "contains";
+        }
+      }
+    });
+    
+    // Filter out empty filters
+    const filtered: Record<string, ColumnFilterState> = {};
+    Object.entries(urlFilters).forEach(([columnId, filterState]) => {
+      if (filterState.value && filterState.value.trim() !== "") {
+        filtered[columnId] = filterState;
+      }
+    });
+    
+    // Only update filters if URL filters differ from current filters (deep comparison)
+    const urlFiltersKeys = Object.keys(filtered).sort();
+    const currentFiltersKeys = Object.keys(filters).sort();
+    
+    if (urlFiltersKeys.length !== currentFiltersKeys.length) {
+      isUpdatingFromUrlRef.current = true;
+      setFilters(filtered);
+      // Reset flag after state update
+      setTimeout(() => {
+        isUpdatingFromUrlRef.current = false;
+      }, 0);
+      return;
+    }
+    
+    // Deep compare each filter
+    let filtersChanged = false;
+    for (const key of urlFiltersKeys) {
+      const urlFilter = filtered[key];
+      const currentFilter = filters[key];
+      if (!currentFilter || 
+          urlFilter.value !== currentFilter.value || 
+          (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
+        filtersChanged = true;
+        break;
+      }
+    }
+    
+    // Also check if any current filters are missing in URL
+    if (!filtersChanged) {
+      for (const key of currentFiltersKeys) {
+        if (!filtered[key]) {
+          filtersChanged = true;
+          break;
+        }
+      }
+    }
+    
+    if (filtersChanged) {
+      isUpdatingFromUrlRef.current = true;
+      setFilters(filtered);
+      // Reset flag after state update
+      setTimeout(() => {
+        isUpdatingFromUrlRef.current = false;
+      }, 0);
+    }
+  }, [search, filters]); // Include filters for comparison, but use ref to prevent loops
+
+  // 🔄 Sync filters TO URL whenever filters state changes (user input)
+  React.useEffect(() => {
+    // Skip if we're updating from URL (prevent feedback loop)
+    if (isUpdatingFromUrlRef.current) {
+      return;
+    }
+
+    const sp = new URLSearchParams(search.toString());
+    
+    // Remove all existing filter params first
+    const keysToRemove: string[] = [];
+    sp.forEach((_, key) => {
+      if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
+        keysToRemove.push(key);
+      }
+    });
+    keysToRemove.forEach((key) => sp.delete(key));
+    
+    // Add current filters to URL
+    let hasActiveFilters = false;
+    Object.entries(filters).forEach(([columnId, filterState]) => {
+      if (filterState?.value && filterState.value.trim() !== "") {
+        hasActiveFilters = true;
+        sp.set(`filters[${columnId}][value]`, filterState.value);
+        // Only add mode if it's not the default "contains"
+        const mode = filterState.mode || "contains";
+        if (mode !== "contains") {
+          sp.set(`filters[${columnId}][mode]`, mode);
+        }
+      }
+    });
+    
+    // Reset to page 1 when filters change (if there are active filters)
+    if (hasActiveFilters) {
+      sp.set("page", "1");
+    }
+    
+    // Only update URL if something changed
+    const newUrl = `${pathname}?${sp.toString()}`;
+    const currentUrl = `${pathname}?${search.toString()}`;
+    if (newUrl !== currentUrl) {
+      router.replace(newUrl, { scroll: false });
+      // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
+      // No need to explicitly invalidate - the queryKey change triggers refetch automatically
+    }
+  }, [filters, pathname, router, search]);
 
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
   const dragIdRef = React.useRef<string | null>(null);
@@ -1698,7 +1879,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             filters,
             onChange: (id, next) => {
               setFilters((prev) => {
-                const newFilters = { ...prev, [id]: next };
+                // Ensure default mode is "contains" if not specified
+                const filterState: ColumnFilterState = {
+                  value: next.value || "",
+                  mode: next.mode || "contains",
+                };
+                const newFilters = { ...prev, [id]: filterState };
 
                 if (onFiltersChange) onFiltersChange(newFilters);
 

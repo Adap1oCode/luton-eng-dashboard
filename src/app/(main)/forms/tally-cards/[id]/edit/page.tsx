@@ -58,8 +58,10 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
   }
 
   // Extract optionsKeys from form config and load options server-side
+  // Pass current values to ensure item_number is included even if not in first 500 results
   const optionsKeys = extractOptionsKeys(tallyCardCreateConfig);
-  const loadedOptions = await loadOptions(optionsKeys);
+  const currentValues = prep.defaults?.item_number ? { item_number: prep.defaults.item_number } : undefined;
+  const loadedOptions = await loadOptions(optionsKeys, currentValues);
   
   // Validate that required options were loaded
   if (!loadedOptions.warehouses || loadedOptions.warehouses.length === 0) {

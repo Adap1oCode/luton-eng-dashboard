@@ -19,15 +19,22 @@ import type { ResolvedOptions, Option } from "./types";
  * - `label` field = Display name shown in dropdown
  * 
  * @param keys - Array of optionsKey strings (e.g., ["warehouses", "items"])
+ * @param currentValues - Optional map of current field values (for edit pages) to ensure they're included
  * @returns Promise resolving to ResolvedOptions object
  * 
  * @example
  * ```typescript
  * const options = await loadOptions(["warehouses"]);
  * // Returns: { warehouses: [{ id: "uuid-1", label: "Warehouse 1" }, ...] }
+ * 
+ * // For edit pages, ensure current values are included:
+ * const options = await loadOptions(["items"], { item_number: 5056827328174 });
  * ```
  */
-export async function loadOptions(keys: string[]): Promise<ResolvedOptions> {
+export async function loadOptions(
+  keys: string[],
+  currentValues?: Record<string, any>
+): Promise<ResolvedOptions> {
   console.log(`[loadOptions] Called with keys:`, keys);
   const results: ResolvedOptions = {};
 
@@ -43,6 +50,14 @@ export async function loadOptions(keys: string[]): Promise<ResolvedOptions> {
       }
 
       try {
+        // Handle static options (e.g., reason codes from config)
+        if (provider.staticOptions) {
+          const staticOpts = await provider.staticOptions();
+          console.log(`[loadOptions] Loaded ${staticOpts.length} static options for "${key}"`);
+          results[key] = staticOpts;
+          return;
+        }
+
         // Build extraQuery with filters only
         // Note: Sort is handled by the provider's defaultSort config, not via query params
         const extraQuery: Record<string, any> = {
@@ -75,6 +90,7 @@ export async function loadOptions(keys: string[]): Promise<ResolvedOptions> {
 
         // Transform to Option[] format
         // CRITICAL: id is converted to string (UUID or bigint), label is for display only
+        // For SearchableSelect: include itemNumber/description for items, code/name for warehouses
         const options: Option[] = provider.transform
           ? rows.map(provider.transform)
           : rows.map((row: any) => {
@@ -88,10 +104,95 @@ export async function loadOptions(keys: string[]): Promise<ResolvedOptions> {
                 label = String(row[provider.labelField] ?? row[provider.idField] ?? "");
               }
 
-              return { id, label };
+              // Add extra fields for two-column display
+              const option: any = { id, label };
+              
+              // For items: include itemNumber and description
+              if (key === "items" && row.item_number !== undefined) {
+                option.itemNumber = String(row.item_number);
+                option.description = row.description ?? "";
+              }
+              
+              // For warehouses: include code and name
+              if (key === "warehouses" && (row.code !== undefined || row.name !== undefined)) {
+                option.code = row.code ?? "";
+                option.name = row.name ?? "";
+              }
+
+              return option;
             });
 
         console.log(`[loadOptions] Transformed ${options.length} options for "${key}":`, options.slice(0, 3));
+
+        // For edit pages: Ensure current value is included if it's not in the loaded options
+        // This handles cases where the current item_number might not be in the first 500 results
+        if (currentValues && provider.idField) {
+          const currentValue = currentValues[provider.idField];
+          if (currentValue != null && currentValue !== "") {
+            const currentValueStr = String(currentValue);
+            const alreadyIncluded = options.some((opt) => opt.id === currentValueStr);
+            
+            if (!alreadyIncluded) {
+              console.log(`[loadOptions] Current value "${currentValueStr}" not found in loaded options for "${key}", fetching it...`);
+              
+              try {
+                // Fetch the specific item by its ID (using the primary key field)
+                const { getServerBaseUrl, getForwardedCookieHeader } = await import("@/lib/ssr/http");
+                const base = await getServerBaseUrl();
+                const cookieHeader = await getForwardedCookieHeader();
+                
+                // For items, the resource uses item_number as PK, so we fetch by that value
+                const singleItemUrl = `${base}/api/${provider.resourceKey}/${encodeURIComponent(currentValueStr)}`;
+                const singleItemRes = await fetch(singleItemUrl, {
+                  headers: cookieHeader,
+                  cache: "no-store", // Don't cache single item lookups
+                });
+                
+                if (singleItemRes.ok) {
+                  const singleItemPayload = await singleItemRes.json();
+                  const singleItem = singleItemPayload?.row ?? singleItemPayload;
+                  
+                  if (singleItem) {
+                    const singleItemId = String(singleItem[provider.idField]);
+                    let singleItemLabel: string;
+                    if (typeof provider.labelField === "function") {
+                      singleItemLabel = provider.labelField(singleItem);
+                    } else {
+                      singleItemLabel = String(singleItem[provider.labelField] ?? singleItem[provider.idField] ?? "");
+                    }
+                    
+                    // Add extra fields for two-column display
+                    const singleItemOption: any = { id: singleItemId, label: singleItemLabel };
+                    
+                    // For items: include itemNumber and description
+                    if (key === "items" && singleItem.item_number !== undefined) {
+                      singleItemOption.itemNumber = String(singleItem.item_number);
+                      singleItemOption.description = singleItem.description ?? "";
+                    }
+                    
+                    // For warehouses: include code and name
+                    if (key === "warehouses" && (singleItem.code !== undefined || singleItem.name !== undefined)) {
+                      singleItemOption.code = singleItem.code ?? "";
+                      singleItemOption.name = singleItem.name ?? "";
+                    }
+                    
+                    // Add to the beginning of options array so it's visible
+                    options.unshift(singleItemOption);
+                    console.log(`[loadOptions] Added current value to options for "${key}":`, singleItemOption);
+                  }
+                } else {
+                  console.warn(`[loadOptions] Failed to fetch current value "${currentValueStr}" for "${key}":`, singleItemRes.status);
+                }
+              } catch (err) {
+                console.error(`[loadOptions] Error fetching current value "${currentValueStr}" for "${key}":`, err);
+                // Continue without the current value - user can still select from available options
+              }
+            } else {
+              console.log(`[loadOptions] Current value "${currentValueStr}" already included in options for "${key}"`);
+            }
+          }
+        }
+
         results[key] = options;
       } catch (error) {
         console.error(`[loadOptions] Failed to load options for key "${key}":`, error);

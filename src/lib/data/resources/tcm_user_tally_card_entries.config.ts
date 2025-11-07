@@ -14,12 +14,14 @@ export type TallyCardEntryInput = {
   qty?: number | null;
   location?: string | null;
   note?: string | null;
+  reason_code?: string | null;
+  multi_location?: boolean | null;
 };
 
 const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryInput> = {
   table: "tcm_user_tally_card_entries",
   pk: "id", // single-column pk per current layer constraints
-  select: "id, updated_by_user_id, role_family, tally_card_number, card_uid, qty, location, note, updated_at",
+  select: "id, updated_by_user_id, role_family, tally_card_number, card_uid, qty, location, note, reason_code, multi_location, updated_at",
   search: ["tally_card_number", "location", "note"],
   defaultSort: { column: "updated_at", desc: true },
 
@@ -39,6 +41,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
     qty: input.qty === undefined || input.qty === null ? null : Number(input.qty),
     location: input.location ?? null,
     note: input.note ?? null,
+    reason_code: input.reason_code ?? 'UNSPECIFIED',
+    multi_location: input.multi_location ?? false,
     // role_family is derived/set elsewhere (e.g., via database trigger or server-side logic)
   }),
 
@@ -53,6 +57,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
       qty: { type: "int", nullable: true, write: true },
       location: { type: "text", nullable: true, write: true },
       note: { type: "text", nullable: true, write: true },
+      reason_code: { type: "text", nullable: true, write: true },
+      multi_location: { type: "boolean", nullable: false, write: true },
       updated_at: { type: "timestamp", nullable: true, readonly: true },
     },
   },
@@ -80,6 +86,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
         "qty",
         "location",
         "note",
+        "reason_code",
+        "multi_location",
         "warehouse", // enriched from tally_cards → warehouses
       ],
       orderBy: { column: "updated_at", direction: "desc" },
@@ -90,6 +98,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
         { key: "full_name", label: "User", width: 200 },
         { key: "warehouse", label: "Warehouse", width: 150 },
         { key: "role_family", label: "Role Family", width: 150 },
+        { key: "reason_code", label: "Reason", width: 120 },
+        { key: "multi_location", label: "Multi-Location", format: "boolean", width: 120 },
         { key: "qty", label: "Qty", format: "number", width: 100 },
         { key: "location", label: "Location", width: 150 },
         { key: "note", label: "Note" },

@@ -3,6 +3,13 @@
 import * as React from "react";
 
 import { Controller, useFormContext } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormItem } from "@/components/ui/form";
+import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
 
 export type Option = { id: string; label: string };
 
@@ -27,113 +34,168 @@ export type FieldDef = {
 };
 
 export function DynamicField({ field, options }: { field: FieldDef; options?: Option[] }) {
-  const { control } = useFormContext();
+  const { control, watch } = useFormContext();
+  const multiLocation = watch("multi_location") ?? false;
+  
   if (field.hidden) return null;
 
-  const labelCls = "mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200";
-  const inputBase =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none " +
-    "focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700";
-  const inputWhite = `bg-white ${inputBase}`;
-  const inputGray = `bg-gray-50 ${inputBase}`;
+  // Conditionally disable/hide location and qty when multi_location is true
+  const isDisabledByMultiLocation =
+    multiLocation && (field.name === "location" || field.name === "qty");
 
   return (
     <Controller
       name={field.name}
       control={control}
-      render={({ field: rhf }) => (
-        <div>
-          <label className={labelCls}>
-            {field.label}
-            {field.required ? <span className="ml-1 text-red-600">*</span> : null}
-          </label>
+      render={({ field: rhf, fieldState }) => {
+        return (
+          <FormItem>
+            <Label htmlFor={field.name}>
+              {field.label}
+              {field.required && <span className="ml-1 text-destructive">*</span>}
+            </Label>
+            {field.kind === "text" && (
+              <Input
+                {...rhf}
+                value={rhf.value ?? ""}
+                placeholder={field.placeholder}
+                readOnly={field.readOnly || isDisabledByMultiLocation}
+                disabled={isDisabledByMultiLocation}
+                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+              />
+            )}
 
-          {field.kind === "text" && (
-            <input
-              {...rhf}
-              value={rhf.value ?? ""}
-              className={field.readOnly ? inputGray : inputWhite}
-              placeholder={field.placeholder}
-              readOnly={field.readOnly}
-            />
-          )}
+            {field.kind === "number" && (
+              <Input
+                type="number"
+                {...rhf}
+                value={rhf.value ?? ""}
+                placeholder={field.placeholder}
+                readOnly={field.readOnly || isDisabledByMultiLocation}
+                disabled={isDisabledByMultiLocation}
+                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+              />
+            )}
 
-          {field.kind === "number" && (
-            <input
-              type="number"
-              {...rhf}
-              value={rhf.value ?? ""}
-              className={field.readOnly ? inputGray : inputWhite}
-              placeholder={field.placeholder}
-              readOnly={field.readOnly}
-            />
-          )}
+            {field.kind === "textarea" && (
+              <Textarea
+                {...rhf}
+                value={rhf.value ?? ""}
+                placeholder={field.placeholder}
+                rows={3}
+                readOnly={field.readOnly}
+                className={field.readOnly ? "bg-muted" : ""}
+              />
+            )}
 
-          {field.kind === "textarea" && (
-            <textarea
-              {...rhf}
-              value={rhf.value ?? ""}
-              className={`w-full resize-none ${inputWhite}`}
-              placeholder={field.placeholder}
-              rows={3}
-              readOnly={field.readOnly}
-            />
-          )}
+            {field.kind === "checkbox" && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={!!rhf.value}
+                  onCheckedChange={(checked) => rhf.onChange(checked)}
+                  disabled={field.readOnly || isDisabledByMultiLocation}
+                />
+                {field.description && (
+                  <Label htmlFor={field.name} className="text-sm font-normal cursor-pointer">
+                    {field.description}
+                  </Label>
+                )}
+              </div>
+            )}
 
-          {field.kind === "checkbox" && (
-            <input type="checkbox" checked={!!rhf.value} onChange={(e) => rhf.onChange(e.target.checked)} />
-          )}
+            {field.kind === "date" && (
+              <Input
+                type="date"
+                {...rhf}
+                value={rhf.value ?? ""}
+                disabled={field.readOnly || isDisabledByMultiLocation}
+                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+              />
+            )}
 
-          {field.kind === "date" && <input type="date" {...rhf} className={inputWhite} />}
-
-          {(field.kind === "select" || field.kind === "multiselect") && (
-            <div className="relative">
-              <select
-                multiple={field.kind === "multiselect"}
-                value={field.kind === "multiselect" ? (rhf.value ?? []) : (rhf.value ?? "")}
-                onChange={(e) => {
-                  if (field.kind === "multiselect") {
-                    const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    rhf.onChange(vals);
-                  } else {
-                    rhf.onChange(e.target.value);
-                  }
-                }}
-                className={`appearance-none ${inputWhite}`}
-              >
-                {field.kind === "select" && <option value="">Select…</option>}
-                {(options ?? []).length === 0 && field.optionsKey ? (
-                  <option value="" disabled>
-                    ⚠️ No options loaded (key: {field.optionsKey})
-                  </option>
-                ) : null}
-                {(options ?? []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              {/* Chevron icon exactly positioned */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="lucide lucide-chevron-down pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-300"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </div>
-          )}
-
-          {field.description ? <p className="text-muted-foreground mt-1 text-xs">{field.description}</p> : null}
-        </div>
-      )}
+            {(field.kind === "select" || field.kind === "multiselect") && (
+              <>
+                {/* Use SearchableSelect for item_number and warehouse_id fields */}
+                {(field.name === "item_number" || field.name === "warehouse_id") && field.kind === "select" ? (
+                  <SearchableSelect
+                    options={(options ?? []) as SearchableSelectOption[]}
+                    value={rhf.value ?? null}
+                    onChange={(value) => rhf.onChange(value)}
+                    placeholder={field.placeholder ?? "Select..."}
+                    searchPlaceholder={
+                      field.name === "item_number"
+                        ? "Search item number or description..."
+                        : "Search warehouse code or name..."
+                    }
+                    twoColumn={true}
+                    searchFields="both"
+                    disabled={field.readOnly || isDisabledByMultiLocation}
+                    className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+                  />
+                ) : field.kind === "select" ? (
+                  <Select
+                    value={rhf.value != null && rhf.value !== "" ? String(rhf.value) : undefined}
+                    onValueChange={(value) => rhf.onChange(value)}
+                    disabled={field.readOnly || isDisabledByMultiLocation || (options ?? []).length === 0}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={field.placeholder ?? "Select..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(options ?? []).length === 0 && field.optionsKey ? (
+                        <SelectItem disabled value="__no-options__">
+                          ⚠️ No options loaded (key: {field.optionsKey})
+                        </SelectItem>
+                      ) : null}
+                      {(options ?? []).map((o) => (
+                        <SelectItem key={o.id} value={String(o.id)}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="space-y-2">
+                    {(options ?? []).length === 0 && field.optionsKey ? (
+                      <p className="text-sm text-muted-foreground">
+                        ⚠️ No options loaded (key: {field.optionsKey})
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        {(options ?? []).map((o) => (
+                          <div key={o.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={Array.isArray(rhf.value) && rhf.value.includes(o.id)}
+                              onCheckedChange={(checked) => {
+                                const currentValues = Array.isArray(rhf.value) ? rhf.value : [];
+                                if (checked) {
+                                  rhf.onChange([...currentValues, o.id]);
+                                } else {
+                                  rhf.onChange(currentValues.filter((v: string) => v !== o.id));
+                                }
+                              }}
+                              disabled={field.readOnly}
+                            />
+                            <Label htmlFor={`${field.name}-${o.id}`} className="text-sm font-normal cursor-pointer">
+                              {o.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+            {field.description && field.kind !== "checkbox" && (
+              <p className="text-sm text-muted-foreground">{field.description}</p>
+            )}
+            {fieldState.error && (
+              <p className="text-sm text-destructive">{fieldState.error.message}</p>
+            )}
+          </FormItem>
+        );
+      }}
     />
   );
 }

@@ -1,26 +1,88 @@
 // src/app/(main)/forms/stock-adjustments/new/form.config.ts
 import { z } from "zod";
 import type { FormConfig } from "@/lib/forms/types";
+import { STOCK_ADJUSTMENT_REASON_CODES, DEFAULT_REASON_CODE } from "@/lib/config/stock-adjustment-reason-codes";
 
-// Form schema for validation
-export const formSchema = z.object({
-  tally_card_number: z.string().min(1, "Tally Card Number is required"),
-  qty: z.number().min(-999999).max(999999, "Quantity must be reasonable"),
-  location: z.string().optional(),
-  note: z.string().optional(),
-  user_id: z.string().optional(),
-  card_uid: z.string().optional(),
-  warehouseId: z.string().optional(),
-  adjustedQuantity: z.number().optional(),
-  currentQuantity: z.number().optional(),
-  adjustmentId: z.string().optional(),
-  itemNumber: z.string().optional(),
-  adjustmentType: z.string().optional(),
-  reason: z.string().optional(),
-  notes: z.string().optional(),
-  status: z.string().optional(),
-  owner: z.string().optional(),
-});
+// Form schema for validation (conditional based on multi_location)
+export const formSchema = z
+  .object({
+    tally_card_number: z.string().min(1, "Tally Card Number is required"),
+    qty: z.number().min(-999999).max(999999, "Quantity must be reasonable").optional(),
+    location: z.string().optional(),
+    note: z.string().optional(),
+    reason_code: z.enum([
+      "UNSPECIFIED",
+      "DAMAGE",
+      "LOST",
+      "FOUND",
+      "TRANSFER",
+      "COUNT_CORRECTION",
+      "ADJUSTMENT",
+      "OTHER",
+    ]).default(DEFAULT_REASON_CODE),
+    multi_location: z.boolean().default(false),
+    user_id: z.string().optional(),
+    card_uid: z.string().optional(),
+    warehouseId: z.string().optional(),
+    adjustedQuantity: z.number().optional(),
+    currentQuantity: z.number().optional(),
+    adjustmentId: z.string().optional(),
+    itemNumber: z.string().optional(),
+    adjustmentType: z.string().optional(),
+    reason: z.string().optional(),
+    notes: z.string().optional(),
+    status: z.string().optional(),
+    owner: z.string().optional(),
+    locations: z.array(
+      z.object({
+        location: z.string().min(1, "Location is required"),
+        qty: z.number().int("Quantity must be an integer"),
+        pos: z.number().optional(),
+      })
+    ).optional(),
+  })
+  .refine(
+    (data) => {
+      // If multi_location is false, require location and qty
+      if (!data.multi_location) {
+        return !!(data.location && data.location.trim() && data.qty != null);
+      }
+      return true;
+    },
+    {
+      message: "Location and quantity are required when not using multi-location mode",
+      path: ["location"],
+    }
+  )
+  .refine(
+    (data) => {
+      // If multi_location is true, require at least one location
+      if (data.multi_location) {
+        return !!(data.locations && data.locations.length > 0);
+      }
+      return true;
+    },
+    {
+      message: "At least one location is required when multi-location mode is enabled",
+      path: ["locations"],
+    }
+  )
+  .refine(
+    (data) => {
+      // If multi_location is true, total qty can be 0 only if reason_code is COUNT_CORRECTION
+      if (data.multi_location && data.locations) {
+        const totalQty = data.locations.reduce((sum, loc) => sum + (loc.qty || 0), 0);
+        if (totalQty === 0 && data.reason_code !== "COUNT_CORRECTION") {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message: "Total quantity cannot be zero unless reason code is 'Count Correction'",
+      path: ["locations"],
+    }
+  );
 
 // Default values for the form
 export const defaultValues = {
@@ -28,6 +90,8 @@ export const defaultValues = {
   qty: 0,
   location: "",
   note: "",
+  reason_code: DEFAULT_REASON_CODE,
+  multi_location: false,
   user_id: "",
   card_uid: "",
   warehouseId: "",
@@ -40,6 +104,7 @@ export const defaultValues = {
   notes: "",
   status: "",
   owner: "",
+  locations: [] as Array<{ location: string; qty: number; pos?: number }>,
 };
 
 // Mock data functions and options
@@ -63,13 +128,11 @@ export const statusOptions = [
   { value: "rejected", label: "Rejected" },
 ];
 
-export const reasonOptions = [
-  { value: "damage", label: "Damage" },
-  { value: "theft", label: "Theft" },
-  { value: "expired", label: "Expired" },
-  { value: "correction", label: "Correction" },
-  { value: "other", label: "Other" },
-];
+// Reason code options (config-driven)
+export const reasonCodeOptions = STOCK_ADJUSTMENT_REASON_CODES.map((code) => ({
+  value: code.value,
+  label: code.label,
+}));
 
 /**
  * Pattern:
@@ -121,6 +184,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
     // Server-managed (kept for schema/defaults; not shown in sections)
     { name: "user_id", label: "User", kind: "text", hidden: true },
     { name: "card_uid", label: "Card UID", kind: "text", hidden: true },
+    { name: "locations", label: "Locations", kind: "text", hidden: true }, // Child locations array
 
     // Visible fields also listed here for schema/defaults; layout comes from `sections`
     {
@@ -133,10 +197,27 @@ export const stockAdjustmentCreateConfig: FormConfig & {
       width: "half",
     },
     {
+      name: "reason_code",
+      label: "Reason Code",
+      kind: "select",
+      required: true,
+      placeholder: "Select reason...",
+      description: "Reason for this adjustment (visible in history & audit).",
+      width: "half",
+      optionsKey: "reasonCodes",
+    },
+    {
+      name: "multi_location",
+      label: "Multi-location adjustment",
+      kind: "checkbox",
+      required: false,
+      width: "half",
+    },
+    {
       name: "qty",
       label: "Quantity (+/−)",
       kind: "number",
-      required: true,
+      required: false, // Conditional based on multi_location
       placeholder: "e.g. -4 or 12",
       width: "half",
     },
@@ -144,6 +225,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
       name: "location",
       label: "Location",
       kind: "text",
+      required: false, // Conditional based on multi_location
       placeholder: "Rack / Aisle / Bin",
       width: "half",
     },
@@ -175,17 +257,32 @@ export const stockAdjustmentCreateConfig: FormConfig & {
           placeholder: "e.g. TC-000123",
         },
         {
+          name: "reason_code",
+          label: "Reason Code",
+          kind: "select",
+          required: true,
+          placeholder: "Select reason...",
+          description: "Reason for this adjustment (visible in history & audit).",
+          optionsKey: "reasonCodes",
+        },
+        {
+          name: "multi_location",
+          label: "Multi-location adjustment",
+          kind: "checkbox",
+          required: false,
+        },
+        {
           name: "location",
           label: "Location",
           kind: "text",
-          required: true,
+          required: false, // Conditional based on multi_location
           placeholder: "Rack / Aisle / Bin",
         },
         {
           name: "qty",
           label: "Quantity",
           kind: "number",
-          required: true,
+          required: false, // Conditional based on multi_location
           placeholder: "e.g. -4 or 12",
         },
         {

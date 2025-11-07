@@ -25,6 +25,14 @@ describe("statusToQuery", () => {
     expect(result).toEqual({});
   });
 
+  it("maps QUANTITY_UNDEFINED status to correct query params", () => {
+    const result = statusToQuery("QUANTITY_UNDEFINED");
+
+    expect(result).toEqual({
+      qty_is_null_or_empty: true,
+    });
+  });
+
   it("returns empty object for unknown status values", () => {
     expect(statusToQuery("UNKNOWN")).toEqual({});
     expect(statusToQuery("")).toEqual({});

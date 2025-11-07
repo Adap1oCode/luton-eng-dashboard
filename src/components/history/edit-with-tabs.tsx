@@ -24,7 +24,7 @@ interface EditWithTabsProps {
   // Fallback: if formNode is provided, use it (for backward compatibility)
   formNode?: React.ReactElement;
   historyUI?: {
-    columns?: Array<{ key: string; label: string; width?: number; format?: "date" | "text" | "number" }>;
+    columns?: Array<{ key: string; label: string; width?: number; format?: "date" | "text" | "number" | "boolean" }>;
     tabBadgeCount?: boolean;
   };
 }

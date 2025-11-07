@@ -245,25 +245,23 @@ export const GET = withLogging(
       }
 
       // 7. Build query against base SCD2 table (not view - view only shows top 1 per anchor)
-      // Query base table fields: id, updated_by_user_id, role_family, tally_card_number, card_uid, qty, location, note, updated_at
+      // Query base table fields from projection.columns (excluding enriched fields like full_name, warehouse, updated_at_pretty)
       // Enrichment (user.full_name, warehouse) happens server-side after query
-      const baseColumns = [
-        "id",
-        "updated_by_user_id",
-        "role_family",
-        "tally_card_number",
-        "card_uid",
-        "qty",
-        "location",
-        "note",
-        "updated_at",
-      ];
+      const projectionColumns = historyCfg.projection?.columns ?? [];
+      // Enriched columns that are added server-side (not in base table)
+      const enrichedColumns = new Set(["full_name", "warehouse", "updated_at_pretty"]);
+      // Base columns that exist in the table (filter out enriched columns)
+      const baseColumns = projectionColumns
+        .filter((col: string) => !enrichedColumns.has(col))
+        .concat(["id", "card_uid"]); // Always include id and card_uid (needed for enrichment)
+      // Remove duplicates
+      const uniqueBaseColumns = Array.from(new Set(baseColumns));
       const orderByColumn = historyCfg.projection?.orderBy?.column ?? "updated_at";
       const orderByDirection = historyCfg.projection?.orderBy?.direction ?? "desc";
 
       let query = sb
         .from(tableOrView)
-        .select(baseColumns.join(", "), { count: "exact" })
+        .select(uniqueBaseColumns.join(", "), { count: "exact" })
         .eq(anchorColumn, anchorValue);
 
       // STEP 1: Apply basic ownership scoping only - we'll add warehouse scoping incrementally

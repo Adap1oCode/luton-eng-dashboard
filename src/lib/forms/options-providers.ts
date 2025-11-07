@@ -11,7 +11,7 @@ import type { Option } from "./types";
  * Maps an optionsKey (e.g., "warehouses") to a resource and transform rules.
  */
 export type OptionProviderConfig = {
-  /** Resource key to fetch from (e.g., "warehouses") */
+  /** Resource key to fetch from (e.g., "warehouses") or "static" for static options */
   resourceKey: string;
   /** Field to use as option.id (UUID or bigint - will be converted to string for dropdown) */
   idField: string;
@@ -23,6 +23,8 @@ export type OptionProviderConfig = {
   sort?: { column: string; desc?: boolean };
   /** Optional custom transform function (overrides idField/labelField) */
   transform?: (row: any) => Option;
+  /** Optional static options loader (for non-resource options like reason codes) */
+  staticOptions?: () => Promise<Option[]>;
 };
 
 /**
@@ -47,6 +49,19 @@ export const OPTIONS_PROVIDERS: Record<string, OptionProviderConfig> = {
       return `${itemNum}${desc}`;
     },
     sort: { column: "item_number", desc: false }, // Sort by item_number ascending
+  },
+  reasonCodes: {
+    resourceKey: "static", // Special key for static options
+    idField: "value",
+    labelField: "label",
+    // Static options loaded from config
+    staticOptions: async () => {
+      const { STOCK_ADJUSTMENT_REASON_CODES } = await import("@/lib/config/stock-adjustment-reason-codes");
+      return STOCK_ADJUSTMENT_REASON_CODES.map((code) => ({
+        id: code.value,
+        label: code.label,
+      }));
+    },
   },
 } as const;
 

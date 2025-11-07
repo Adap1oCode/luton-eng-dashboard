@@ -51,6 +51,9 @@ interface ResourceFormSSRPageProps {
     all?: string[];
   };
 
+  // Optional: Custom submit button component (for SCD-2 forms that need isDirty tracking)
+  customSubmitButton?: React.ReactNode;
+
   // Loading states
   isInitialLoading?: boolean;
   initialLoadingTitle?: string;
@@ -101,6 +104,7 @@ export default function ResourceFormSSRPage({
   isBackgroundLoading = false,
   backgroundLoadingMessage = "Processing...",
   children,
+  customSubmitButton,
 }: ResourceFormSSRPageProps) {
   const computedCancelHref = cancelHref ?? resolveDefaultCancelHref(config);
   const computedPrimaryLabel = primaryLabel ?? (config as any)?.submitLabel ?? "Save";
@@ -123,7 +127,9 @@ export default function ResourceFormSSRPage({
             </Link>
           ),
         primary: hidePrimary ? null : (
-          primaryButtonPermissions ? (
+          customSubmitButton ? (
+            customSubmitButton
+          ) : primaryButtonPermissions ? (
             <PermissionGate any={primaryButtonPermissions.any} all={primaryButtonPermissions.all}>
               <button
                 form={formId}

@@ -63,6 +63,7 @@ export type StockAdjustmentRow = {
 export function statusToQuery(status: string): Record<string, any> {
   if (status === "ACTIVE") return { qty_gt: 0, qty_not_null: true };
   if (status === "ZERO") return { qty_eq: 0 };
+  if (status === "QUANTITY_UNDEFINED") return { qty_is_null_or_empty: true };
   return {};
 }
 
@@ -87,12 +88,23 @@ export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
     placeholder: "Enter quantity",
     validation: (value) => !isNaN(Number(value)),
     parseValue: (value) => Number(value),
-    showBadge: false,
+    showBadge: false, // Only show badge when empty (NONE), otherwise show normal text
     formatDisplay: (value: any) => {
-      if (value !== null && value !== undefined) {
+      if (value !== null && value !== undefined && value !== "") {
         return String(value);
       }
-      return "—";
+      return "NONE"; // Will be shown in red badge when empty
+    },
+  },
+  location: {
+    fieldType: "text",
+    placeholder: "Enter location",
+    showBadge: false, // Only show badge when empty (NONE), otherwise show normal text
+    formatDisplay: (value: any) => {
+      if (value !== null && value !== undefined && value !== "") {
+        return String(value);
+      }
+      return "NONE"; // Will be shown in red badge when empty
     },
   },
 };
@@ -161,21 +173,18 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
         inlineEdit: INLINE_EDIT_CONFIGS.qty,
       },
       enableSorting: true,
-      size: 120,
+      size: 280, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
       id: "location",
       accessorKey: "location",
       header: "Location",
+      // No custom cell renderer - ResourceTableClient will use InlineEditCellWrapper when meta.inlineEdit is present
+      meta: {
+        inlineEdit: INLINE_EDIT_CONFIGS.location,
+      },
       enableSorting: true,
-      size: 160,
-    },
-    {
-      id: "note",
-      accessorKey: "note",
-      header: "Note",
-      enableSorting: false,
-      size: 280,
+      size: 320, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
       id: "updated_at_pretty",
@@ -200,6 +209,7 @@ export const quickFilters: QuickFilter[] = [
       { value: "ALL", label: "All adjustments" },
       { value: "ACTIVE", label: "Active (qty > 0)" },
       { value: "ZERO", label: "Zero quantity" },
+      { value: "QUANTITY_UNDEFINED", label: "Quantity undefined" },
     ],
     defaultValue: "ALL",
     toQueryParam: statusToQuery,

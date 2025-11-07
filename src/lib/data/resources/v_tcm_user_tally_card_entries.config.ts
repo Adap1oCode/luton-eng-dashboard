@@ -10,6 +10,8 @@ export type TallyCardEntryInput = {
   qty?: number | null;
   location?: string | null;
   note?: string | null;
+  reason_code?: string | null;
+  multi_location?: boolean | null;
 };
 
 const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryInput> = {
@@ -19,7 +21,7 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
 
   // ⚡ Keep lean; card_uid omitted (only used in forms)
   select:
-    "id, user_id, full_name, role_family, tally_card_number, qty, location, note, updated_at, updated_at_pretty, warehouse_id, warehouse",
+    "id, user_id, full_name, role_family, tally_card_number, qty, location, note, reason_code, multi_location, updated_at, updated_at_pretty, warehouse_id, warehouse",
 
   search: ["tally_card_number", "location", "note", "full_name", "role_family"],
   defaultSort: { column: "tally_card_number", desc: false },
@@ -42,6 +44,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
     qty: input.qty == null ? null : Number(input.qty),
     location: input.location ?? null,
     note: input.note ?? null,
+    reason_code: input.reason_code ?? 'UNSPECIFIED',
+    multi_location: input.multi_location ?? false,
     // role_family is derived/set elsewhere; view exposes it read-only
   }),
 
@@ -58,6 +62,8 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
       qty: { type: "int", nullable: true, write: true },
       location: { type: "text", nullable: true, write: true },
       note: { type: "text", nullable: true, write: true },
+      reason_code: { type: "text", nullable: true, write: true },
+      multi_location: { type: "boolean", nullable: false, write: true },
       updated_at: { type: "timestamp", nullable: true, readonly: true },
       updated_at_pretty: { type: "text", nullable: true, readonly: true },
       warehouse_id: { type: "uuid", readonly: true },

@@ -15,6 +15,7 @@ import inventoryWarehouse from "./dashboards/inventory-warehouse.ts";
 import inventoryUom from "./dashboards/inventory-uom.ts";
 import inventoryItemCostByWarehouse from "./dashboards/inventory-item-cost-by-warehouse.ts";
 import v_table_report_combined from "./dbdocs/v_table_report_combined.config.ts";
+import tcm_user_tally_card_entry_locations from "./tcm_user_tally_card_entry_locations.config.ts";
 
 const resources = {
   // ✅ Database table names (primary keys)
@@ -24,6 +25,7 @@ const resources = {
   role_warehouse_rules,
   tcm_tally_cards,
   tcm_user_tally_card_entries,
+  tcm_user_tally_card_entry_locations,
   v_tcm_user_tally_card_entries,
   v_tcm_tally_card_entry_compare,
   v_tcm_tally_cards_current: tcm_tally_cards_current,
@@ -36,6 +38,7 @@ const resources = {
 
   // ✅ Friendly aliases for business-facing routes
   "stock-adjustments": tcm_user_tally_card_entries,
+  "stock-adjustment-locations": tcm_user_tally_card_entry_locations,
   "tally-cards": tcm_tally_cards,
   "inventory-unique": v_inventory_unique,
   // ✅ Dashboard-friendly aliases for inventory resources
@@ -57,6 +60,7 @@ export {
   tcm_tally_cards,
   tcm_tally_cards_current,
   tcm_user_tally_card_entries,
+  tcm_user_tally_card_entry_locations,
   v_tcm_user_tally_card_entries,
   v_tcm_tally_card_entry_compare,
   v_inventory_unique,

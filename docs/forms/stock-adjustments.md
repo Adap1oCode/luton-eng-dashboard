@@ -87,8 +87,7 @@ Standardized shared component used for all list pages.
 | **Warehouse** | Warehouse | ✅ | ✅ | — |
 | **Name** | Name | ✅ | ✅ | — |
 | **Qty** | Qty | ✅ | ✅ | ✅ **Inline editing** (no badges) |
-| **Location** | Location | ✅ | ✅ | — |
-| **Note** | Note | ❌ | ✅ | — |
+| **Location** | Location | ✅ | ✅ | ✅ **Inline editing** (no badges) |
 | **Updated** | Updated | ✅ | ✅ | — |
 | **Actions** | ⋯ (last column) | ❌ | ❌ | — |
 
@@ -101,6 +100,11 @@ Standardized shared component used for all list pages.
    - Validation ensures numeric values only
    - Changes are saved via API call to update the record
    - **Note**: Status badges have been removed for cleaner appearance
+3. **Location Inline Editing**:
+   - Location column is editable directly in the table
+   - Click on location value to enter edit mode
+   - Use check/cancel buttons to save or cancel changes
+   - Changes are saved via API call to update the record
 
 #### Features
 

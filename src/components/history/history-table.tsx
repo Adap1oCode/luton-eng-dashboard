@@ -16,7 +16,7 @@ import { OptimisticProvider } from "@/components/forms/shell/optimistic-context"
 interface HistoryTableProps {
   resourceKey: string;
   recordId: string;
-  columnsConfig: Array<{ key: string; label: string; width?: number; format?: "date" | "text" | "number" }>;
+  columnsConfig: Array<{ key: string; label: string; width?: number; format?: "date" | "text" | "number" | "boolean" }>;
   queryKey: (string | number)[];
 }
 
@@ -47,6 +47,21 @@ function formatNumberValue(value: unknown): string {
   if (value === null || value === undefined) return "-";
   if (typeof value === "number") {
     return value.toLocaleString();
+  }
+  return String(value);
+}
+
+// Format boolean value for display
+function formatBooleanValue(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+  // Handle string representations of booleans
+  if (typeof value === "string") {
+    const lower = value.toLowerCase();
+    if (lower === "true" || lower === "yes" || lower === "1") return "Yes";
+    if (lower === "false" || lower === "no" || lower === "0") return "No";
   }
   return String(value);
 }
@@ -90,6 +105,9 @@ export default function HistoryTable({ resourceKey, recordId, columnsConfig, que
             }
             if (col.format === "number") {
               return <span className="text-sm">{formatNumberValue(value)}</span>;
+            }
+            if (col.format === "boolean") {
+              return <span className="text-sm">{formatBooleanValue(value)}</span>;
             }
             return <span className="text-sm">{String(value ?? "-")}</span>;
           },

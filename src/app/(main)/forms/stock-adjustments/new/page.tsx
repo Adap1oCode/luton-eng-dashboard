@@ -1,10 +1,12 @@
 import React from "react";
 
-import FormIsland from "@/components/forms/shell/form-island";
 import FormShell from "@/components/forms/shell/form-shell";
 import { PermissionGate } from "@/components/auth/permissions-gate";
 import { ensureSections, getAllFields } from "@/lib/forms/config-normalize";
 import { buildDefaults } from "@/lib/forms/schema";
+import { extractOptionsKeys } from "@/lib/forms/extract-options-keys";
+import { loadOptions } from "@/lib/forms/load-options";
+import StockAdjustmentFormWrapper from "../components/stock-adjustment-form-wrapper";
 
 import { stockAdjustmentCreateConfig } from "./form.config";
 
@@ -23,7 +25,15 @@ export default async function NewStockAdjustmentPage() {
   };
 
   const formId = "stock-adjustment-form";
-  const options = {};
+
+  // Extract optionsKeys from form config and load options server-side
+  const optionsKeys = extractOptionsKeys(stockAdjustmentCreateConfig);
+  const loadedOptions = await loadOptions(optionsKeys);
+
+  // Ensure defaults include locations array
+  if (!defaults.locations) {
+    defaults.locations = [];
+  }
 
   // Return server-rendered shell with client form island
   // Note: in Next.js App Router, this async component can directly return JSX
@@ -51,12 +61,14 @@ export default async function NewStockAdjustmentPage() {
         ),
       }}
     >
-      <FormIsland
+      <StockAdjustmentFormWrapper
         formId={formId}
         config={transportConfig}
         defaults={defaults}
-        options={options as any}
-        // hideInternalActions defaults to true in FormIsland — including it here is optional
+        options={loadedOptions}
+        action={transportConfig.action}
+        method={transportConfig.method as "POST" | "PATCH"}
+        submitLabel={transportConfig.submitLabel}
       />
     </FormShell>
   );
