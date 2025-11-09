@@ -209,7 +209,7 @@ export const quickFilters: QuickFilter[] = [
 // -----------------------------------------------------------------------------
 // View Config
 // -----------------------------------------------------------------------------
-export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
+export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY,
   formsRouteSegment: ROUTE_SEGMENT,
   idField: "id",

@@ -20,13 +20,23 @@ export type FieldDef = {
   dependsOn?: { field: string; param: string }; // dynamic option dep
 };
 
+export type SectionDef = {
+  key: string;
+  title: string;
+  defaultOpen?: boolean;
+  headerRight?: React.ReactNode;
+  layout?: { columns?: 1 | 2 | 3 | 4; fill?: "row" | "column" };
+  fields: FieldDef[];
+};
+
 export type FormConfig = {
   key: string; // e.g. "order.create"
   title: string; // page heading
   subtitle?: string; // page subheading
   permissionKey: string; // e.g. "resource:orders:create"
   resource: string; // e.g. "orders"
-  fields: FieldDef[]; // field list
+  fields?: FieldDef[]; // field list (legacy, used for schema/defaults)
+  sections?: SectionDef[]; // sections (preferred for layout)
   submitLabel?: string; // button text
 };
 

@@ -189,7 +189,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
     // Visible fields also listed here for schema/defaults; layout comes from `sections`
     {
       name: "tally_card_number",
-      label: "Tally Card #",
+      label: "Tally Card",
       kind: "text",
       required: true,
       readOnly: true,
@@ -198,11 +198,10 @@ export const stockAdjustmentCreateConfig: FormConfig & {
     },
     {
       name: "reason_code",
-      label: "Reason Code",
+      label: "Reason",
       kind: "select",
       required: true,
       placeholder: "Select reason...",
-      description: "Reason for this adjustment (visible in history & audit).",
       width: "half",
       optionsKey: "reasonCodes",
     },
@@ -211,7 +210,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
       label: "Multi-location adjustment",
       kind: "checkbox",
       required: false,
-      width: "half",
+      hidden: true, // Hidden - now shown as toggle in accordion header
     },
     {
       name: "qty",
@@ -248,47 +247,42 @@ export const stockAdjustmentCreateConfig: FormConfig & {
       defaultOpen: true,
       layout: { columns: 3, fill: "row" }, // 3-col, row-first fill (defaults anyway)
       fields: [
-        // Column 1 stack
+        // Order: Tally Card, Location, Quantity, Reason, Note
         {
           name: "tally_card_number",
-          label: "Tally Card #",
+          label: "Tally Card",
           kind: "text",
           required: true,
+          readOnly: true,
           placeholder: "e.g. TC-000123",
-        },
-        {
-          name: "reason_code",
-          label: "Reason Code",
-          kind: "select",
-          required: true,
-          placeholder: "Select reason...",
-          description: "Reason for this adjustment (visible in history & audit).",
-          optionsKey: "reasonCodes",
-        },
-        {
-          name: "multi_location",
-          label: "Multi-location adjustment",
-          kind: "checkbox",
-          required: false,
         },
         {
           name: "location",
           label: "Location",
           kind: "text",
-          required: false, // Conditional based on multi_location
+          required: true, // Required (conditional validation handled in schema)
           placeholder: "Rack / Aisle / Bin",
         },
         {
           name: "qty",
           label: "Quantity",
           kind: "number",
-          required: false, // Conditional based on multi_location
+          required: true, // Required (conditional validation handled in schema)
           placeholder: "e.g. -4 or 12",
+        },
+        {
+          name: "reason_code",
+          label: "Reason",
+          kind: "select",
+          required: true,
+          placeholder: "Select reason...",
+          optionsKey: "reasonCodes",
         },
         {
           name: "note",
           label: "Note",
           kind: "textarea",
+          required: false, // Optional
           placeholder: "Optional details...",
           span: 2, // span across col 1..2 (matches your desired layout)
         },

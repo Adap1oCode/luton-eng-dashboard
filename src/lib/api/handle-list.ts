@@ -76,11 +76,15 @@ export async function listHandler(req: Request, resourceKey: string) {
           filters[col] = filters[col] || {};
           filters[col][kind] = value;
         }
-        // Numeric comparison filters: qty_gt, qty_gte, qty_lt, qty_lte, qty_eq
+        // Numeric and date comparison filters: qty_gt, updated_at_gte, etc.
         else if (key.endsWith('_gt') || key.endsWith('_gte') || key.endsWith('_lt') || key.endsWith('_lte') || key.endsWith('_eq')) {
+          // Try numeric first (for qty, etc.)
           const numValue = Number(value);
           if (Number.isFinite(numValue)) {
             filters[key] = numValue;
+          } else {
+            // If not numeric, pass through as string (for dates, etc.)
+            filters[key] = value;
           }
         }
         // Other custom filters

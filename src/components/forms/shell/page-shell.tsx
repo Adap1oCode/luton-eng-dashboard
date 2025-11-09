@@ -230,8 +230,11 @@ export default function PageShell({
               </div>
             </div>
 
-            {/* Row 2: Use Toolbar component with actions support */}
-            <Toolbar config={toolbarConfig} actions={toolbarActions} />
+            {/* Row 2: Use Toolbar component with actions support + custom toolbarRight */}
+            <div className="flex items-center justify-between gap-3">
+              <Toolbar config={toolbarConfig} actions={toolbarActions} />
+              {toolbarRight && <div className="flex items-center">{toolbarRight}</div>}
+            </div>
             </div>
           )}
 

@@ -13,6 +13,8 @@ export function toRow(d: any): StockAdjustmentRow {
     qty: d?.qty ?? null,
     location: d?.location ?? null,
     note: d?.note ?? null,
+    reason_code: d?.reason_code ?? null,
+    multi_location: d?.multi_location ?? null,
     updated_at: d?.updated_at ?? null,
     updated_at_pretty: d?.updated_at_pretty ?? null,
     is_active: d?.qty !== null && d?.qty !== undefined && Number(d?.qty) > 0,

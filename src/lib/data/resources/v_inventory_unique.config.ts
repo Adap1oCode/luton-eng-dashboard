@@ -52,7 +52,7 @@ const v_inventory_unique: ResourceConfig<InventoryUnique, InventoryUniqueInput> 
       description: { type: "text", nullable: true, readonly: true },
       unit_of_measure: { type: "text", nullable: true, readonly: true },
       event_type: { type: "text", nullable: true, readonly: true },
-      snapshot_date: { type: "date", nullable: true, readonly: true },
+      snapshot_date: { type: "timestamp", nullable: true, readonly: true },
       content_hash: { type: "text", nullable: true, readonly: true },
     },
   },

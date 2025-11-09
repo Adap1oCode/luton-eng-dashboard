@@ -139,3 +139,6 @@ WHERE schemaname = 'public'
   AND tablename = 'tcm_user_tally_card_entries';
 ```
 
+
+
+

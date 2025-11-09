@@ -68,6 +68,25 @@ export function statusToQuery(status: string): Record<string, any> {
   return {};
 }
 
+/**
+ * Date filter → query parameter mapping.
+ * Converts "LAST_X_DAYS" to updated_at_gte with ISO date string.
+ */
+export function dateFilterToQuery(dateFilter: string): Record<string, any> {
+  if (dateFilter === "ALL") return {};
+  
+  const days = parseInt(dateFilter.replace("LAST_", "").replace("_DAYS", ""));
+  if (isNaN(days)) return {};
+  
+  // Calculate date X days ago
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(0, 0, 0, 0); // Start of day
+  
+  // Return ISO string for Supabase
+  return { updated_at_gte: date.toISOString() };
+}
+
 export type QuickFilterMeta = {
   id: string;
   toQueryParam?: (value: string) => Record<string, any>;
@@ -77,6 +96,10 @@ export const tallyCardsFilterMeta: QuickFilterMeta[] = [
   {
     id: "status",
     toQueryParam: statusToQuery,
+  },
+  {
+    id: "updated",
+    toQueryParam: dateFilterToQuery,
   },
 ];
 
@@ -132,7 +155,7 @@ function buildColumns(): TColumnDef<TallyCardRow>[] {
     {
       id: "tally_card_number",
       accessorKey: "tally_card_number",
-      header: "Tally Card Number",
+      header: "Tally Card",
       cell: ({ row }) => {
         const id = row.original.id;
         const tallyCardNumber = row.getValue<string | null>("tally_card_number");
@@ -151,21 +174,14 @@ function buildColumns(): TColumnDef<TallyCardRow>[] {
         );
       },
       enableSorting: true,
-      size: 180,
-    },
-    {
-      id: "warehouse_id",
-      accessorKey: "warehouse_id",
-      header: "Warehouse ID",
-      enableSorting: true,
-      size: 160,
+      size:200,
     },
     {
       id: "warehouse_name",
       accessorKey: "warehouse_name",
       header: "Warehouse",
       enableSorting: true,
-      size: 180,
+      size: 200,
     },
     {
       id: "item_number",
@@ -175,17 +191,7 @@ function buildColumns(): TColumnDef<TallyCardRow>[] {
         inlineEdit: INLINE_EDIT_CONFIGS.item_number,
       },
       enableSorting: true,
-      size: 140,
-    },
-    {
-      id: "note",
-      accessorKey: "note",
-      header: "Note",
-      meta: {
-        inlineEdit: INLINE_EDIT_CONFIGS.note,
-      },
-      enableSorting: false,
-      size: 280,
+      size: 210,
     },
     {
       id: "is_active",
@@ -200,21 +206,14 @@ function buildColumns(): TColumnDef<TallyCardRow>[] {
         );
       },
       enableSorting: true,
-      size: 100,
-    },
-    {
-      id: "snapshot_at",
-      header: "Snapshot",
-      accessorFn: (row) => row.snapshot_at ?? row.created_at ?? null,
-      enableSorting: true,
-      size: 180,
+      size: 150,
     },
     {
       id: "updated_at_pretty",
       header: "Updated",
       accessorFn: (row) => row.updated_at_pretty ?? row.updated_at ?? null,
       enableSorting: true,
-      size: 180,
+      size: 200,
     },
     makeActionsColumn<TallyCardRow>(),
   ];
@@ -236,16 +235,28 @@ export const quickFilters: QuickFilter[] = [
     defaultValue: "ALL",
     toQueryParam: statusToQuery,
   },
+  {
+    id: "updated",
+    label: "Updated",
+    type: "enum",
+    options: [
+      { value: "ALL", label: "All time" },
+      { value: "LAST_7_DAYS", label: "Last 7 days" },
+      { value: "LAST_30_DAYS", label: "Last 30 days" },
+      { value: "LAST_90_DAYS", label: "Last 90 days" },
+    ],
+    defaultValue: "ALL",
+    toQueryParam: dateFilterToQuery,
+  },
 ];
 
 // -----------------------------------------------------------------------------
 // View Config
 // -----------------------------------------------------------------------------
-export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> = {
+export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY,
   formsRouteSegment: ROUTE_SEGMENT,
   idField: "id",
-  // @ts-expect-error - apiEndpoint is used at runtime but not in BaseViewConfig type
   apiEndpoint: API_ENDPOINT, // VIEW endpoint for list/view-all screen (not TABLE endpoint)
   toolbar: { left: undefined, right: [] },
   quickFilters: quickFilters,

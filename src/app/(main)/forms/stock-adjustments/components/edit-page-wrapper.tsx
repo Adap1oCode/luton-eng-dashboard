@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { EditWithTabs } from "@/components/history/edit-with-tabs";
+import EditWithTabs from "@/components/history/edit-with-tabs";
 import EditFormClient from "./edit-form-client";
 import SubmitButtonState from "./submit-button-state";
 import type { FormConfig, ResolvedOptions } from "@/lib/forms/types";
@@ -65,4 +65,7 @@ export default function EditPageWrapper({
     />
   );
 }
+
+
+
 

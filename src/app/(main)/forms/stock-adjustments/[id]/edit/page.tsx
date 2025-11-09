@@ -17,7 +17,8 @@ import EditPageClient from "../../components/edit-page-client";
 import SubmitButtonWithState from "../../components/submit-button-with-state";
 import { DEFAULT_REASON_CODE, STOCK_ADJUSTMENT_REASON_CODES } from "@/lib/config/stock-adjustment-reason-codes";
 
-const ALLOWED_REASON_CODES = new Set(STOCK_ADJUSTMENT_REASON_CODES.map((code) => code.value));
+type ReasonCodeType = "UNSPECIFIED" | "DAMAGE" | "LOST" | "FOUND" | "TRANSFER" | "COUNT_CORRECTION" | "ADJUSTMENT" | "OTHER";
+const ALLOWED_REASON_CODES = new Set<ReasonCodeType>(STOCK_ADJUSTMENT_REASON_CODES.map((code) => code.value as ReasonCodeType));
 
 import { stockAdjustmentCreateConfig } from "../../new/form.config";
 
@@ -42,24 +43,48 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
       .eq("id", id)
       .maybeSingle();
     
+    console.log("[EditStockAdjustmentPage] Entry lookup:", {
+      url_id: id,
+      found_entry: !!entryData,
+      tally_card_number: entryData?.tally_card_number,
+    });
+    
     if (entryData?.tally_card_number) {
       // Find the latest entry_id for this tally_card_number
+      // Use updated_at DESC, then id DESC as tiebreaker (newer IDs are typically created later)
       const { data: latestEntry } = await sb
         .from("tcm_user_tally_card_entries")
-        .select("id")
+        .select("id, updated_at")
         .eq("tally_card_number", entryData.tally_card_number)
         .order("updated_at", { ascending: false })
+        .order("id", { ascending: false })  // Tiebreaker: if updated_at is same, use newest ID
         .limit(1)
         .maybeSingle();
       
+      console.log("[EditStockAdjustmentPage] Latest entry lookup:", {
+        tally_card_number: entryData.tally_card_number,
+        latest_id: latestEntry?.id,
+        latest_updated_at: latestEntry?.updated_at,
+        url_id: id,
+        ids_match: latestEntry?.id === id,
+      });
+      
       if (latestEntry?.id) {
         entryIdToUse = latestEntry.id;
+        if (latestEntry.id !== id) {
+          console.log("[EditStockAdjustmentPage] Using latest entry ID instead of URL ID:", {
+            url_id: id,
+            latest_id: latestEntry.id,
+          });
+        }
       }
     }
   } catch (err) {
     // If we can't find the latest, use the original id
-    console.warn("Failed to find latest entry_id, using provided id:", err);
+    console.warn("[EditStockAdjustmentPage] Failed to find latest entry_id, using provided id:", err);
   }
+  
+  console.log("[EditStockAdjustmentPage] Final entryIdToUse:", entryIdToUse);
 
   let prep: any;
   try {
@@ -194,8 +219,11 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     }
   }
   if (defaults.reason_code) {
-    const normalizedReason = String(defaults.reason_code).toUpperCase();
-    defaults.reason_code = ALLOWED_REASON_CODES.has(normalizedReason) ? normalizedReason : DEFAULT_REASON_CODE;
+    const normalizedReason = String(defaults.reason_code).toUpperCase() as ReasonCodeType;
+    const validReason: ReasonCodeType = ALLOWED_REASON_CODES.has(normalizedReason) 
+      ? normalizedReason
+      : DEFAULT_REASON_CODE;
+    defaults.reason_code = validReason;
   } else {
     defaults.reason_code = DEFAULT_REASON_CODE;
   }

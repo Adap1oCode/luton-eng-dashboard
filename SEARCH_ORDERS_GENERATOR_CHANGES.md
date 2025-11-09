@@ -215,3 +215,6 @@ All other 22 fields are text type (some nullable, some not).
 
 
 
+
+
+

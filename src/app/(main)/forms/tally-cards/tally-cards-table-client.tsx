@@ -40,6 +40,27 @@ export function TallyCardsTableClient({
     return config;
   }, []); // Empty deps since buildColumns should be pure
 
+  // Initial column visibility: hide warehouse_id, note, and snapshot_at
+  const initialColumnVisibility = useMemo(() => {
+    return {
+      id: false, // Always hide routing id
+      tally_card_number: true,
+      warehouse_id: false, // Hidden
+      warehouse_name: true,
+      item_number: true,
+      note: false, // Hidden
+      is_active: true,
+      snapshot_at: false, // Hidden
+      updated_at_pretty: true,
+      actions: true,
+    };
+  }, []);
+
+  // Initial sorting: by tally_card_number ASC
+  const initialSorting = useMemo(() => {
+    return [{ id: "tally_card_number", desc: false }];
+  }, []);
+
   return (
     <ResourceTableClient
       config={viewConfigWithColumns}
@@ -47,6 +68,8 @@ export function TallyCardsTableClient({
       initialTotal={initialTotal}
       page={page}
       pageSize={pageSize}
+      initialColumnVisibility={initialColumnVisibility}
+      initialSorting={initialSorting}
     />
   );
 }

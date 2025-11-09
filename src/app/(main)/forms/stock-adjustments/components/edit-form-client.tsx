@@ -54,8 +54,6 @@ export default function EditFormClient({
       action={action}
       method={method}
       submitLabel={submitLabel}
-      onIsDirtyChange={setIsDirty}
-      onSubmittingChange={setIsSubmitting}
     />
   );
 }

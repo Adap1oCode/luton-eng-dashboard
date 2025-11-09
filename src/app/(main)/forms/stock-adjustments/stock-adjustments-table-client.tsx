@@ -40,6 +40,22 @@ export function StockAdjustmentsTableClient({
     return config;
   }, []); // Empty deps since buildColumns should be pure
 
+  // Initial column visibility: hide full_name (name column) and multi_location (now shown as badge in location column)
+  const initialColumnVisibility = useMemo(() => {
+    return {
+      id: false, // Always hide routing id
+      tally_card_number: true,
+      warehouse: true,
+      full_name: false, // Hidden
+      reason_code: true,
+      multi_location: false, // Hidden - now shown as MULTI badge in location column
+      qty: true,
+      location: true,
+      updated_at_pretty: true,
+      actions: true,
+    };
+  }, []);
+
   return (
     <ResourceTableClient
       config={viewConfigWithColumns}
@@ -47,6 +63,7 @@ export function StockAdjustmentsTableClient({
       initialTotal={initialTotal}
       page={page}
       pageSize={pageSize}
+      initialColumnVisibility={initialColumnVisibility}
     />
   );
 }

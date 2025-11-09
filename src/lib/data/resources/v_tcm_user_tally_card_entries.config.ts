@@ -63,7 +63,7 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
       location: { type: "text", nullable: true, write: true },
       note: { type: "text", nullable: true, write: true },
       reason_code: { type: "text", nullable: true, write: true },
-      multi_location: { type: "boolean", nullable: false, write: true },
+      multi_location: { type: "bool", nullable: false, write: true },
       updated_at: { type: "timestamp", nullable: true, readonly: true },
       updated_at_pretty: { type: "text", nullable: true, readonly: true },
       warehouse_id: { type: "uuid", readonly: true },

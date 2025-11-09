@@ -24,7 +24,7 @@ import type { InlineEditConfig } from "@/components/data-table/inline-edit-cell"
 // -----------------------------------------------------------------------------
 const ROUTE_SEGMENT = "stock-adjustments" as const;
 const API_ENDPOINT = "/api/v_tcm_user_tally_card_entries" as const;
-const RESOURCE_KEY = "tcm_user_tally_card_entries" as const;
+export const RESOURCE_KEY = "tcm_user_tally_card_entries" as const;
 const PERMISSION_PREFIX = `resource:${RESOURCE_KEY}` as const;
 export const RESOURCE_TITLE = "Stock Adjustments" as const;
 
@@ -48,6 +48,8 @@ export type StockAdjustmentRow = {
   qty?: number | null;
   location?: string | null;
   note?: string | null;
+  reason_code?: string | null;
+  multi_location?: boolean | null;
   updated_at?: string | null;
   updated_at_pretty?: string | null;
   is_active?: boolean | null;
@@ -67,6 +69,34 @@ export function statusToQuery(status: string): Record<string, any> {
   return {};
 }
 
+/**
+ * Date filter → query parameter mapping.
+ * Converts "LAST_X_DAYS" to updated_at_gte with ISO date string.
+ */
+export function dateFilterToQuery(dateFilter: string): Record<string, any> {
+  if (dateFilter === "ALL") return {};
+  
+  const days = parseInt(dateFilter.replace("LAST_", "").replace("_DAYS", ""));
+  if (isNaN(days)) return {};
+  
+  // Calculate date X days ago
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(0, 0, 0, 0); // Start of day
+  
+  // Return ISO string for Supabase
+  return { updated_at_gte: date.toISOString() };
+}
+
+/**
+ * Warehouse filter → query parameter mapping.
+ * Filters by warehouse name (exact match).
+ */
+export function warehouseFilterToQuery(warehouseFilter: string): Record<string, any> {
+  if (warehouseFilter === "ALL") return {};
+  return { warehouse: warehouseFilter };
+}
+
 export type QuickFilterMeta = {
   id: string;
   toQueryParam?: (value: string) => Record<string, any>;
@@ -76,6 +106,14 @@ export const stockAdjustmentsFilterMeta: QuickFilterMeta[] = [
   {
     id: "status",
     toQueryParam: statusToQuery,
+  },
+  {
+    id: "updated",
+    toQueryParam: dateFilterToQuery,
+  },
+  {
+    id: "warehouse",
+    toQueryParam: warehouseFilterToQuery,
   },
 ];
 
@@ -158,11 +196,18 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       size: 160,
     },
     {
-      id: "full_name",
-      accessorKey: "full_name",
-      header: "Name",
+      id: "location",
+      accessorKey: "location",
+      header: "Location",
+      // Custom cell renderer that wraps inline edit with MULTI badge
+      // Note: ResourceTableClient will wrap this with InlineEditCellWrapper, so we need to handle both display and edit modes
+      meta: {
+        inlineEdit: INLINE_EDIT_CONFIGS.location,
+        // Custom renderer flag to add MULTI badge
+        // showMultiBadge: true, // Custom meta property - handled by ResourceTableClient
+      },
       enableSorting: true,
-      size: 160,
+      size: 320, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
       id: "qty",
@@ -176,15 +221,11 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       size: 280, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
-      id: "location",
-      accessorKey: "location",
-      header: "Location",
-      // No custom cell renderer - ResourceTableClient will use InlineEditCellWrapper when meta.inlineEdit is present
-      meta: {
-        inlineEdit: INLINE_EDIT_CONFIGS.location,
-      },
+      id: "reason_code",
+      accessorKey: "reason_code",
+      header: "Reason Code",
       enableSorting: true,
-      size: 320, // Increased width to accommodate existing value + input box + buttons for inline editing
+      size: 140,
     },
     {
       id: "updated_at_pretty",
@@ -192,6 +233,13 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       accessorFn: (row) => row.updated_at_pretty ?? row.updated_at ?? null,
       enableSorting: true,
       size: 180,
+    },
+    {
+      id: "full_name",
+      accessorKey: "full_name",
+      header: "Name",
+      enableSorting: true,
+      size: 160,
     },
     makeActionsColumn<StockAdjustmentRow>(),
   ];
@@ -214,12 +262,40 @@ export const quickFilters: QuickFilter[] = [
     defaultValue: "ALL",
     toQueryParam: statusToQuery,
   },
+  {
+    id: "updated",
+    label: "Updated",
+    type: "enum",
+    options: [
+      { value: "ALL", label: "All time" },
+      { value: "LAST_7_DAYS", label: "Last 7 days" },
+      { value: "LAST_30_DAYS", label: "Last 30 days" },
+      { value: "LAST_90_DAYS", label: "Last 90 days" },
+    ],
+    defaultValue: "ALL",
+    toQueryParam: dateFilterToQuery,
+  },
+  {
+    id: "warehouse",
+    label: "Warehouse",
+    type: "enum",
+    options: [
+      { value: "ALL", label: "All warehouses" },
+      // Note: In a real implementation, you'd load these dynamically from the API
+      // For now, using static list - see implementation guide for dynamic loading
+      { value: "AM - WH 1", label: "AM - WH 1" },
+      { value: "AM - WH 2", label: "AM - WH 2" },
+      { value: "AM - WH 3", label: "AM - WH 3" },
+    ],
+    defaultValue: "ALL",
+    toQueryParam: warehouseFilterToQuery,
+  },
 ];
 
 // -----------------------------------------------------------------------------
 // View Config
 // -----------------------------------------------------------------------------
-export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> = {
+export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY,
   formsRouteSegment: ROUTE_SEGMENT,
   idField: "id",

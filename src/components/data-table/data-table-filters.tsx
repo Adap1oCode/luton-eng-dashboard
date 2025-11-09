@@ -57,7 +57,7 @@ export function DataTableFilters({
         return (
           <th
             key={c.id}
-            className="bg-muted/50 border border-gray-200 p-2 text-left text-xs dark:border-gray-700"
+            className="bg-muted/50 border border-gray-200 p-3 text-left text-xs dark:border-gray-700"
             style={
               columnWidthsPx?.[c.id]
                 ? { width: `${columnWidthsPx[c.id]}px` }
@@ -67,17 +67,18 @@ export function DataTableFilters({
             {c.disableInput ? (
               <div />
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
                 <Input
-                  placeholder="Filter…"
+                  placeholder="Filter..."
                   value={state.value}
                   onChange={(e) => onChange(c.id, { ...state, value: e.target.value })}
-                  className="h-8 w-full text-xs"
+                  className="h-9 placeholder:font-normal"
+                  style={{ width: "calc(100% - 2.75rem)" }}
                 />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-10 px-2 text-xs">
-                      <Filter className="h-3 w-3" />
+                    <Button variant="outline" size="sm" className="h-9 px-2 py-1 shrink-0 flex items-center justify-center">
+                      <Filter className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-36 p-1">

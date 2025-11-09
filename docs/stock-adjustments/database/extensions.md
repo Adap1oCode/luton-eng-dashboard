@@ -110,3 +110,6 @@ JOIN pg_namespace n ON e.extnamespace = n.oid
 WHERE e.extname = 'pgcrypto';
 ```
 
+
+
+

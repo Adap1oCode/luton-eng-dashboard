@@ -40,7 +40,13 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
 
   // Call RPC function with parent fields only
   // Child locations are managed separately via resource API
-  console.log("[patch-scd2] Calling RPC function fn_user_entry_patch_scd2...");
+  // Feature flag: Use v3 (production-ready) by default, fallback to v2 if flag is off
+  const useV3 = process.env.NEXT_PUBLIC_SCD2_USE_V3 !== "false"; // Default to true
+  const rpcFunctionName = useV3 
+    ? "fn_tcm_user_tally_card_entries_patch_scd2_v3"
+    : "fn_user_entry_patch_scd2_v2";
+  
+  console.log(`[patch-scd2] Calling RPC function ${rpcFunctionName} (v3=${useV3})...`);
   let data, error;
   try {
     const rpcParams = {
@@ -53,7 +59,7 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
     };
     console.log("[patch-scd2] RPC parameters:", rpcParams);
     
-    const result = await (sb as any).rpc("fn_user_entry_patch_scd2", rpcParams);
+    const result = await (sb as any).rpc(rpcFunctionName, rpcParams);
     data = result.data;
     error = result.error;
     

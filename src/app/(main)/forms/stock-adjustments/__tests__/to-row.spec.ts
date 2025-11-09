@@ -25,6 +25,8 @@ describe("toRow", () => {
       qty: 10,
       location: "A1-B2",
       note: "Test note",
+      reason_code: null,
+      multi_location: null,
       updated_at: "2024-01-15T10:30:00Z",
       updated_at_pretty: "Jan 15, 2024",
       is_active: true,
@@ -106,6 +108,8 @@ describe("toRow", () => {
       qty: null,
       location: null,
       note: null,
+      reason_code: null,
+      multi_location: null,
       updated_at: null,
       updated_at_pretty: null,
       is_active: false,
@@ -129,6 +133,9 @@ describe("toRow", () => {
     expect(typeof result1.warehouse).toBe("string");
   });
 });
+
+
+
 
 
 

@@ -26,14 +26,13 @@ describe("buildColumns", () => {
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
 
-    // Verify expected column IDs
+    // Verify expected column IDs (based on actual buildColumns implementation)
     expect(ids).toContain("id");
     expect(ids).toContain("tally_card_number");
-    expect(ids).toContain("warehouse_id");
+    expect(ids).toContain("warehouse_name");  // Changed from warehouse_id
     expect(ids).toContain("item_number");
-    expect(ids).toContain("note");
     expect(ids).toContain("is_active");
-    expect(ids).toContain("snapshot_at");
+    expect(ids).toContain("updated_at_pretty");  // Changed from snapshot_at
   });
 
   it("columns maintain stable structure across calls", () => {
@@ -54,8 +53,8 @@ describe("buildColumns", () => {
     const columns = tallyCardsViewConfig.buildColumns();
     const ids = columns.map((col) => (col as { id?: string }).id);
 
-    // Should have: id, tally_card_number, warehouse_id, item_number, note, is_active, snapshot_at, actions
-    expect(ids.length).toBeGreaterThanOrEqual(8);
+    // Should have: id, tally_card_number, warehouse_name, item_number, is_active, updated_at_pretty, actions
+    expect(ids.length).toBeGreaterThanOrEqual(7);
   });
 });
 

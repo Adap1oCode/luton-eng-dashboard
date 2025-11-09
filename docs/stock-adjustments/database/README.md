@@ -84,3 +84,6 @@ WHERE event_object_schema = 'public'
 - The `dbdocs.v_table_report_combined` view may not exist in all environments - use alternative queries if needed
 - Always test queries in a development environment first
 
+
+
+

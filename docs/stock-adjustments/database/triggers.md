@@ -222,3 +222,6 @@ ALTER TABLE tcm_user_tally_card_entries
 ENABLE TRIGGER ALL;
 ```
 
+
+
+

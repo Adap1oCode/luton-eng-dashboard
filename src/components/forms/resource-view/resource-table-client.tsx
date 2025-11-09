@@ -64,6 +64,7 @@ import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import { parseListParams, type SPRecord } from "@/lib/next/search-params";
 import { useSelectionStore } from "@/components/forms/shell/selection/selection-store";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -71,6 +72,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { ViewsMenu } from "@/components/data-table/views-menu";
 
 type FilterMode = "contains" | "startsWith" | "endsWith" | "equals" | "notEquals";
@@ -89,6 +92,8 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
   onFiltersChange?: (filters: Record<string, ColumnFilterState>) => void;
   onClearSorting?: () => void;
   onClearFilters?: () => void;
+  initialColumnVisibility?: VisibilityState;
+  initialSorting?: Array<{ id: string; desc: boolean }>;
 };
 
 // move header and cell wrappers into shared data-table modules
@@ -107,6 +112,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   onFiltersChange,
   onClearSorting,
   onClearFilters,
+  initialColumnVisibility,
+  initialSorting,
 }: ResourceTableClientProps<TRow>) {
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
@@ -239,20 +246,32 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   } = useSavedViews(tableId, defaultColumnIds);
 
   // Local TanStack table state
-  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
+  // Compute default column visibility: all columns visible except routing id
+  const defaultColumnVisibility = React.useMemo<VisibilityState>(() => {
+    if (initialColumnVisibility) {
+      return { ...initialColumnVisibility, [idField]: false }; // Always hide routing id
+    }
+    // Default: all columns visible except routing id
+    const visibility: VisibilityState = {};
+    baseColumns.forEach((col) => {
+      const colId = String((col as any).id ?? (col as any).accessorKey ?? "");
+      if (colId && colId !== idField) {
+        visibility[colId] = true;
+      }
+    });
+    visibility[idField] = false; // Always hide routing id
+    return visibility;
+  }, [initialColumnVisibility, baseColumns, idField]);
+
+  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>(
+    initialSorting ?? []
+  );
   const [rowSelection, setRowSelection] = React.useState({});
   // Expanded row state - controlled to persist across data updates
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
   const initialOrderRef = React.useRef<string[]>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    tally_card_number: true,
-    item_number: true,
-    is_active: true,
-    warehouse: true,
-    // make sure routing id is hidden from the start
-    [idField]: false,
-  });
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(defaultColumnVisibility);
 
   // ✅ Filters state tied to DataTableFilters
   // Initialize filters from URL search params (filters[columnId][value] and filters[columnId][mode])
@@ -800,21 +819,43 @@ export default function ResourceTableClient<TRow extends { id: string }>({
 
       // Check if this column has inline editing configuration
       const inlineEditConfig = (c.meta as any)?.inlineEdit as InlineEditConfig | undefined;
+      const showMultiBadge = (c.meta as any)?.showMultiBadge === true;
 
       if (inlineEditConfig) {
         // Use generic inline editing
-        c.cell = (cellProps) => (
-          <InlineEditCellWrapper
-            row={cellProps.row}
-            columnId={c.id || (c as any).accessorKey}
-            editingCell={editingCell}
-            config={inlineEditConfig}
-            onEditStart={handleInlineEditStart}
-            onEditChange={handleInlineEditChange}
-            onSave={handleInlineEditSave}
-            onCancel={handleInlineEditCancel}
-          />
-        );
+        c.cell = (cellProps) => {
+          const baseCell = (
+            <InlineEditCellWrapper
+              row={cellProps.row}
+              columnId={c.id || (c as any).accessorKey}
+              editingCell={editingCell}
+              config={inlineEditConfig}
+              onEditStart={handleInlineEditStart}
+              onEditChange={handleInlineEditChange}
+              onSave={handleInlineEditSave}
+              onCancel={handleInlineEditCancel}
+            />
+          );
+
+          // Add MULTI badge if needed (only in display mode, not when editing)
+          if (showMultiBadge) {
+            const isEditing = editingCell?.rowId === (cellProps.row.original as { id: string }).id && editingCell?.columnId === (c.id || (c as any).accessorKey);
+            const multiLocation = (cellProps.row.original as any)?.multi_location;
+            
+            if (!isEditing && multiLocation) {
+              return (
+                <div className="flex items-center gap-2">
+                  {baseCell}
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-100 dark:border-orange-800 px-1.5 py-0.5 text-xs font-medium shrink-0">
+                    MULTI
+                  </Badge>
+                </div>
+              );
+            }
+          }
+
+          return baseCell;
+        };
       } else if (c.id === "status") {
         // Legacy status editing for backward compatibility
         c.cell = (cellProps) => (
@@ -1654,32 +1695,43 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     }
   }, [onClearFilters]);
 
-  // Extract column IDs to avoid depending on entire table object
-  const allLeafColumnIds = React.useMemo(() => {
-    return table.getAllLeafColumns().map((c) => ({
-      id: String(c.id),
-      canFilter: c.getCanFilter(),
-    }));
-  }, [table]);
-
-  // إعداد أعمدة صف الفلاتر مع الحفاظ على ترتيب الهيدر (بما فيهم الأعمدة الخاصة فارغة)
+  // Extract filter columns to match EXACTLY the header row structure
+  // Use getHeaderGroups() to get the same columns in the same order as the header row
   const filterColumns: FilterColumn[] = React.useMemo(() => {
-    // ✅ exclude idField from filter row to avoid "Column with id 'id' does not exist."
-    return allLeafColumnIds
-      .filter((col) => col.id !== idField && col.id !== "id")
-      .map((col) => ({
-        id: col.id,
+    // Get the first header group (there's typically only one)
+    const headerGroup = table.getHeaderGroups()[0];
+    if (!headerGroup) return [];
+
+    // Map headers to filter columns in the exact same order
+    return headerGroup.headers.map((header) => {
+      const column = header.column;
+      const colId = String(column.id);
+
+      // Determine if this column should have a filter input
+      const shouldDisableInput =
+        // Exclude routing id, actions, and selection columns
+        colId === idField ||
+        colId === "id" ||
+        colId === "actions" ||
+        colId === "__select" ||
+        colId === "select" ||
+        // Exclude columns that can't be filtered
+        !column.getCanFilter();
+
+      return {
+        id: colId,
         label:
-          col.id === "is_active"
+          colId === "is_active"
             ? "Status"
-            : col.id === "__select" || col.id === "select"
+            : colId === "__select" || colId === "select"
               ? ""
-              : col.id === "actions"
+              : colId === "actions"
                 ? ""
-                : col.id,
-        disableInput: col.id === "actions" || col.id === "__select" || col.id === "select",
-      }));
-  }, [allLeafColumnIds, idField]);
+                : colId,
+        disableInput: shouldDisableInput,
+      };
+    });
+  }, [table, idField, columnVisibility]); // Include columnVisibility to recalculate when visibility changes
 
   // استمع لأي ضغطة على زر التولبار العلوي الذي يحمل data-onclick-id="exportCsv"
   // Use ref to avoid recreating listener when table object changes
@@ -1720,23 +1772,41 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     return values;
   }, [config.quickFilters, search]);
 
-  // Quick Filters component - reads from config and syncs with URL
+  // Quick Filters component - single dropdown with grouped options
   const QuickFiltersToolbar = React.useMemo(() => {
     const quickFilters = config.quickFilters ?? [];
     if (quickFilters.length === 0) return null;
 
-    const handleFilterChange = (filterId: string, value: string) => {
+    const handleFilterChange = (value: string) => {
       const sp = new URLSearchParams(search.toString());
       
-      // Find the filter config to check defaultValue
-      const filterConfig = quickFilters.find((f) => f.id === filterId);
-      const defaultValue = filterConfig?.defaultValue ?? "ALL";
-      
-      // Remove "ALL" or empty values from URL (uses default from filter config)
-      if (!value || value === "ALL" || value === defaultValue) {
-        sp.delete(filterId);
+      // Handle "Clear all" option
+      if (value === "__clear_all__") {
+        // Remove all filter query params
+        quickFilters.forEach((filter) => {
+          sp.delete(filter.id);
+        });
       } else {
-        sp.set(filterId, value);
+        // Parse the value: format is "filterId:optionValue"
+        const colonIndex = value.indexOf(":");
+        if (colonIndex <= 0) return; // Invalid format
+        
+        const filterId = value.substring(0, colonIndex);
+        const optionValue = value.substring(colonIndex + 1);
+        
+        // Find the filter config to check defaultValue
+        const filterConfig = quickFilters.find((f) => f.id === filterId);
+        if (!filterConfig) return; // Filter not found
+        
+        const defaultValue = filterConfig.defaultValue ?? "ALL";
+        
+        // Update only this filter (keep other filters active)
+        // Remove "ALL" or empty values from URL (uses default from filter config)
+        if (!optionValue || optionValue === "ALL" || optionValue === defaultValue) {
+          sp.delete(filterId);
+        } else {
+          sp.set(filterId, optionValue);
+        }
       }
       
       // Reset to page 1 when filter changes
@@ -1750,32 +1820,85 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       queryClient.invalidateQueries({ queryKey: [endpointKey] });
     };
 
+    // Build display value showing current active filters
+    const activeFilters = quickFilters
+      .map((filter) => {
+        const value = quickFilterValues[filter.id] ?? filter.defaultValue;
+        if (!value || value === "ALL" || value === filter.defaultValue) return null;
+        const option = filter.options?.find((opt: any) => opt.value === value);
+        return option ? `${filter.label}: ${option.label}` : null;
+      })
+      .filter(Boolean);
+    
+    const displayValue = activeFilters.length > 0 
+      ? activeFilters.join(", ")
+      : "All filters";
+
+    // Find current selected value for the dropdown
+    // Only set if there's exactly one active filter (for better UX)
+    let currentSelectedValue = "";
+    const activeFilterCount = quickFilters.filter((filter) => {
+      if (filter.type !== "enum" || !filter.options) return false;
+      const currentValue = quickFilterValues[filter.id] ?? filter.defaultValue;
+      return currentValue && currentValue !== "ALL" && currentValue !== filter.defaultValue;
+    }).length;
+    
+    // Only show selected value if there's exactly one active filter
+    // Otherwise show display value (which shows all active filters)
+    if (activeFilterCount === 1) {
+      for (const filter of quickFilters) {
+        if (filter.type === "enum" && filter.options) {
+          const currentValue = quickFilterValues[filter.id] ?? filter.defaultValue;
+          if (currentValue && currentValue !== "ALL" && currentValue !== filter.defaultValue) {
+            currentSelectedValue = `${filter.id}:${currentValue}`;
+            break;
+          }
+        }
+      }
+    }
+
     return (
       <div className="flex items-center gap-2">
-        {quickFilters.map((filter) => {
-          if (filter.type === "enum" && filter.options) {
-            return (
-              <div key={filter.id} className="flex items-center gap-2">
-                <label htmlFor={`quick-filter-${filter.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {filter.label}:
-                </label>
-                <select
-                  id={`quick-filter-${filter.id}`}
-                  value={quickFilterValues[filter.id] ?? filter.defaultValue ?? ""}
-                  onChange={(e) => handleFilterChange(filter.id, e.target.value)}
-                  className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  {filter.options.map((option: { value: string; label: string }) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          }
-          return null;
-        })}
+        <Label htmlFor="quick-filters-combined" className="text-sm font-medium">
+          Filters:
+        </Label>
+        <Select
+          value={currentSelectedValue}
+          onValueChange={handleFilterChange}
+        >
+          <SelectTrigger id="quick-filters-combined" className="h-9 w-[220px]">
+            <SelectValue placeholder="All filters">
+              {displayValue}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {/* Clear all option */}
+            <SelectItem value="__clear_all__" className="font-medium">
+              Clear all filters
+            </SelectItem>
+            <SelectSeparator />
+            {quickFilters.map((filter, filterIndex) => {
+              if (filter.type !== "enum" || !filter.options) return null;
+              
+              return (
+                <React.Fragment key={filter.id}>
+                  {filterIndex > 0 && <SelectSeparator />}
+                  <SelectGroup>
+                    <SelectLabel>{filter.label}</SelectLabel>
+                    {filter.options.map((option: { value: string; label: string }) => {
+                      const combinedValue = `${filter.id}:${option.value}`;
+                      return (
+                        <SelectItem key={combinedValue} value={combinedValue}>
+                          {option.label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectGroup>
+                </React.Fragment>
+              );
+            })}
+          </SelectContent>
+        </Select>
       </div>
     );
   }, [config.quickFilters, quickFilterValues, pathname, router, getApiEndpoint, queryClient, search]);
@@ -1794,7 +1917,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             <div className="flex items-center gap-2">
               {/* Quick Filters - first item in bottom toolbar */}
               {QuickFiltersToolbar}
-              {QuickFiltersToolbar && <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />}
+              {QuickFiltersToolbar && <Separator orientation="vertical" className="h-6" />}
               {ColumnsAndSortToolbar}
               {/* More Filters button - controlled by config */}
               {showMoreFiltersButton && (
@@ -1809,6 +1932,27 @@ export default function ResourceTableClient<TRow extends { id: string }>({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Filter status - shown on the right */}
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {activeFiltersCount > 0 ? (
+                  <span>
+                    {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
+                  </span>
+                ) : (
+                  <span>No filters applied</span>
+                )}
+              </div>
+              {/* Clear all filters button - only show when filters are active */}
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                >
+                  Clear all filters
+                </Button>
+              )}
               {/* Save View button - controlled by config */}
               {showSaveViewButton && (
                 <Button
@@ -1824,39 +1968,6 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             </div>
           </div>
         </div>
-
-        {/* ✅ FIX: Lazy-load More Filters Section - only render when showMoreFilters is true */}
-        {showMoreFilters && (
-          <div className="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={() => setShowMoreFilters(false)} className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Hide Filters
-                </Button>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {activeFiltersCount > 0 ? (
-                    <span>
-                      {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""} active
-                    </span>
-                  ) : (
-                    <span>No filters applied</span>
-                  )}
-                </div>
-              </div>
-              {activeFiltersCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                >
-                  Clear all filters
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
 
         <DataTable
           dndEnabled={enableColumnReordering}

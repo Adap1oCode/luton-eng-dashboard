@@ -29,7 +29,13 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
 
   // Extract only the fields we need for tally cards
   // The RPC function handles SCD-2 logic internally
-  const { data, error } = await (sb as any).rpc("fn_tally_card_patch_scd2", {
+  // Feature flag: Use v3 (production-ready) by default, fallback to v1 if flag is off
+  const useV3 = process.env.NEXT_PUBLIC_SCD2_USE_V3 !== "false"; // Default to true
+  const rpcFunctionName = useV3 
+    ? "fn_tcm_tally_cards_patch_scd2_v3"
+    : "fn_tally_card_patch_scd2";
+  
+  const { data, error } = await (sb as any).rpc(rpcFunctionName, {
     p_id: id,
     p_tally_card_number: payload?.tally_card_number ?? null,
     p_warehouse_id: payload?.warehouse_id ?? null,

@@ -122,7 +122,7 @@ export default function EditWithTabs({
         ) : formNode ? (
           formOptions && React.isValidElement(formNode)
             ? React.cloneElement(formNode as React.ReactElement<any>, {
-                ...formNode.props,
+                ...(formNode.props as Record<string, any>),
                 options: formOptions,
               })
             : formNode

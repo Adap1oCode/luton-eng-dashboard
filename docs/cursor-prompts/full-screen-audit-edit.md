@@ -1,14 +1,14 @@
-# Fill Screen Audit - Original Discovery Prompt
+# Full Screen Audit - Original Discovery Prompt
 
-**Stock Adjustments Edit — Full Audit**
+**Stock Adjustments & Tally Cards Edit screens — Full Audit**
 
-You are a senior Next.js/TypeScript reviewer. Your task is to perform a discovery-driven audit of the Stock Adjustments – Edit screen end-to-end and identify the smallest set of changes that cut unnecessary complexity and render/data overhead — without changing behavior.
+You are a senior Next.js/TypeScript reviewer. Your task is to perform a discovery-driven audit of the above screen(s) end-to-end and identify the smallest set of changes that cut unnecessary complexity and render/data overhead — without changing behavior.
 
 **Important:** Do not assume file paths. First, find what the code actually does today. If anything is missing to complete your assessment, ask me explicitly before concluding.
 
 ## Objectives
 
-Map the runtime path when the user opens the /forms/stock-adjustments/[id]/edit screen:
+Map the runtime path when the user opens the /forms/stock-adjustments/[id]/edit and /forms/tally-cards/[id]/edit screen:
 
 - Route → SSR → API → DB/provider → client island → table → pagination/URL sync
 
@@ -27,7 +27,7 @@ Identify and rank waste:
 - Client-side filtering that duplicates server logic
 - URL-sync feedback loops
 
-Produce an 80/20, no-regression action plan (3–6 tiny changes), each ≤10 lines.
+Produce an 80/20, no-regression action plan (10-15 high benefit and low risk changes), each ≤30 lines. Include complexity if significant rewrite.
 
 ## Discovery Process
 

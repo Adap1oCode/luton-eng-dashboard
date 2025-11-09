@@ -41,7 +41,7 @@ const tcm_user_tally_card_entry_locations: ResourceConfig<
       entry_id: { type: "uuid", write: true },
       location: { type: "text", write: true },
       qty: { type: "int", write: true },
-      pos: { type: "smallint", nullable: true, write: true },
+      pos: { type: "int", nullable: true, write: true },
     },
   },
 };

@@ -184,14 +184,6 @@ export default function StockAdjustmentFormWithLocations({ entryId }: Props) {
           </p>
         </div>
       )}
-
-      {/* Total Qty Display */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Total Quantity (computed):</span>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{totalQty}</span>
-        </div>
-      </div>
     </div>
   );
 }
