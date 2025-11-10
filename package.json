@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.x",
   "scripts": {
     "dev": "node scripts/kill-ports.mjs && next dev",
     "dev:3000": "cross-env PORT=3000 node scripts/kill-ports.mjs && cross-env PORT=3000 next dev -p 3000",
