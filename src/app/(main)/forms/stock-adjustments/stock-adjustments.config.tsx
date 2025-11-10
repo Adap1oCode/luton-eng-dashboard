@@ -45,6 +45,7 @@ export type StockAdjustmentRow = {
   full_name: string;
   warehouse: string;
   tally_card_number?: string | null;
+  item_number?: number | null;
   qty?: number | null;
   location?: string | null;
   note?: string | null;
@@ -111,10 +112,7 @@ export const stockAdjustmentsFilterMeta: QuickFilterMeta[] = [
     id: "updated",
     toQueryParam: dateFilterToQuery,
   },
-  {
-    id: "warehouse",
-    toQueryParam: warehouseFilterToQuery,
-  },
+  // warehouse filter removed from quick filters - kept in action toolbar only
 ];
 
 // -----------------------------------------------------------------------------
@@ -150,7 +148,7 @@ export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
 // -----------------------------------------------------------------------------
 // Columns Definition
 // -----------------------------------------------------------------------------
-function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
+export function buildColumns(onItemNumberClick?: (itemNumber: string | number | null) => void): TColumnDef<StockAdjustmentRow>[] {
   return [
     // Hidden routing-only id
     {
@@ -196,6 +194,33 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
       size: 160,
     },
     {
+      id: "item_number",
+      accessorKey: "item_number",
+      header: "Item Number",
+      cell: ({ row }) => {
+        const value = row.getValue<number | null>("item_number");
+        if (!value) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        if (onItemNumberClick) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onItemNumberClick(value);
+              }}
+              className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200 cursor-pointer"
+            >
+              {String(value)}
+            </button>
+          );
+        }
+        return <span>{String(value)}</span>;
+      },
+      enableSorting: true,
+      size: 160,
+    },
+    {
       id: "location",
       accessorKey: "location",
       header: "Location",
@@ -207,7 +232,7 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
         // showMultiBadge: true, // Custom meta property - handled by ResourceTableClient
       },
       enableSorting: true,
-      size: 320, // Increased width to accommodate existing value + input box + buttons for inline editing
+      size: 150, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
       id: "qty",
@@ -218,14 +243,14 @@ function buildColumns(): TColumnDef<StockAdjustmentRow>[] {
         inlineEdit: INLINE_EDIT_CONFIGS.qty,
       },
       enableSorting: true,
-      size: 280, // Increased width to accommodate existing value + input box + buttons for inline editing
+      size: 120, // Increased width to accommodate existing value + input box + buttons for inline editing
     },
     {
       id: "reason_code",
       accessorKey: "reason_code",
       header: "Reason Code",
       enableSorting: true,
-      size: 140,
+      size: 180,
     },
     {
       id: "updated_at_pretty",
@@ -275,21 +300,7 @@ export const quickFilters: QuickFilter[] = [
     defaultValue: "ALL",
     toQueryParam: dateFilterToQuery,
   },
-  {
-    id: "warehouse",
-    label: "Warehouse",
-    type: "enum",
-    options: [
-      { value: "ALL", label: "All warehouses" },
-      // Note: In a real implementation, you'd load these dynamically from the API
-      // For now, using static list - see implementation guide for dynamic loading
-      { value: "AM - WH 1", label: "AM - WH 1" },
-      { value: "AM - WH 2", label: "AM - WH 2" },
-      { value: "AM - WH 3", label: "AM - WH 3" },
-    ],
-    defaultValue: "ALL",
-    toQueryParam: warehouseFilterToQuery,
-  },
+  // warehouse filter removed from quick filters - kept in action toolbar only
 ];
 
 // -----------------------------------------------------------------------------
@@ -306,7 +317,7 @@ export const stockAdjustmentsViewConfig: BaseViewConfig<StockAdjustmentRow> & { 
     rowSelection: true,
     pagination: true,
   },
-  buildColumns: () => buildColumns(),
+  buildColumns: () => buildColumns(), // Default buildColumns without click handler
   // Hide Views and Save View buttons in bottom toolbar
   bottomToolbarButtons: {
     views: false,

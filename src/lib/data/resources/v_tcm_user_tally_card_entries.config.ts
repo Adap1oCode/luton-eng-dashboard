@@ -21,7 +21,7 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
 
   // ⚡ Keep lean; card_uid omitted (only used in forms)
   select:
-    "id, user_id, full_name, role_family, tally_card_number, qty, location, note, reason_code, multi_location, updated_at, updated_at_pretty, warehouse_id, warehouse",
+    "id, user_id, full_name, role_family, tally_card_number, item_number, qty, location, note, reason_code, multi_location, updated_at, updated_at_pretty, warehouse_id, warehouse",
 
   search: ["tally_card_number", "location", "note", "full_name", "role_family"],
   defaultSort: { column: "tally_card_number", desc: false },
@@ -59,6 +59,7 @@ const tcm_user_tally_card_entries: ResourceConfig<TcmUserEntry, TallyCardEntryIn
       role_family: { type: "text", readonly: true },          // owner dimension
       tally_card_number: { type: "text", write: true },
       card_uid: { type: "uuid", nullable: true, write: true },
+      item_number: { type: "bigint", nullable: true, readonly: true },
       qty: { type: "int", nullable: true, write: true },
       location: { type: "text", nullable: true, write: true },
       note: { type: "text", nullable: true, write: true },

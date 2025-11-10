@@ -115,6 +115,23 @@ export async function listHandler(req: Request, resourceKey: string) {
           `Please run the migration: supabase/migrations/20250203_create_v_warehouse_locations_view.sql`
         );
       }
+
+      // Check for missing column errors (including item_number)
+      if (/column.*does not exist|column.*not found/i.test(dbMsg)) {
+        // Check specifically for item_number
+        if (/item_number/i.test(dbMsg) && entry.config.table === "v_tcm_user_tally_card_entries") {
+          throw new Error(
+            `Column "item_number" is missing from view "${entry.config.table}". ` +
+            `Please run the migration: supabase/migrations/20250203_add_item_number_to_v_tcm_user_tally_card_entries.sql`
+          );
+        }
+        // Generic column error
+        throw new Error(
+          `Database error: ${dbMsg}. ` +
+          `This may be due to a missing column in "${entry.config.table}". ` +
+          `Please check your migrations.`
+        );
+      }
       
       // Re-throw with original error
       throw dbError;

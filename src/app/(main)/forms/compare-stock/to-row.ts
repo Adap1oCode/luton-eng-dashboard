@@ -24,8 +24,11 @@ export function toRow(d: any): CompareStockRow {
   const warehouse = d?.warehouse ?? null;
   const location = d?.location ?? null;
 
+  const rowKey = d?.row_key ?? [tallyCard ?? "", warehouse ?? "", location ?? ""].join("|");
+
   return {
-    row_key: d?.row_key ?? [tallyCard ?? "", warehouse ?? "", location ?? ""].join("|"),
+    id: rowKey,
+    row_key: rowKey,
     tally_card: tallyCard,
     item_number: normalizeString(d?.item_number),
     warehouse,

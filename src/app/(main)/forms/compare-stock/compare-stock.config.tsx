@@ -13,6 +13,7 @@ export type QuickFilter = {
 };
 
 export type CompareStockRow = {
+  id: string;
   row_key: string;
   tally_card: string | null;
   item_number: string | null;
@@ -44,15 +45,6 @@ export function statusFilterToQuery(status: string): Record<string, any> {
   return { status: status };
 }
 
-/**
- * Warehouse filter → query parameter mapping.
- * Filters by warehouse name (exact match).
- */
-export function warehouseFilterToQuery(warehouseFilter: string): Record<string, any> {
-  if (warehouseFilter === "ALL") return {};
-  return { warehouse: warehouseFilter };
-}
-
 export type QuickFilterMeta = {
   id: string;
   toQueryParam?: (value: string) => Record<string, any>;
@@ -62,10 +54,6 @@ export const compareStockFilterMeta: QuickFilterMeta[] = [
   {
     id: "status",
     toQueryParam: statusFilterToQuery,
-  },
-  {
-    id: "warehouse",
-    toQueryParam: warehouseFilterToQuery,
   },
 ];
 
@@ -86,22 +74,6 @@ export const quickFilters: QuickFilter[] = [
     ],
     defaultValue: "ALL",
     toQueryParam: statusFilterToQuery,
-  },
-  {
-    id: "warehouse",
-    label: "Warehouse",
-    type: "enum",
-    options: [
-      { value: "ALL", label: "All warehouses" },
-      // Note: In a real implementation, you'd load these dynamically from the API
-      // For now, using static list - see implementation guide for dynamic loading
-      { value: "RTZ - WH 1", label: "RTZ - WH 1" },
-      { value: "AM - WH 1", label: "AM - WH 1" },
-      { value: "AM - WH 2", label: "AM - WH 2" },
-      { value: "AM - WH 3", label: "AM - WH 3" },
-    ],
-    defaultValue: "ALL",
-    toQueryParam: warehouseFilterToQuery,
   },
 ];
 
@@ -129,7 +101,7 @@ function renderLocation(value: string | null): React.ReactNode {
   return <span>{value}</span>;
 }
 
-function buildColumns(): TColumnDef<CompareStockRow>[] {
+export function buildColumns(onItemNumberClick?: (itemNumber: string | number | null) => void): TColumnDef<CompareStockRow>[] {
   return [
     {
       id: "row_key",
@@ -173,7 +145,23 @@ function buildColumns(): TColumnDef<CompareStockRow>[] {
       header: "Item Number",
       cell: ({ row }) => {
         const value = row.getValue<string | null>("item_number");
-        return <span>{value ?? <span className="text-muted-foreground">—</span>}</span>;
+        if (!value) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        if (onItemNumberClick) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onItemNumberClick(value);
+              }}
+              className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200 cursor-pointer"
+            >
+              {value}
+            </button>
+          );
+        }
+        return <span>{value}</span>;
       },
       enableSorting: false,
       size: 160,
@@ -291,6 +279,9 @@ function buildColumns(): TColumnDef<CompareStockRow>[] {
   ];
 }
 
+// Create a default buildColumns that matches BaseViewConfig signature
+const defaultBuildColumns = () => buildColumns();
+
 export const compareStockViewConfig: BaseViewConfig<CompareStockRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY,
   formsRouteSegment: ROUTE_SEGMENT,
@@ -306,7 +297,7 @@ export const compareStockViewConfig: BaseViewConfig<CompareStockRow> & { apiEndp
     pagination: true,
     sortable: false,
   },
-  buildColumns,
+  buildColumns: defaultBuildColumns,
   // Hide Views and Save View buttons in bottom toolbar
   bottomToolbarButtons: {
     views: false,

@@ -9,6 +9,7 @@ import users from "./users.config.ts";
 import v_tcm_tally_card_entry_compare from "./v_tcm_tally_card_entry_compare.config.ts";
 import v_tcm_user_tally_card_entries from "./v_tcm_user_tally_card_entries.config.ts";
 import v_inventory_unique from "./v_inventory_unique.config.ts";
+import v_inventory_current from "./v_inventory_current.config.ts";
 import warehouses from "./warehouses.config.ts";
 import inventory_summary from "./dashboards/inventory-summary.ts";
 import inventoryWarehouse from "./dashboards/inventory-warehouse.ts";
@@ -33,6 +34,7 @@ const resources = {
   v_tcm_tally_card_entry_compare,
   v_tcm_tally_cards_current: tcm_tally_cards_current,
   v_inventory_unique,
+  v_inventory_current,
   v_table_report_combined,
   inventory_summary,
   inventoryWarehouse,
@@ -46,6 +48,7 @@ const resources = {
   "tally-cards": tcm_tally_cards,
   "warehouse-locations": warehouse_locations,
   "inventory-unique": v_inventory_unique,
+  "inventory-current": v_inventory_current,
   "compare-stock": v_tcm_compare_stock,
   // ✅ Dashboard-friendly aliases for inventory resources
   "inventory-summary": inventory_summary,
@@ -71,6 +74,7 @@ export {
   v_tcm_user_tally_card_entries,
   v_tcm_tally_card_entry_compare,
   v_inventory_unique,
+  v_inventory_current,
   v_table_report_combined,
   inventory_summary,
   inventoryWarehouse,

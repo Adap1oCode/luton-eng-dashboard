@@ -7,11 +7,12 @@
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
 import type { TallyCardRow } from "./tally-cards.config";
-import { tallyCardsViewConfig } from "./tally-cards.config";
+import { tallyCardsViewConfig, buildColumns } from "./tally-cards.config";
 
 interface TallyCardsTableClientProps {
   initialRows: TallyCardRow[];
@@ -26,19 +27,27 @@ export function TallyCardsTableClient({
   page,
   pageSize,
 }: TallyCardsTableClientProps) {
+  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
+  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
+
+  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
+    setSelectedItemNumber(itemNumber);
+    setShowInventoryDialog(true);
+  }, []);
+
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
   const viewConfigWithColumns = useMemo<BaseViewConfig<TallyCardRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
     const config = {
       ...tallyCardsViewConfig,
-      columns: tallyCardsViewConfig.buildColumns(),
+      columns: buildColumns(handleItemNumberClick),
       // Explicitly preserve apiEndpoint from viewConfig (VIEW endpoint, not TABLE)
       apiEndpoint: tallyCardsViewConfig.apiEndpoint,
     };
     // Remove buildColumns function since columns are materialized
     delete (config as any).buildColumns;
     return config;
-  }, []); // Empty deps since buildColumns should be pure
+  }, [handleItemNumberClick]);
 
   // Initial column visibility: hide warehouse_id, note, and snapshot_at
   const initialColumnVisibility = useMemo(() => {
@@ -62,15 +71,22 @@ export function TallyCardsTableClient({
   }, []);
 
   return (
-    <ResourceTableClient
-      config={viewConfigWithColumns}
-      initialRows={initialRows}
-      initialTotal={initialTotal}
-      page={page}
-      pageSize={pageSize}
-      initialColumnVisibility={initialColumnVisibility}
-      initialSorting={initialSorting}
-    />
+    <>
+      <ResourceTableClient
+        config={viewConfigWithColumns}
+        initialRows={initialRows}
+        initialTotal={initialTotal}
+        page={page}
+        pageSize={pageSize}
+        initialColumnVisibility={initialColumnVisibility}
+        initialSorting={initialSorting}
+      />
+      <InventoryInfoDialog
+        open={showInventoryDialog}
+        onOpenChange={setShowInventoryDialog}
+        itemNumber={selectedItemNumber}
+      />
+    </>
   );
 }
 

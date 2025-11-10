@@ -7,11 +7,12 @@
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
 import type { StockAdjustmentRow } from "./stock-adjustments.config";
-import { stockAdjustmentsViewConfig } from "./stock-adjustments.config";
+import { stockAdjustmentsViewConfig, buildColumns } from "./stock-adjustments.config";
 
 interface StockAdjustmentsTableClientProps {
   initialRows: StockAdjustmentRow[];
@@ -26,19 +27,27 @@ export function StockAdjustmentsTableClient({
   page,
   pageSize,
 }: StockAdjustmentsTableClientProps) {
+  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
+  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
+
+  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
+    setSelectedItemNumber(itemNumber);
+    setShowInventoryDialog(true);
+  }, []);
+
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
   const viewConfigWithColumns = useMemo<BaseViewConfig<StockAdjustmentRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
     const config = {
       ...stockAdjustmentsViewConfig,
-      columns: stockAdjustmentsViewConfig.buildColumns(),
+      columns: buildColumns(handleItemNumberClick),
       // Explicitly preserve apiEndpoint from viewConfig (VIEW endpoint, not TABLE)
       apiEndpoint: stockAdjustmentsViewConfig.apiEndpoint,
     };
     // Remove buildColumns function since columns are materialized
     delete (config as any).buildColumns;
     return config;
-  }, []); // Empty deps since buildColumns should be pure
+  }, [handleItemNumberClick]);
 
   // Initial column visibility: hide full_name (name column) and multi_location (now shown as badge in location column)
   const initialColumnVisibility = useMemo(() => {
@@ -46,6 +55,7 @@ export function StockAdjustmentsTableClient({
       id: false, // Always hide routing id
       tally_card_number: true,
       warehouse: true,
+      item_number: true,
       full_name: false, // Hidden
       reason_code: true,
       multi_location: false, // Hidden - now shown as MULTI badge in location column
@@ -57,14 +67,21 @@ export function StockAdjustmentsTableClient({
   }, []);
 
   return (
-    <ResourceTableClient
-      config={viewConfigWithColumns}
-      initialRows={initialRows}
-      initialTotal={initialTotal}
-      page={page}
-      pageSize={pageSize}
-      initialColumnVisibility={initialColumnVisibility}
-    />
+    <>
+      <ResourceTableClient
+        config={viewConfigWithColumns}
+        initialRows={initialRows}
+        initialTotal={initialTotal}
+        page={page}
+        pageSize={pageSize}
+        initialColumnVisibility={initialColumnVisibility}
+      />
+      <InventoryInfoDialog
+        open={showInventoryDialog}
+        onOpenChange={setShowInventoryDialog}
+        itemNumber={selectedItemNumber}
+      />
+    </>
   );
 }
 
