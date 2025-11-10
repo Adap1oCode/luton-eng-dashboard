@@ -119,3 +119,7 @@
     @apply bg-background text-foreground overscroll-none;
   }
 }
+
+:root {
+  --sidebar-foreground: rgb(51, 51, 51);
+}

@@ -55,7 +55,10 @@ export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Si
   const filteredNav = filterNavGroups(sidebarItems, list); // mode default = open-by-default
 
   return (
-    <Sidebar {...props} className="border-r">
+    <Sidebar
+      {...props}
+      className="border-r"
+    >
       <SidebarHeader className="border-b">
         <SidebarMenu>
           <SidebarMenuItem>

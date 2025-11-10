@@ -2,20 +2,30 @@
 import {
   Home,
   ChartPie,
-  Grid2X2,
   ChartLine,
   ShoppingBag,
-  BookA,
-  Forklift,
+  Users,
   Mail,
   MessageSquare,
   Calendar,
   Kanban,
   ReceiptText,
-  Users,
   Lock,
   Fingerprint,
   SquareArrowUpRight,
+  ListChecks,
+  FilePlus,
+  List,
+  IdCard,
+  Clock,
+  ArrowLeftRight,
+  GitCompare,
+  Building2,
+  LogIn,
+  UserPlus,
+  Grid2x2,
+  MapPin,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,9 +38,9 @@ export interface NavSubItem {
   comingSoon?: boolean;
   newTab?: boolean;
   subItems?: NavSubItem[];
-  requiredAny?: PermKeys; // ANY permission must match
-  requiredAll?: PermKeys; // ALL permissions must match
-  public?: boolean; // show even if user has no role/permissions
+  requiredAny?: PermKeys;
+  requiredAll?: PermKeys;
+  public?: boolean;
 }
 
 export interface NavMainItem extends Omit<NavSubItem, "subItems"> {
@@ -44,9 +54,9 @@ export interface NavGroup {
 }
 
 export const sidebarItems: NavGroup[] = [
+  // Dashboards
   {
     id: 1,
-    label: "Dashboards",
     items: [
       {
         title: "Dashboards",
@@ -55,119 +65,123 @@ export const sidebarItems: NavGroup[] = [
         requiredAny: ["menu:dashboard"],
         subItems: [
           { title: "Default", url: "/dashboard/default", icon: ChartPie, requiredAny: ["menu:dashboard"] },
-          { 
-            title: "Purchase Orders", 
-            url: "/dashboard/purchase-orders", 
+          {
+            title: "Purchase Orders",
+            url: "/dashboard/purchase-orders",
             icon: ChartLine,
             requiredAny: ["menu:dashboard", "menu:dashboard:purchase_orders"]
           },
-          { 
-            title: "Inventory", 
-            url: "/dashboard/inventory", 
+          {
+            title: "Inventory",
+            url: "/dashboard/inventory",
             icon: ShoppingBag,
             requiredAny: ["menu:dashboard", "menu:dashboard:inventory"]
           },
-          { 
-            title: "Customers", 
-            url: "/dashboard/customers", 
-            icon: BookA,
+          {
+            title: "Customers",
+            url: "/dashboard/customers",
+            icon: Users,
             requiredAny: ["menu:dashboard", "menu:dashboard:customers"]
           },
-          { title: "Transactions", url: "/dashboard/transactions", icon: Forklift, comingSoon: true },
+          { title: "Transactions", url: "/dashboard/transactions", icon: ArrowLeftRight, comingSoon: true },
         ],
       },
     ],
   },
+
+  // Requisitions
   {
-    id: 1.5,
-    label: "Requisitions",
+    id: 2,
     items: [
       {
         title: "Requisitions",
-        url: "/dashboard",
-        icon: Grid2X2,
+        url: "/dashboard/requisitions",
+        icon: ListChecks,
         requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"],
         subItems: [
-          { title: "Requisitions", url: "/dashboard/requisitions", icon: Grid2X2, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
-          { title: "New Requisition", url: "/dashboard/requisitions/new", icon: Grid2X2, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
-          { title: "View All Requisitions", url: "/dashboard/requisitions/all", icon: Grid2X2, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
+          { title: "Requisitions", url: "/dashboard/requisitions", icon: ListChecks, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
+          { title: "New Requisition", url: "/dashboard/requisitions/new", icon: FilePlus, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
+          { title: "View All Requisitions", url: "/dashboard/requisitions/all", icon: List, requiredAny: ["menu:dashboard", "menu:dashboard:requisitions"] },
         ],
       },
     ],
   },
+
+  // Inventory Manager
   {
-    id: 1.6,
-    label: "Inventory Manager",
+    id: 3,
     items: [
       {
         title: "Unique Items",
-        url: "/forms/inventory",
-        icon: Grid2X2,
-        requiredAny: ["menu:forms:tally_cards", "menu:forms:stock_adjustments", "menu:forms:user_tally_card_entries"],
+        url: "/forms/unique-items",
+        icon: Package,
+        requiredAny: ["menu:forms:unique_items"],
         subItems: [
           {
             title: "Warehouses",
             url: "/forms/warehouses",
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:tally_cards"],
+            icon: Building2,
+            requiredAny: ["menu:forms:warehouses"],
           },
-          { 
-            title: "Locations", 
-            url: "/forms/warehouse-locations", 
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:stock_adjustments"]
+          {
+            title: "Locations",
+            url: "/forms/locations",
+            icon: MapPin,
+            requiredAny: ["menu:forms:locations"],
           },
           {
             title: "Compare Stock",
             url: "/forms/compare-stock",
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:stock_adjustments"],
+            icon: GitCompare,
+            requiredAny: ["menu:forms:compare_stock"],
           },
         ],
       },
     ],
   },
+
+  // Tally Card Manager
   {
-    id: 1.7,
-    label: "Tally Card Manager",
+    id: 4,
     items: [
       {
         title: "Tally Card Manager",
         url: "/forms/tally-cards",
-        icon: Grid2X2,
+        icon: Grid2x2,
         requiredAny: ["menu:forms:tally_cards", "menu:forms:stock_adjustments", "menu:forms:user_tally_card_entries"],
         subItems: [
           {
             title: "Tally Cards",
             url: "/forms/tally-cards",
-            icon: Grid2X2,
+            icon: Grid2x2,
             requiredAny: ["menu:forms:tally_cards"],
           },
-          { 
-            title: "Stock Adjustments", 
-            url: "/forms/stock-adjustments", 
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:stock_adjustments"]
+          {
+            title: "Stock Adjustments",
+            url: "/forms/stock-adjustments",
+            icon: ArrowLeftRight,
+            requiredAny: ["menu:forms:stock_adjustments"],
           },
           {
             title: "Compare Stock",
-            url: "/forms/compare-stock",
-            icon: Grid2X2,
+            url: "/forms/compare-stock-adjustments",
+            icon: GitCompare,
             requiredAny: ["menu:forms:stock_adjustments"],
           },
         ],
       },
     ],
   },
+
+  // Administration
   {
-    id: 1.8,
-    label: "Administration",
+    id: 5,
     items: [
       {
         title: "Administration",
         url: "/forms/users",
         icon: Users,
-        requiredAny: ["menu:forms:users", "menu:forms:roles", "menu:forms:role_warehouse_rules", "menu:forms:warehouses"],
+        requiredAny: ["menu:forms:users", "menu:forms:roles", "menu:forms:role_warehouse_rules"],
         subItems: [
           {
             title: "Users",
@@ -187,19 +201,14 @@ export const sidebarItems: NavGroup[] = [
             icon: Lock,
             requiredAny: ["menu:forms:role_warehouse_rules"],
           },
-          {
-            title: "Warehouses",
-            url: "/forms/warehouses",
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:warehouses"],
-          },
         ],
       },
     ],
   },
+
+  // Authentication (public)
   {
-    id: 2,
-    label: "Pages",
+    id: 6,
     items: [
       {
         title: "Authentication",
@@ -207,25 +216,24 @@ export const sidebarItems: NavGroup[] = [
         icon: Fingerprint,
         public: true,
         subItems: [
-          { title: "Login", url: "/auth/login", newTab: true, public: true },
-          { title: "Register", url: "/auth/register", newTab: true, public: true },
-          { title: "Login v1 (Legacy)", url: "/auth/v1/login", newTab: true, public: true },
-          { title: "Register v1 (Legacy)", url: "/auth/v1/register", newTab: true, public: true },
+          { title: "Login", url: "/auth/login", icon: LogIn, newTab: true, public: true },
+          { title: "Register", url: "/auth/register", icon: UserPlus, newTab: true, public: true },
+          { title: "Login v1 (Legacy)", url: "/auth/v1/login", icon: LogIn, newTab: true, public: true },
+          { title: "Register v1 (Legacy)", url: "/auth/v1/register", icon: UserPlus, newTab: true, public: true },
         ],
       },
+    ],
+  },
+
+  // Coming Soon Features
+  {
+    id: 7,
+    items: [
       { title: "Email", url: "/mail", icon: Mail, comingSoon: true },
       { title: "Chat", url: "/chat", icon: MessageSquare, comingSoon: true },
       { title: "Calendar", url: "/calendar", icon: Calendar, comingSoon: true },
       { title: "Kanban", url: "/kanban", icon: Kanban, comingSoon: true },
       { title: "Invoice", url: "/invoice", icon: ReceiptText, comingSoon: true },
-      { title: "Users", url: "/users", icon: Users, comingSoon: true },
-      { title: "Roles", url: "/roles", icon: Lock, comingSoon: true },
-    ],
-  },
-  {
-    id: 3,
-    label: "Misc",
-    items: [
       {
         title: "Others",
         url: "/others",
