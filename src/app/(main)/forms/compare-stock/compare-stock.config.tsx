@@ -13,6 +13,7 @@ export type QuickFilter = {
 };
 
 export type CompareStockRow = {
+  id: string;
   row_key: string;
   tally_card: string | null;
   item_number: string | null;
