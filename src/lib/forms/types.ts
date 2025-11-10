@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // lib/forms/types.ts (SHARED)
 // ---------------------------------------------------------------------------
-export type Option = { id: string; label: string };
+export type Option = { id: string; label: string; value?: string }; // value defaults to id if not provided
 
 export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
 

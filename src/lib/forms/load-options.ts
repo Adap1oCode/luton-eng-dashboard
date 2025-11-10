@@ -20,6 +20,7 @@ import type { ResolvedOptions, Option } from "./types";
  * 
  * @param keys - Array of optionsKey strings (e.g., ["warehouses", "items"])
  * @param currentValues - Optional map of current field values (for edit pages) to ensure they're included
+ * @param dynamicFilters - Optional map of dynamic filters per optionsKey (e.g., { warehouseLocations: { warehouse_id: "..." } })
  * @returns Promise resolving to ResolvedOptions object
  * 
  * @example
@@ -29,11 +30,15 @@ import type { ResolvedOptions, Option } from "./types";
  * 
  * // For edit pages, ensure current values are included:
  * const options = await loadOptions(["items"], { item_number: 5056827328174 });
+ * 
+ * // With dynamic filters (e.g., filter locations by warehouse):
+ * const options = await loadOptions(["warehouseLocations"], undefined, { warehouseLocations: { warehouse_id: "uuid-123" } });
  * ```
  */
 export async function loadOptions(
   keys: string[],
-  currentValues?: Record<string, any>
+  currentValues?: Record<string, any>,
+  dynamicFilters?: Record<string, Record<string, any>>
 ): Promise<ResolvedOptions> {
   console.log(`[loadOptions] Called with keys:`, keys);
   const results: ResolvedOptions = {};
@@ -61,10 +66,15 @@ export async function loadOptions(
         // Build extraQuery with filters only
         // Note: Sort is handled by the provider's defaultSort config, not via query params
         const extraQuery: Record<string, any> = {
-          ...provider.filter, // Re-enable filter now that we're fixing the API issue
+          ...provider.filter, // Static filter from provider config
         };
         
-        console.log(`[loadOptions] DEBUG: Provider filter:`, provider.filter, `Using extraQuery:`, extraQuery);
+        // Add dynamic filters if provided for this key
+        if (dynamicFilters && dynamicFilters[key]) {
+          Object.assign(extraQuery, dynamicFilters[key]);
+        }
+        
+        console.log(`[loadOptions] DEBUG: Provider filter:`, provider.filter, `Dynamic filters:`, dynamicFilters?.[key], `Using extraQuery:`, extraQuery);
 
         console.log(`[loadOptions] Loading options for key "${key}":`, {
           resourceKey: provider.resourceKey,

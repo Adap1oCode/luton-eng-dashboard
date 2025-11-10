@@ -752,10 +752,12 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     [],
   );
 
+  const sortingEnabled = config?.features?.sortable !== false;
+
   // ✅ FIX: Split header decoration from base columns to reduce recalculation
   // Memoized header decoration function (only depends on columnOrder changes)
   const createHeaderDecoration = React.useCallback(
-    (label: string, columnId: string) => {
+    (label: string, columnId: string, columnCanSort: boolean) => {
       return (props: any) => (
         <DecoratedHeader
           column={
@@ -767,10 +769,11 @@ export default function ResourceTableClient<TRow extends { id: string }>({
           }
           label={label}
           columnOrder={columnOrder}
+          showSortButton={sortingEnabled && columnCanSort}
         />
       );
     },
-    [columnOrder],
+    [columnOrder, sortingEnabled],
   );
 
   // 🎛️ Memoized columns that include decorated headers
@@ -783,8 +786,9 @@ export default function ResourceTableClient<TRow extends { id: string }>({
       if (typeof header === "string" || React.isValidElement(header) || header == null) {
         // Extract string label: if header is string use it, otherwise fall back to column id
         const label = typeof header === "string" ? header : (col as { id?: string }).id ?? "";
+        const canSort = (col as { enableSorting?: boolean }).enableSorting !== false;
         // Use memoized header decoration function
-        c.header = createHeaderDecoration(label, col.id ?? "");
+        c.header = createHeaderDecoration(label, col.id ?? "", canSort);
       }
 
       return c;
@@ -967,16 +971,22 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     // hydrateFromRemote(remoteViews);
   }, [tableId, hydrateFromRemote, defaultColumnIds]);
 
+  // Extract bottom toolbar button visibility from config (needed early for width effect)
+  const bottomToolbarButtons = config.bottomToolbarButtons ?? {};
+  const showViewsButton = bottomToolbarButtons.views !== false;
+
   // Apply current view to column widths on mount (if saved px widths exist)
-  // Guarded: only runs when currentView and setWidths are available
+  // Guarded: only runs when currentView and setWidths are available AND views are enabled
   React.useEffect(() => {
+    // Don't apply saved view widths if views are disabled
+    if (!showViewsButton) return;
     if (!currentView || !setWidths) return;
 
     // Use saved px widths if available
     if (currentView.columnWidthsPx && Object.keys(currentView.columnWidthsPx).length > 0) {
       setWidths(currentView.columnWidthsPx);
     }
-  }, [currentView, setWidths]);
+  }, [currentView, setWidths, showViewsButton]);
 
   // Calculate responsive scaling for render widths
   const renderColumnWidthsPx = React.useMemo(() => {
@@ -1426,10 +1436,8 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   );
 
   // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu
-  // Extract bottom toolbar button visibility from config (defaults to true for backward compatibility)
+  // Note: bottomToolbarButtons and showViewsButton are already defined earlier (for width effect)
   // Note: Export CSV is handled by the top action toolbar, not here
-  const bottomToolbarButtons = config.bottomToolbarButtons ?? {};
-  const showViewsButton = bottomToolbarButtons.views !== false;
   const showColumnsButton = bottomToolbarButtons.columns !== false;
   const showSortButton = bottomToolbarButtons.sort !== false;
   const showMoreFiltersButton = bottomToolbarButtons.moreFilters !== false;

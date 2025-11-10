@@ -223,10 +223,11 @@ export const stockAdjustmentCreateConfig: FormConfig & {
     {
       name: "location",
       label: "Location",
-      kind: "text",
+      kind: "select",
       required: false, // Conditional based on multi_location
-      placeholder: "Rack / Aisle / Bin",
+      placeholder: "Select location...",
       width: "half",
+      optionsKey: "warehouseLocations",
     },
     {
       name: "note",
@@ -259,9 +260,10 @@ export const stockAdjustmentCreateConfig: FormConfig & {
         {
           name: "location",
           label: "Location",
-          kind: "text",
+          kind: "select",
           required: true, // Required (conditional validation handled in schema)
-          placeholder: "Rack / Aisle / Bin",
+          placeholder: "Select location...",
+          optionsKey: "warehouseLocations",
         },
         {
           name: "qty",

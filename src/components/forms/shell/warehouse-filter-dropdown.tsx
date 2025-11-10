@@ -28,6 +28,8 @@ interface WarehouseFilterDropdownProps {
   queryParamName?: string;
   /** Label text (default: "Warehouse") */
   label?: string;
+  /** Use warehouse name as value instead of code (default: false) */
+  useNameAsValue?: boolean;
 }
 
 interface SessionContext {
@@ -46,6 +48,7 @@ export function WarehouseFilterDropdown({
   hasWarehouseScope = false,
   queryParamName = "warehouse",
   label = "Warehouse",
+  useNameAsValue = false,
 }: WarehouseFilterDropdownProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -156,7 +159,10 @@ export function WarehouseFilterDropdown({
   const allWarehousesOption = { value: "ALL", label: "All Warehouses" };
   const warehouseOptionsWithAll = [
     allWarehousesOption,
-    ...warehouseOptions.map((w) => ({ value: w.code, label: w.name || w.code })),
+    ...warehouseOptions.map((w) => ({
+      value: useNameAsValue ? (w.name || w.code) : w.code,
+      label: w.name || w.code,
+    })),
   ];
 
   return (

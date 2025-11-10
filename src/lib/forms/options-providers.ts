@@ -63,6 +63,33 @@ export const OPTIONS_PROVIDERS: Record<string, OptionProviderConfig> = {
       }));
     },
   },
+  warehouseLocations: {
+    resourceKey: "warehouse-locations", // API endpoint resource key
+    idField: "id", // Use UUID for React key uniqueness
+    labelField: "name", // Display name shown in dropdown
+    filter: { is_active: true }, // Only show active locations
+    sort: { column: "name", desc: false }, // Sort by name ascending
+    // Transform: Use UUID as id (for React key), but store name as value (since location field stores name, not UUID)
+    // Since we filter by warehouse_id, location names should be unique within a warehouse
+    // Use UUID as the React key for guaranteed uniqueness
+    transform: (row: any) => {
+      const uuid = row?.id;
+      const name = String(row?.name ?? "");
+      
+      // Use UUID as React key (should always be present and unique)
+      // Fallback to warehouse_id-name combo only if UUID is missing (shouldn't happen with valid data)
+      const warehouseId = String(row?.warehouse_id ?? "");
+      const uniqueId = uuid && typeof uuid === "string" && uuid.length >= 32
+        ? String(uuid)
+        : (warehouseId && name ? `${warehouseId}-${name}` : `loc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+      
+      return {
+        id: uniqueId, // UUID for React key (unique within warehouse since we filter by warehouse_id)
+        label: name, // Display name
+        value: name, // Location name to save to form (location field stores name, not UUID)
+      };
+    },
+  },
 } as const;
 
 

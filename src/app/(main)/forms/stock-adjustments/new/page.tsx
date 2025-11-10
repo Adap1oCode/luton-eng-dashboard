@@ -28,7 +28,36 @@ export default async function NewStockAdjustmentPage() {
 
   // Extract optionsKeys from form config and load options server-side
   const optionsKeys = extractOptionsKeys(stockAdjustmentCreateConfig);
-  const loadedOptions = await loadOptions(optionsKeys);
+  
+  // Get warehouse_id from tally card to filter locations (if tally_card_number is pre-filled)
+  let warehouseId: string | undefined;
+  const tallyCardNumber = defaults.tally_card_number;
+  if (tallyCardNumber) {
+    try {
+      const { createClient } = await import("@/lib/supabase-server");
+      const sb = await createClient();
+      
+      // Fetch warehouse_id from tally_cards table
+      const { data: tallyCard } = await sb
+        .from("tcm_tally_cards")
+        .select("warehouse_id")
+        .eq("tally_card_number", tallyCardNumber)
+        .maybeSingle();
+      
+      if (tallyCard?.warehouse_id) {
+        warehouseId = String(tallyCard.warehouse_id);
+        console.log("[NewStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
+      }
+    } catch (err) {
+      console.warn("[NewStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
+    }
+  }
+  
+  // Load options with warehouse filter for locations (if warehouse_id is available)
+  const dynamicFilters = warehouseId 
+    ? { warehouseLocations: { warehouse_id: warehouseId } }
+    : undefined;
+  const loadedOptions = await loadOptions(optionsKeys, undefined, dynamicFilters);
 
   // Ensure defaults include locations array
   if (!defaults.locations) {

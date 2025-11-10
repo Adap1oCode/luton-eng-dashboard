@@ -5,15 +5,18 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect, type SearchableSelectOption } from "@/components/forms/searchable-select";
 
 import type { LocationRow } from "./locations-table";
+import type { Option } from "@/lib/forms/types";
 
 type Props = {
   onAdd: (location: string, qty: number) => void;
   expanded?: boolean;
+  locationOptions?: Option[]; // Warehouse locations for dropdown
 };
 
-export default function AddLocationSection({ onAdd, expanded: initialExpanded = true }: Props) {
+export default function AddLocationSection({ onAdd, expanded: initialExpanded = true, locationOptions = [] }: Props) {
   const [expanded, setExpanded] = useState(initialExpanded);
   const [location, setLocation] = useState("");
   const [qty, setQty] = useState<number | "">("");
@@ -62,13 +65,20 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Location <span className="text-red-600">*</span>
                 </label>
-                <Input
-                  type="text"
+                <SearchableSelect
+                  options={locationOptions.map((o) => ({
+                    ...o,
+                    // Use location name (value) as id for SearchableSelect matching
+                    id: o.value ?? o.id,
+                  })) as SearchableSelectOption[]}
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Rack / Aisle / Bin"
-                  className="w-full"
+                  onChange={(selectedId) => {
+                    // selectedId is already the location name (value)
+                    setLocation(selectedId);
+                  }}
+                  placeholder="Select location..."
+                  searchPlaceholder="Search location..."
+                  disabled={locationOptions.length === 0}
                 />
               </div>
 
@@ -100,7 +110,7 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30">
                 <h4 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">Instructions</h4>
                 <ul className="space-y-1 text-xs text-blue-800 dark:text-blue-200">
-                  <li>• Enter location (e.g., "A-1-B", "Rack 5")</li>
+                  <li>• Select location from dropdown</li>
                   <li>• Enter quantity (positive or negative)</li>
                   <li>• Click "Add Location" or press Enter</li>
                   <li>• Total quantity is computed automatically</li>

@@ -489,7 +489,7 @@ export default function StockAdjustmentFormWrapper({
       }}
     >
       <LocationsCapture onLocationsReady={handleLocationsReady} />
-      <StockAdjustmentFormWithLocations entryId={entryId} />
+      <StockAdjustmentFormWithLocations entryId={entryId} options={options} />
       <SubmitButtonWrapper formId={formId} />
     </DynamicForm>
   );

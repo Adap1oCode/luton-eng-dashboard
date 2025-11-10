@@ -16,11 +16,14 @@ import inventoryUom from "./dashboards/inventory-uom.ts";
 import inventoryItemCostByWarehouse from "./dashboards/inventory-item-cost-by-warehouse.ts";
 import v_table_report_combined from "./dbdocs/v_table_report_combined.config.ts";
 import tcm_user_tally_card_entry_locations from "./tcm_user_tally_card_entry_locations.config.ts";
+import warehouse_locations from "./warehouse_locations.config.ts";
+import v_tcm_compare_stock from "./v_tcm_compare_stock.config.ts";
 
 const resources = {
   // ✅ Database table names (primary keys)
   users,
   warehouses,
+  warehouse_locations,
   roles,
   role_warehouse_rules,
   tcm_tally_cards,
@@ -35,12 +38,15 @@ const resources = {
   inventoryWarehouse,
   inventoryUom,
   inventoryItemCostByWarehouse,
+  v_tcm_compare_stock,
 
   // ✅ Friendly aliases for business-facing routes
   "stock-adjustments": tcm_user_tally_card_entries,
   "stock-adjustment-locations": tcm_user_tally_card_entry_locations,
   "tally-cards": tcm_tally_cards,
+  "warehouse-locations": warehouse_locations,
   "inventory-unique": v_inventory_unique,
+  "compare-stock": v_tcm_compare_stock,
   // ✅ Dashboard-friendly aliases for inventory resources
   "inventory-summary": inventory_summary,
   "inventory-warehouse": inventoryWarehouse,
@@ -55,6 +61,7 @@ export default resources;
 export {
   users,
   warehouses,
+  warehouse_locations,
   roles,
   role_warehouse_rules,
   tcm_tally_cards,
@@ -69,4 +76,5 @@ export {
   inventoryWarehouse,
   inventoryUom,
   inventoryItemCostByWarehouse,
+  v_tcm_compare_stock,
 };

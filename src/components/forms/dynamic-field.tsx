@@ -115,45 +115,41 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
 
             {(field.kind === "select" || field.kind === "multiselect") && (
               <>
-                {/* Use SearchableSelect for item_number and warehouse_id fields */}
-                {(field.name === "item_number" || field.name === "warehouse_id") && field.kind === "select" ? (
+                {/* Use SearchableSelect for all select fields (except multiselect) */}
+                {field.kind === "select" ? (
                   <SearchableSelect
-                    options={(options ?? []) as SearchableSelectOption[]}
+                    options={(options ?? []).map((o) => {
+                      // For location fields: SearchableSelect uses id for matching, but form stores value (location name)
+                      // Map options so id matches what we'll pass as value (use value as id for location fields)
+                      if (field.name === "location" && o.value) {
+                        return {
+                          ...o,
+                          id: o.value, // Use location name as id for SearchableSelect matching
+                        } as SearchableSelectOption;
+                      }
+                      return o as SearchableSelectOption;
+                    })}
                     value={rhf.value ?? null}
-                    onChange={(value) => rhf.onChange(value)}
+                    onChange={(selectedId) => {
+                      // For location fields, selectedId is already the location name (value)
+                      // For other fields, selectedId is the id (UUID or item_number)
+                      rhf.onChange(selectedId);
+                    }}
                     placeholder={field.placeholder ?? "Select..."}
                     searchPlaceholder={
                       field.name === "item_number"
                         ? "Search item number or description..."
-                        : "Search warehouse code or name..."
+                        : field.name === "warehouse_id"
+                        ? "Search warehouse code or name..."
+                        : field.name === "location"
+                        ? "Search location..."
+                        : "Search..."
                     }
-                    twoColumn={true}
-                    searchFields="both"
+                    twoColumn={field.name === "item_number" || field.name === "warehouse_id"}
+                    searchFields={field.name === "item_number" || field.name === "warehouse_id" ? "both" : "label"}
                     disabled={field.readOnly || isDisabledByMultiLocation}
                     className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
                   />
-                ) : field.kind === "select" ? (
-                  <Select
-                    value={rhf.value != null && rhf.value !== "" ? String(rhf.value) : undefined}
-                    onValueChange={(value) => rhf.onChange(value)}
-                    disabled={field.readOnly || isDisabledByMultiLocation || (options ?? []).length === 0}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={field.placeholder ?? "Select..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(options ?? []).length === 0 && field.optionsKey ? (
-                        <SelectItem disabled value="__no-options__">
-                          ⚠️ No options loaded (key: {field.optionsKey})
-                        </SelectItem>
-                      ) : null}
-                      {(options ?? []).map((o) => (
-                        <SelectItem key={o.id} value={String(o.id)}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 ) : (
                   <div className="space-y-2">
                     {(options ?? []).length === 0 && field.optionsKey ? (

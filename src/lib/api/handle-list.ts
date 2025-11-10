@@ -93,7 +93,32 @@ export async function listHandler(req: Request, resourceKey: string) {
         }
       }
     }
-    const { rows, total } = await provider.list({ q, page, pageSize, activeOnly, filters });
+    let rows: any[];
+    let total: number;
+    try {
+      const result = await provider.list({ q, page, pageSize, activeOnly, filters });
+      rows = result.rows;
+      total = result.total;
+    } catch (dbError: any) {
+      const dbMsg = String(dbError?.message ?? dbError ?? "");
+      console.error("[listHandler] Database error:", {
+        resource: resourceKey,
+        table: entry.config.table,
+        error: dbMsg,
+        code: (dbError as any)?.code,
+      });
+      
+      // Check if it's a "relation does not exist" error
+      if (/relation.*does not exist|relation.*not found/i.test(dbMsg)) {
+        throw new Error(
+          `Database table/view "${entry.config.table}" does not exist. ` +
+          `Please run the migration: supabase/migrations/20250203_create_v_warehouse_locations_view.sql`
+        );
+      }
+      
+      // Re-throw with original error
+      throw dbError;
+    }
 
     // Optional debug logging (safe; separate session fetch used only for logs)
     if (AUTH_SCOPING_ENABLED) {
@@ -134,9 +159,14 @@ export async function listHandler(req: Request, resourceKey: string) {
       raw: raw && entry.allowRaw ? true : false,
     });
   } catch (err) {
+    console.error("[listHandler] Error for resource:", resourceKey, {
+      error: err,
+      message: (err as any)?.message,
+      stack: (err as any)?.stack,
+    });
     const res = mapError(resourceKey, err);
     if (res.status === 500) {
-      console.error("[listHandler]", resourceKey, err);
+      console.error("[listHandler] 500 error details:", resourceKey, err);
     }
     return res;
   }

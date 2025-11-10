@@ -6,12 +6,14 @@ import { useFormContext } from "react-hook-form";
 import AddLocationSection from "./add-location-section";
 import LocationsTable, { type LocationRow } from "./locations-table";
 import { allowsZeroQuantity } from "@/lib/config/stock-adjustment-reason-codes";
+import type { ResolvedOptions } from "@/lib/forms/types";
 
 type Props = {
   entryId?: string; // For edit mode - to load existing locations
+  options?: ResolvedOptions; // Options for dropdowns (e.g., warehouseLocations)
 };
 
-export default function StockAdjustmentFormWithLocations({ entryId }: Props) {
+export default function StockAdjustmentFormWithLocations({ entryId, options }: Props) {
   const { watch, setValue, setError, clearErrors } = useFormContext();
   const multiLocation = watch("multi_location") ?? false;
   const reasonCode = watch("reason_code") ?? "UNSPECIFIED";
@@ -156,7 +158,7 @@ export default function StockAdjustmentFormWithLocations({ entryId }: Props) {
   return (
     <div className="space-y-6">
       {/* Add Location Section */}
-      <AddLocationSection onAdd={handleAddLocation} />
+      <AddLocationSection onAdd={handleAddLocation} locationOptions={options?.warehouseLocations} />
 
       {/* Locations Table */}
       <LocationsTable

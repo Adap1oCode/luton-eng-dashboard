@@ -96,6 +96,38 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
+    id: 1.6,
+    label: "Inventory Manager",
+    items: [
+      {
+        title: "Unique Items",
+        url: "/forms/inventory",
+        icon: Grid2X2,
+        requiredAny: ["menu:forms:tally_cards", "menu:forms:stock_adjustments", "menu:forms:user_tally_card_entries"],
+        subItems: [
+          {
+            title: "Warehouses",
+            url: "/forms/warehouses",
+            icon: Grid2X2,
+            requiredAny: ["menu:forms:tally_cards"],
+          },
+          { 
+            title: "Locations", 
+            url: "/forms/warehouse-locations", 
+            icon: Grid2X2,
+            requiredAny: ["menu:forms:stock_adjustments"]
+          },
+          {
+            title: "Compare Stock",
+            url: "/forms/compare-stock",
+            icon: Grid2X2,
+            requiredAny: ["menu:forms:stock_adjustments"],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 1.7,
     label: "Tally Card Manager",
     items: [
@@ -111,12 +143,6 @@ export const sidebarItems: NavGroup[] = [
             icon: Grid2X2,
             requiredAny: ["menu:forms:tally_cards"],
           },
-          {
-            title: "Tally Cards (Current)",
-            url: "/forms/tally-cards-current",
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:tally_cards_current"],
-          },
           { 
             title: "Stock Adjustments", 
             url: "/forms/stock-adjustments", 
@@ -124,16 +150,10 @@ export const sidebarItems: NavGroup[] = [
             requiredAny: ["menu:forms:stock_adjustments"]
           },
           {
-            title: "User Tally Card Entries",
-            url: "/forms/user-tally-card-entries",
+            title: "Compare Stock",
+            url: "/forms/compare-stock",
             icon: Grid2X2,
-            requiredAny: ["menu:forms:user_tally_card_entries"],
-          },
-          {
-            title: "Compare Stock Adjustments",
-            url: "/forms/compare-stock-adjustments",
-            icon: Grid2X2,
-            requiredAny: ["menu:forms:stock_adjustments"], // Using same permission as stock adjustments
+            requiredAny: ["menu:forms:stock_adjustments"],
           },
         ],
       },

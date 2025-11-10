@@ -43,10 +43,27 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
   }
 
   if (!res.ok) {
+    let errorBody: any = {};
+    let errorText: string = "";
+    try {
+      const text = await res.text();
+      errorText = text;
+      try {
+        errorBody = JSON.parse(text);
+      } catch {
+        // Not JSON, use text as error
+        errorBody = { message: text || "Unknown error" };
+      }
+    } catch (e) {
+      errorBody = { message: "Failed to read error response" };
+    }
+    
     console.error(`[fetchResourcePage] API error for ${endpoint}:`, {
       status: res.status,
       statusText: res.statusText,
       url: `${base}${endpoint}?${qs.toString()}`,
+      errorBody,
+      errorText: errorText.substring(0, 500), // First 500 chars
     });
     return { rows: [], total: 0 };
   }
