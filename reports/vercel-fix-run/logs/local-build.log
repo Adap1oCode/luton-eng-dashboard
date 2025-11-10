@@ -1,0 +1,101 @@
+
+> studio-admin@1.0.0 build
+> next build --no-lint
+
+   ▲ Next.js 15.5.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 17.5s
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/11) ...
+   Generating static pages (2/11) 
+   Generating static pages (5/11) 
+   Generating static pages (8/11) 
+ ✓ Generating static pages (11/11)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                            Size  First Load JS
+┌ ○ /_not-found                                        1 kB         103 kB
+├ ƒ /admin/table-docs-monitor                       3.88 kB         115 kB
+├ ƒ /api/[resource]                                   616 B         151 kB
+├ ƒ /api/[resource]/[id]                              616 B         151 kB
+├ ƒ /api/[resource]/bulk                              210 B         102 kB
+├ ƒ /api/admin/refresh-table-docs                     210 B         102 kB
+├ ƒ /api/admin/table-docs-health                      210 B         102 kB
+├ ƒ /api/admin/users                                  210 B         102 kB
+├ ƒ /api/dashboard-inventory                          210 B         102 kB
+├ ƒ /api/db-check                                     210 B         102 kB
+├ ƒ /api/debug/nav-filter                             210 B         102 kB
+├ ƒ /api/debug/permissions                            210 B         102 kB
+├ ○ /api/docs                                         210 B         102 kB
+├ ƒ /api/forms/stock-adjustments                      616 B         151 kB
+├ ƒ /api/health                                       210 B         102 kB
+├ ƒ /api/impersonate                                  210 B         102 kB
+├ ƒ /api/me/permissions                               210 B         102 kB
+├ ƒ /api/me/role                                      210 B         102 kB
+├ ƒ /api/resources/[resource]/[id]/history            210 B         102 kB
+├ ƒ /api/saved-views                                  210 B         102 kB
+├ ƒ /api/saved-views/[id]                             210 B         102 kB
+├ ƒ /api/stock-adjustments/[id]/actions/patch-scd2    210 B         102 kB
+├ ƒ /api/stock-adjustments/[id]/locations             210 B         102 kB
+├ ƒ /api/tally-cards/[id]/actions/patch-scd2          210 B         102 kB
+├ ƒ /api/tools/resource/[key]                         210 B         102 kB
+├ ƒ /api/tools/resources                              210 B         102 kB
+├ ƒ /auth/callback                                    210 B         102 kB
+├ ○ /auth/login                                     7.64 kB         205 kB
+├ ○ /auth/register                                  6.53 kB         201 kB
+├ ƒ /auth/v1/callback                                 210 B         102 kB
+├ ƒ /auth/v1/login                                  6.99 kB         204 kB
+├ ƒ /auth/v1/register                                5.5 kB         200 kB
+├ ƒ /dashboard                                        210 B         102 kB
+├ ƒ /dashboard/about                                  210 B         102 kB
+├ ƒ /dashboard/default                               128 kB         339 kB
+├ ƒ /dashboard/forms/audit                          12.3 kB         253 kB
+├ ƒ /dashboard/inventory                              129 B         118 kB
+├ ƒ /dashboard/purchase-orders                        129 B         118 kB
+├ ƒ /dashboard/requisitions                           129 B         118 kB
+├ ƒ /dashboard/requisitions/all                      9.5 kB         180 kB
+├ ƒ /dashboard/requisitions/new                     13.8 kB         162 kB
+├ ƒ /forms/compare-stock                            4.24 kB         233 kB
+├ ƒ /forms/compare-stock-adjustments                  246 B         229 kB
+├ ƒ /forms/inventory-current                        2.04 kB         230 kB
+├ ƒ /forms/inventory-unique                         2.02 kB         230 kB
+├ ƒ /forms/products                                   246 B         229 kB
+├ ƒ /forms/requisitions                              121 kB         232 kB
+├ ƒ /forms/roles                                    7.31 kB         225 kB
+├ ƒ /forms/roles/[id]                                 210 B         102 kB
+├ ƒ /forms/roles/[id]/edit                            598 B         226 kB
+├ ƒ /forms/roles/new                                  466 B         226 kB
+├ ƒ /forms/stock-adjustments                        4.93 kB         237 kB
+├ ƒ /forms/stock-adjustments copy                   2.19 kB         234 kB
+├ ƒ /forms/stock-adjustments copy/[id]/edit         2.23 kB         273 kB
+├ ƒ /forms/stock-adjustments copy/new               3.27 kB         163 kB
+├ ƒ /forms/stock-adjustments/[id]/edit               3.9 kB         275 kB
+├ ƒ /forms/stock-adjustments/new                    8.58 kB         168 kB
+├ ƒ /forms/tally-cards                              4.08 kB         236 kB
+├ ƒ /forms/tally-cards/[id]/edit                    2.23 kB         273 kB
+├ ƒ /forms/tally-cards/new                          3.27 kB         163 kB
+├ ƒ /forms/users                                      246 B         229 kB
+├ ƒ /forms/warehouse-locations                      2.75 kB         235 kB
+├ ƒ /forms/warehouse-locations/[id]/edit            2.17 kB         168 kB
+├ ƒ /forms/warehouse-locations/new                  3.27 kB         163 kB
+├ ƒ /forms/warehouses                                1.8 kB         234 kB
+├ ƒ /forms/warehouses/[id]/edit                     2.17 kB         168 kB
+├ ƒ /forms/warehouses/new                           3.27 kB         163 kB
+├ ƒ /performance                                    7.33 kB         126 kB
+├ ƒ /tools/screen-generator                         4.41 kB         106 kB
+└ ƒ /unauthorized                                     166 B         105 kB
++ First Load JS shared by all                        102 kB
+  ├ chunks/1255-b00d55424d42ab78.js                 45.3 kB
+  ├ chunks/4bd1b696-182b6b13bdad92e3.js             54.2 kB
+  └ other shared chunks (total)                     2.35 kB
+
+
+ƒ Middleware                                          75 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

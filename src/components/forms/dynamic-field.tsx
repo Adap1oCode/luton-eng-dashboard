@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FormItem } from "@/components/ui/form";
 import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
 
-export type Option = { id: string; label: string };
+export type Option = { id: string; label: string; value?: string };
 
 export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
 

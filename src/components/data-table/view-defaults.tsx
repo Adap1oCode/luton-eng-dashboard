@@ -268,6 +268,8 @@ export type BaseViewConfig<TRow> = {
   toolbar: ToolbarConfig;
   quickFilters: any[]; // intentionally flexible; views define their own
   buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
+  /** View-level API endpoint used for client refetches */
+  apiEndpoint?: string;
   /** Resource key for single-record DELETE calls (/api/[resource]/[id]) */
   resourceKeyForDelete?: string;
   /** Route segment for forms pages (e.g., 'tally-cards') */

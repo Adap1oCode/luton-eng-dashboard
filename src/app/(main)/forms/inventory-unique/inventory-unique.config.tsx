@@ -28,6 +28,7 @@ export const RESOURCE_TITLE = "Inventory Unique" as const;
 // Types
 // -----------------------------------------------------------------------------
 export type InventoryUniqueRow = {
+  id: string;
   item_number: number; // bigint, used as primary key
   warehouse: string | null;
   location: string | null;
@@ -149,10 +150,10 @@ function buildColumns(): TColumnDef<InventoryUniqueRow>[] {
 // -----------------------------------------------------------------------------
 // View Config
 // -----------------------------------------------------------------------------
-export const inventoryUniqueViewConfig: BaseViewConfig<InventoryUniqueRow> = {
+export const inventoryUniqueViewConfig: BaseViewConfig<InventoryUniqueRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY, // Not used for read-only, but required by type
   formsRouteSegment: ROUTE_SEGMENT,
-  idField: "item_number", // Use item_number as identifier
+  idField: "id",
   apiEndpoint: API_ENDPOINT,
   toolbar: {
     left: [],

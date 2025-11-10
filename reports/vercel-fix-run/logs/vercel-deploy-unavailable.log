@@ -1,0 +1,2 @@
+Unable to retrieve Vercel build logs.
+Reason: Vercel MCP resources and CLI token were not available in the workspace. `npx vercel teams ls` failed with "No existing credentials found" and no MCP resources were configured.
