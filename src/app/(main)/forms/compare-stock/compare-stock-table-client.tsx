@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
 
 import type { CompareStockRow } from "./compare-stock.config";
-import { compareStockViewConfig } from "./compare-stock.config";
+import { compareStockViewConfig, buildColumns } from "./compare-stock.config";
 
 interface CompareStockTableClientProps {
   initialRows: CompareStockRow[];
@@ -20,15 +21,23 @@ export function CompareStockTableClient({
   page,
   pageSize,
 }: CompareStockTableClientProps) {
+  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
+  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
+
+  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
+    setSelectedItemNumber(itemNumber);
+    setShowInventoryDialog(true);
+  }, []);
+
   const viewConfigWithColumns = useMemo<BaseViewConfig<CompareStockRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
     const config = {
       ...compareStockViewConfig,
-      columns: compareStockViewConfig.buildColumns(),
+      columns: buildColumns(handleItemNumberClick),
       apiEndpoint: compareStockViewConfig.apiEndpoint,
     };
     delete (config as any).buildColumns;
     return config;
-  }, []);
+  }, [handleItemNumberClick]);
 
   const initialColumnVisibility = useMemo(() => {
     return {
@@ -46,13 +55,20 @@ export function CompareStockTableClient({
   }, []);
 
   return (
-    <ResourceTableClient
-      config={viewConfigWithColumns}
-      initialRows={initialRows}
-      initialTotal={initialTotal}
-      page={page}
-      pageSize={pageSize}
-      initialColumnVisibility={initialColumnVisibility}
-    />
+    <>
+      <ResourceTableClient
+        config={viewConfigWithColumns}
+        initialRows={initialRows}
+        initialTotal={initialTotal}
+        page={page}
+        pageSize={pageSize}
+        initialColumnVisibility={initialColumnVisibility}
+      />
+      <InventoryInfoDialog
+        open={showInventoryDialog}
+        onOpenChange={setShowInventoryDialog}
+        itemNumber={selectedItemNumber}
+      />
+    </>
   );
 }

@@ -138,7 +138,7 @@ export const INLINE_EDIT_CONFIGS: Record<string, InlineEditConfig> = {
 // -----------------------------------------------------------------------------
 // Columns Definition
 // -----------------------------------------------------------------------------
-function buildColumns(): TColumnDef<TallyCardRow>[] {
+export function buildColumns(onItemNumberClick?: (itemNumber: string | number | null) => void): TColumnDef<TallyCardRow>[] {
   return [
     // Hidden routing-only id
     {
@@ -187,8 +187,29 @@ function buildColumns(): TColumnDef<TallyCardRow>[] {
       id: "item_number",
       accessorKey: "item_number",
       header: "Item Number",
+      cell: ({ row }) => {
+        const value = row.getValue<number | null>("item_number");
+        if (!value) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        if (onItemNumberClick) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onItemNumberClick(value);
+              }}
+              className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200 cursor-pointer"
+            >
+              {String(value)}
+            </button>
+          );
+        }
+        // Fallback to inline edit if no click handler
+        return <span>{String(value)}</span>;
+      },
       meta: {
-        inlineEdit: INLINE_EDIT_CONFIGS.item_number,
+        inlineEdit: onItemNumberClick ? undefined : INLINE_EDIT_CONFIGS.item_number, // Disable inline edit when clickable
       },
       enableSorting: true,
       size: 210,
@@ -264,7 +285,7 @@ export const tallyCardsViewConfig: BaseViewConfig<TallyCardRow> & { apiEndpoint?
     rowSelection: true,
     pagination: true,
   },
-  buildColumns: () => buildColumns(),
+  buildColumns: () => buildColumns(), // Default buildColumns without click handler
   // Hide Views and Save View buttons in bottom toolbar
   bottomToolbarButtons: {
     views: false,

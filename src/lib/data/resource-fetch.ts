@@ -58,13 +58,22 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
       errorBody = { message: "Failed to read error response" };
     }
     
+    // Log full error details for debugging
     console.error(`[fetchResourcePage] API error for ${endpoint}:`, {
       status: res.status,
       statusText: res.statusText,
       url: `${base}${endpoint}?${qs.toString()}`,
-      errorBody,
-      errorText: errorText.substring(0, 500), // First 500 chars
+      errorBody: errorBody || {},
+      errorText: errorText ? errorText.substring(0, 1000) : "(empty)", // First 1000 chars
+      errorMessage: errorBody?.error?.message || errorBody?.message || "(no message)",
     });
+    
+    // If we have a meaningful error message, log it prominently
+    const errorMessage = errorBody?.error?.message || errorBody?.message;
+    if (errorMessage && errorMessage !== "Unknown error") {
+      console.error(`[fetchResourcePage] Error details:`, errorMessage);
+    }
+    
     return { rows: [], total: 0 };
   }
 

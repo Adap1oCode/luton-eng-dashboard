@@ -10,6 +10,7 @@ export function toRow(d: any): StockAdjustmentRow {
     full_name: String(d?.full_name ?? ""),
     warehouse: String(d?.warehouse ?? ""),
     tally_card_number: d?.tally_card_number ?? null,
+    item_number: d?.item_number != null ? Number(d.item_number) : null,
     qty: d?.qty ?? null,
     location: d?.location ?? null,
     note: d?.note ?? null,
