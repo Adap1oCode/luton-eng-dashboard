@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
  * CI Verification Script
- * Runs all verification steps required by the Cursor Working Agreement
- * Cross-platform compatible (Windows, macOS, Linux)
+ * Runs all verification steps required by the Cursor Working Agreement.
+ * Cross-platform compatible (Windows, macOS, Linux) and optimized for pnpm.
  */
 
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { existsSync, statSync, readdirSync } from 'fs';
 import { request } from 'http';
+import { performance } from 'perf_hooks';
+
 // Port configuration (inline to avoid TypeScript compilation issues)
 const PORTS = {
   PRODUCTION: 3000,
@@ -25,8 +25,9 @@ const PORTS = {
   RESERVED_2: 3009,
 };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const PNPM_CMD = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const DEFAULT_HEALTH_TIMEOUT_MS = 60_000;
+const STEP_SEPARATOR = '='.repeat(64);
 
 // ANSI color codes
 const colors = {
@@ -36,316 +37,474 @@ const colors = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
+  magenta: '\x1b[35m',
 };
+
+const defaultRoutes = [
+  { url: '/', expectedContent: '<!DOCTYPE html>' },
+  { url: '/dashboard/inventory', expectedContent: '<!DOCTYPE html>' },
+  { url: '/forms/stock-adjustments', expectedContent: '<!DOCTYPE html>' },
+  { url: '/api/me/role', expectedContent: null },
+];
+
+let appServerProcess = null;
+let appServerReadyPromise = null;
 
 function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-function runCommand(command, args = []) {
+function formatDuration(ms) {
+  if (Number.isNaN(ms)) {
+    return '0.0s';
+  }
+  const seconds = ms / 1000;
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds - minutes * 60;
+  return `${minutes}m ${remaining.toFixed(1)}s`;
+}
+
+function parseFlags(argv) {
+  const flags = {
+    fast: false,
+    noBuild: false,
+    noHealthCheck: false,
+    noE2E: false,
+    port: Number(process.env.CI_VERIFY_PORT) || PORTS.CI_VERIFICATION,
+  };
+
+  for (const arg of argv) {
+    if (arg === '--fast') {
+      flags.fast = true;
+      flags.noBuild = true;
+      flags.noHealthCheck = true;
+      flags.noE2E = true;
+    } else if (arg === '--no-build') {
+      flags.noBuild = true;
+    } else if (arg === '--no-health-check') {
+      flags.noHealthCheck = true;
+    } else if (arg === '--no-e2e' || arg === '--skip-e2e') {
+      flags.noE2E = true;
+    } else if (arg.startsWith('--port=')) {
+      const value = Number(arg.split('=').pop());
+      if (!Number.isNaN(value) && value > 0) {
+        flags.port = value;
+      }
+    }
+  }
+
+  return flags;
+}
+
+function runCommand({ command, args = [], env = process.env, cwd = process.cwd() }) {
   return new Promise((resolve, reject) => {
     log(`\n${colors.blue}▶${colors.reset} Running: ${colors.bright}${command} ${args.join(' ')}${colors.reset}`);
-    
+
     const child = spawn(command, args, {
       stdio: 'inherit',
-      shell: true,
-      cwd: process.cwd(),
+      shell: false,
+      cwd,
+      env,
     });
 
-    child.on('close', (code) => {
+    child.on('close', (code, signal) => {
       if (code === 0) {
-        log(`${colors.green}✓${colors.reset} ${command} ${args.join(' ')} ${colors.green}passed${colors.reset}`);
         resolve();
       } else {
-        log(`${colors.red}✗${colors.reset} ${command} ${args.join(' ')} ${colors.red}failed${colors.reset} (exit code: ${code})`);
-        reject(new Error(`Command failed: ${command} ${args.join(' ')}`));
+        const reason = signal ? `signal ${signal}` : `exit code ${code}`;
+        reject(new Error(`Command failed (${reason}): ${command} ${args.join(' ')}`));
       }
     });
 
     child.on('error', (err) => {
-      log(`${colors.red}✗${colors.reset} Failed to start command: ${err.message}`, colors.red);
-      reject(err);
+      reject(new Error(`Failed to start command "${command}": ${err.message}`));
     });
   });
 }
 
 function verifyBuildOutput() {
   log(`\n${colors.blue}▶${colors.reset} Verifying build output...`);
-  
+
   const buildDir = join(process.cwd(), '.next');
   const staticDir = join(buildDir, 'static');
   const serverDir = join(buildDir, 'server');
-  
-  // Check if .next directory exists
+
   if (!existsSync(buildDir)) {
-    throw new Error('Build directory (.next) not found');
+    throw new Error('Build directory (.next) not found. Did you run "pnpm build"?');
   }
-  
-  // Check if static assets exist
   if (!existsSync(staticDir)) {
-    throw new Error('Static assets directory not found');
+    throw new Error('Static assets directory not found under .next/static');
   }
-  
-  // Check if server files exist
   if (!existsSync(serverDir)) {
-    throw new Error('Server files directory not found');
+    throw new Error('Server files directory not found under .next/server');
   }
-  
-  // Check for key build files
-  const keyFiles = [
-    join(buildDir, 'BUILD_ID'),
-    join(buildDir, 'package.json'),
-  ];
-  
+
+  const keyFiles = [join(buildDir, 'BUILD_ID'), join(buildDir, 'package.json')];
   for (const file of keyFiles) {
     if (!existsSync(file)) {
       throw new Error(`Required build file not found: ${file}`);
-    } else {
-      const stats = statSync(file);
-      if (stats.size === 0) {
-        throw new Error(`Build file is empty: ${file}`);
-      }
-      log(`${colors.green}✓${colors.reset} ${file} (${stats.size} bytes)`);
     }
+    const stats = statSync(file);
+    if (stats.size === 0) {
+      throw new Error(`Build file is empty: ${file}`);
+    }
+    log(`${colors.green}✓${colors.reset} ${file.replace(process.cwd(), '.')} (${stats.size} bytes)`);
   }
-  
-  // Check for JavaScript chunks in static directory
+
   const chunksDir = join(staticDir, 'chunks');
-  if (existsSync(chunksDir)) {
-    const files = require('fs').readdirSync(chunksDir);
-    const jsFiles = files.filter(f => f.endsWith('.js'));
-    if (jsFiles.length === 0) {
-      throw new Error('No JavaScript chunks found in build output');
-    }
-    log(`${colors.green}✓${colors.reset} Found ${jsFiles.length} JavaScript chunks`);
-    
-    // Check for main app files
-    const mainAppFile = files.find(f => f.startsWith('main-app-'));
-    const frameworkFile = files.find(f => f.startsWith('framework-'));
-    
-    if (mainAppFile) {
-      log(`${colors.green}✓${colors.reset} Main app bundle: ${mainAppFile}`);
-    }
-    if (frameworkFile) {
-      log(`${colors.green}✓${colors.reset} Framework bundle: ${frameworkFile}`);
-    }
-  } else {
-    throw new Error('Static chunks directory not found');
+  if (!existsSync(chunksDir)) {
+    throw new Error('Static chunks directory not found under .next/static/chunks');
   }
-  
+
+  const files = readdirSync(chunksDir);
+  const jsFiles = files.filter((file) => file.endsWith('.js'));
+  if (jsFiles.length === 0) {
+    throw new Error('No JavaScript bundles found in .next/static/chunks');
+  }
+
+  log(`${colors.green}✓${colors.reset} Found ${jsFiles.length} JavaScript chunks`);
+  const mainAppFile = files.find((file) => file.startsWith('main-app-'));
+  const frameworkFile = files.find((file) => file.startsWith('framework-'));
+  if (mainAppFile) {
+    log(`${colors.green}✓${colors.reset} Main app bundle: ${mainAppFile}`);
+  }
+  if (frameworkFile) {
+    log(`${colors.green}✓${colors.reset} Framework bundle: ${frameworkFile}`);
+  }
+
   log(`${colors.green}✓${colors.reset} Build output verification passed`);
 }
 
-function startApp() {
-  return new Promise((resolve, reject) => {
-    log(`\n${colors.blue}▶${colors.reset} Starting Next.js app for health check on port ${PORTS.CI_HEALTH_CHECK}...`);
-    
-    const child = spawn('npm', ['run', 'start'], {
-      stdio: 'pipe',
-      shell: true,
-      cwd: process.cwd(),
-      env: { ...process.env, PORT: PORTS.CI_HEALTH_CHECK.toString() },
-    });
+async function ensureAppServer(port, { logStreaming = false } = {}) {
+  if (appServerReadyPromise) {
+    return appServerReadyPromise;
+  }
 
-    let appReady = false;
-    let output = '';
-    let errorOutput = '';
+  appServerReadyPromise = new Promise((resolve, reject) => {
+    log(`\n${colors.blue}▶${colors.reset} Starting Next.js server on port ${port}...`);
+
+    const child = spawn(
+      PNPM_CMD,
+      ['exec', 'next', 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, NODE_ENV: 'production', PORT: String(port) },
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false,
+      },
+    );
+
+    appServerProcess = child;
+    let resolved = false;
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+
+    const handleReady = (source) => {
+      if (!resolved) {
+        resolved = true;
+        log(`${colors.green}✓${colors.reset} Next.js server ready (${source})`);
+        resolve(child);
+      }
+    };
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        child.kill();
+        reject(new Error(`Next.js server failed to start within ${DEFAULT_HEALTH_TIMEOUT_MS / 1000}s`));
+      }
+    }, DEFAULT_HEALTH_TIMEOUT_MS);
 
     child.stdout.on('data', (data) => {
       const text = data.toString();
-      output += text;
-      // Look for Next.js ready message patterns
-      if (text.includes('Ready in') || text.includes('Local:') || text.includes('started server') || text.includes('ready - started server')) {
-        if (!appReady) {
-          appReady = true;
-          log(`${colors.green}✓${colors.reset} App started successfully`);
-          resolve(child);
-        }
+      stdoutBuffer += text;
+      if (logStreaming) {
+        process.stdout.write(`${colors.magenta}[next stdout]${colors.reset} ${text}`);
+      }
+      if (/ready - started server/i.test(text) || /Ready in/i.test(text) || /Local:/i.test(text)) {
+        handleReady('stdout');
       }
     });
 
     child.stderr.on('data', (data) => {
       const text = data.toString();
-      errorOutput += text;
-      // Some Next.js messages go to stderr but are not errors
-      if (text.includes('Ready in') || text.includes('Local:') || text.includes('started server')) {
-        if (!appReady) {
-          appReady = true;
-          log(`${colors.green}✓${colors.reset} App started successfully`);
-          resolve(child);
-        }
+      stderrBuffer += text;
+      if (logStreaming) {
+        process.stderr.write(`${colors.magenta}[next stderr]${colors.reset} ${text}`);
       }
-    });
-
-    // Timeout after 30 seconds
-    const timeout = setTimeout(() => {
-      if (!appReady) {
-        child.kill();
-        log(`${colors.red}✗${colors.reset} App failed to start within 30 seconds`);
-        log(`${colors.yellow}Output:${colors.reset}\n${output}`);
-        log(`${colors.yellow}Errors:${colors.reset}\n${errorOutput}`);
-        reject(new Error('App startup timeout'));
-      }
-    }, 30000);
-
-    child.on('close', (code) => {
-      clearTimeout(timeout);
-      if (!appReady) {
-        log(`${colors.red}✗${colors.reset} App process exited with code ${code}`);
-        log(`${colors.yellow}Output:${colors.reset}\n${output}`);
-        log(`${colors.yellow}Errors:${colors.reset}\n${errorOutput}`);
-        reject(new Error(`App process exited with code ${code}`));
+      if (/ready - started server/i.test(text) || /Ready in/i.test(text) || /Local:/i.test(text)) {
+        handleReady('stderr');
       }
     });
 
     child.on('error', (err) => {
       clearTimeout(timeout);
-      log(`${colors.red}✗${colors.reset} Failed to start app: ${err.message}`);
-      reject(err);
+      reject(new Error(`Failed to start Next.js server: ${err.message}`));
     });
+
+    child.on('close', (code, signal) => {
+      clearTimeout(timeout);
+      if (!resolved) {
+        const reason = signal ? `signal ${signal}` : `exit code ${code}`;
+        const details = [stdoutBuffer, stderrBuffer].filter(Boolean).join('\n---\n');
+        reject(new Error(`Next.js server exited before ready (${reason}).\n${details}`));
+      }
+    });
+  });
+
+  return appServerReadyPromise;
+}
+
+async function stopAppServer() {
+  if (!appServerProcess) {
+    return;
+  }
+
+  const child = appServerProcess;
+  appServerProcess = null;
+  appServerReadyPromise = null;
+
+  return new Promise((resolve) => {
+    child.once('close', () => {
+      log(`${colors.blue}▶${colors.reset} Next.js server terminated`);
+      resolve();
+    });
+
+    child.kill('SIGTERM');
+
+    setTimeout(() => {
+      if (!child.killed) {
+        child.kill('SIGKILL');
+      }
+    }, 5_000);
   });
 }
 
-function testRoute(url, expectedContent = null) {
+function testRoute({ url, expectedContent }, port) {
   return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
+    const fullUrl = new URL(url, `http://127.0.0.1:${port}`);
     const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || PORTS.CI_HEALTH_CHECK,
-      path: urlObj.pathname,
+      hostname: fullUrl.hostname,
+      port: fullUrl.port || port,
+      path: fullUrl.pathname + fullUrl.search,
       method: 'GET',
-      timeout: 10000,
+      timeout: 10_000,
     };
 
     const req = request(options, (res) => {
       let data = '';
-      
+
       res.on('data', (chunk) => {
-        data += chunk;
+        data += chunk.toString();
       });
 
       res.on('end', () => {
-        // Accept 200 (success), 307 (redirect - likely auth redirect), and 401 (unauthorized - expected for protected APIs)
-        if (res.statusCode === 200 || res.statusCode === 307 || res.statusCode === 401) {
-          // Check for basic content validation if expected content provided (only for 200 responses)
+        const acceptableStatus = [200, 307, 308, 401];
+        if (acceptableStatus.includes(res.statusCode)) {
           if (res.statusCode === 200 && expectedContent && !data.includes(expectedContent)) {
-            reject(new Error(`Route ${url} returned 200 but missing expected content: ${expectedContent}`));
+            reject(new Error(`Route ${fullUrl.pathname} returned 200 but missing expected content.`));
             return;
           }
-          // For API endpoints, just check that we got some response
-          if (url.includes('/api/') && data.length === 0) {
-            reject(new Error(`API endpoint ${url} returned empty response`));
+
+          if (fullUrl.pathname.startsWith('/api/') && data.length === 0) {
+            reject(new Error(`API endpoint ${fullUrl.pathname} returned empty response.`));
             return;
           }
-          log(`${colors.green}✓${colors.reset} ${url} - ${res.statusCode} (${data.length} bytes)`);
+
+          log(`${colors.green}✓${colors.reset} ${fullUrl.href} - ${res.statusCode} (${data.length} bytes)`);
           resolve();
-        } else if (res.statusCode === 500 && url.includes('/api/me/role')) {
-          // Special case: /api/me/role might return 500 if not authenticated, which is acceptable
-          log(`${colors.yellow}⚠${colors.reset} ${url} - ${res.statusCode} (${data.length} bytes) - API error expected without auth`);
-          resolve();
-        } else {
-          reject(new Error(`Route ${url} returned ${res.statusCode}`));
+          return;
         }
+
+        if (res.statusCode === 500 && fullUrl.pathname === '/api/me/role') {
+          log(`${colors.yellow}⚠${colors.reset} ${fullUrl.href} - 500 (expected without auth)`);
+          resolve();
+          return;
+        }
+
+        reject(new Error(`Route ${fullUrl.href} returned status ${res.statusCode}`));
       });
     });
 
     req.on('error', (err) => {
-      reject(new Error(`Failed to connect to ${url}: ${err.message}`));
+      reject(new Error(`Failed to connect to ${fullUrl.href}: ${err.message}`));
     });
 
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error(`Request to ${url} timed out`));
+      reject(new Error(`Request to ${fullUrl.href} timed out`));
     });
 
     req.end();
   });
 }
 
-async function runHealthCheck() {
-  let appProcess = null;
-  
-  try {
-    // First verify build output
-    verifyBuildOutput();
-    
-    // Start the app
-    appProcess = await startApp();
-    
-    // Wait a bit for the app to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    
-    // Test critical routes as per Cursor Working Agreement
-    const routes = [
-      { url: `http://localhost:${PORTS.CI_HEALTH_CHECK}/`, expectedContent: '<!DOCTYPE html>' },
-      { url: `http://localhost:${PORTS.CI_HEALTH_CHECK}/dashboard/inventory`, expectedContent: '<!DOCTYPE html>' },
-      { url: `http://localhost:${PORTS.CI_HEALTH_CHECK}/forms/stock-adjustments`, expectedContent: '<!DOCTYPE html>' },
-      { url: `http://localhost:${PORTS.CI_HEALTH_CHECK}/api/me/role`, expectedContent: null }, // API endpoint
-    ];
+async function runHealthCheck({ port, routes }) {
+  await ensureAppServer(port);
 
-    for (const route of routes) {
-      try {
-        await testRoute(route.url, route.expectedContent);
-      } catch (err) {
-        log(`${colors.red}✗${colors.reset} Route test failed: ${err.message}`);
-        throw err;
-      }
+  for (const route of routes) {
+    await testRoute(route, port);
+  }
+
+  log(`${colors.green}✓${colors.reset} All health check routes passed`);
+}
+
+async function runPlaywrightSmoke({ port }) {
+  await ensureAppServer(port);
+
+  await runCommand({
+    command: PNPM_CMD,
+    args: ['run', 'test:e2e:smoke'],
+    env: {
+      ...process.env,
+      CI_VERIFY: 'true',
+      PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${port}`,
+    },
+  });
+}
+
+function createSteps(flags, state) {
+  return [
+    {
+      id: 'typecheck',
+      label: 'TypeScript typecheck',
+      enabled: true,
+      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'typecheck'] }),
+    },
+    {
+      id: 'lint',
+      label: 'ESLint',
+      enabled: true,
+      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'lint'] }),
+    },
+    {
+      id: 'unit',
+      label: 'Vitest unit tests',
+      enabled: true,
+      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'test:unit'] }),
+    },
+    {
+      id: 'build',
+      label: 'Next.js production build',
+      enabled: !flags.noBuild,
+      run: async () => {
+        await runCommand({ command: PNPM_CMD, args: ['run', 'build'] });
+        state.buildCompleted = true;
+      },
+    },
+    {
+      id: 'verify-build',
+      label: 'Verify build artifacts',
+      enabled: !flags.noBuild,
+      run: () => {
+        if (!state.buildCompleted) {
+          throw new Error('Cannot verify build output before build step has completed.');
+        }
+        verifyBuildOutput();
+      },
+    },
+    {
+      id: 'health-check',
+      label: 'Health-check critical routes',
+      enabled: !flags.noBuild && !flags.noHealthCheck,
+      run: () => runHealthCheck({ port: flags.port, routes: defaultRoutes }),
+    },
+    {
+      id: 'playwright-smoke',
+      label: 'Playwright @smoke',
+      enabled: !flags.noBuild && !flags.noE2E,
+      run: () => runPlaywrightSmoke({ port: flags.port }),
+    },
+  ];
+}
+
+async function runSteps(steps) {
+  let passed = 0;
+  const results = [];
+
+  for (const step of steps) {
+    if (!step.enabled) {
+      log(`${colors.yellow}⚠ Skipping ${step.label}${colors.reset}`);
+      results.push({ id: step.id, label: step.label, status: 'skipped', durationMs: 0 });
+      continue;
     }
-    
-    log(`${colors.green}✓${colors.reset} All health check routes passed`);
-    
-  } finally {
-    // Clean up: kill the app process
-    if (appProcess) {
-      appProcess.kill();
-      log(`${colors.blue}▶${colors.reset} App process terminated`);
+
+    log(`\n${STEP_SEPARATOR}`);
+    log(`${colors.bright}${step.label}${colors.reset}`);
+    log(`${STEP_SEPARATOR}`);
+
+    const start = performance.now();
+    try {
+      await step.run();
+      const duration = performance.now() - start;
+      passed += 1;
+      log(`${colors.green}✓${colors.reset} ${step.label} completed in ${formatDuration(duration)}`);
+      results.push({ id: step.id, label: step.label, status: 'passed', durationMs: duration });
+    } catch (error) {
+      const duration = performance.now() - start;
+      log(`${colors.red}✗ ${step.label} failed after ${formatDuration(duration)}${colors.reset}`);
+      log(`${colors.red}Reason:${colors.reset} ${error.message}`);
+      results.push({ id: step.id, label: step.label, status: 'failed', durationMs: duration, error });
+      throw new Error(step.label);
     }
   }
+
+  return { passed, results };
 }
 
 async function main() {
-  log('\n' + '='.repeat(60), colors.bright);
-  log('  CI VERIFICATION (Cursor Working Agreement)', colors.bright);
-  log('='.repeat(60) + '\n', colors.bright);
+  const flags = parseFlags(process.argv.slice(2));
+  const state = { buildCompleted: false };
+  const steps = createSteps(flags, state);
+  const totalEnabled = steps.filter((step) => step.enabled).length;
 
-  const steps = [
-    { name: 'TypeCheck', command: 'npm', args: ['run', 'typecheck'] },
-    { name: 'Lint', command: 'npm', args: ['run', 'lint'] },
-    { name: 'Unit Tests', command: 'npm', args: ['run', 'test:unit'] },
-    // Build step removed: typecheck is sufficient for regression detection
-    // Health check removed: requires app startup, flaky, moved to nightly
-    // E2E Smoke Tests: moved to nightly job
-  ];
+  log(`\n${colors.bright}${STEP_SEPARATOR}`);
+  log('  CI VERIFICATION (Cursor Working Agreement)');
+  log(`${STEP_SEPARATOR}${colors.reset}\n`);
 
-  let passedSteps = 0;
-  const startTime = Date.now();
-
-  for (const step of steps) {
-    try {
-      if (step.command === 'runHealthCheck') {
-        await runHealthCheck();
-      } else {
-        await runCommand(step.command, step.args);
-      }
-      passedSteps++;
-    } catch (err) {
-      log(`\n${colors.red}${'='.repeat(60)}${colors.reset}`, colors.red);
-      log(`  ❌ CI VERIFICATION FAILED AT: ${step.name}`, colors.red);
-      log(`${colors.red}${'='.repeat(60)}${colors.reset}\n`, colors.red);
-      process.exit(1);
+  if (flags.fast) {
+    log(`${colors.yellow}Fast mode enabled (--fast): skipping build, health check, and Playwright smoke tests.${colors.reset}`);
+  } else {
+    const skipMessages = [];
+    if (flags.noBuild) skipMessages.push('build');
+    if (flags.noHealthCheck) skipMessages.push('health-check');
+    if (flags.noE2E) skipMessages.push('e2e smoke');
+    if (skipMessages.length > 0) {
+      log(`${colors.yellow}Skipping: ${skipMessages.join(', ')}${colors.reset}`);
     }
   }
 
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+  log(`${colors.blue}Using port:${colors.reset} ${flags.port}`);
 
-  log(`\n${colors.green}${'='.repeat(60)}${colors.reset}`, colors.green);
-  log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${passedSteps}/${steps.length})`, colors.green);
-  log(`  Duration: ${duration}s`, colors.green);
-  log(`${colors.green}${'='.repeat(60)}${colors.reset}\n`, colors.green);
+  const startTime = performance.now();
+
+  try {
+    const { passed } = await runSteps(steps);
+    const totalDuration = performance.now() - startTime;
+    log(`\n${colors.green}${STEP_SEPARATOR}${colors.reset}`);
+    log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${passed}/${totalEnabled})`);
+    log(`  Duration: ${formatDuration(totalDuration)}`);
+    log(`${colors.green}${STEP_SEPARATOR}${colors.reset}\n`);
+  } finally {
+    await stopAppServer();
+  }
 }
 
-main().catch((err) => {
+process.on('SIGINT', async () => {
+  await stopAppServer();
+  process.exit(1);
+});
+
+process.on('SIGTERM', async () => {
+  await stopAppServer();
+  process.exit(1);
+});
+
+main().catch(async (err) => {
   log(`\n${colors.red}Fatal error:${colors.reset} ${err.message}`, colors.red);
+  await stopAppServer();
   process.exit(1);
 });
 
