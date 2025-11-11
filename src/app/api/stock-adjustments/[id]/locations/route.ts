@@ -87,3 +87,107 @@ export async function GET(req: Request, ctx: AwaitableParams<{ id: string }>) {
   return json({ locations: locations ?? [] }, 200);
 }
 
+type LocationInput = {
+  location: string;
+  qty: number;
+  pos?: number | null;
+};
+
+export async function PUT(req: Request, ctx: AwaitableParams<{ id: string }>) {
+  const { id } = await awaitParams(ctx);
+
+  if (!id || typeof id !== "string" || id.length > 128) {
+    return json({ error: { message: "Invalid id parameter" } }, 400);
+  }
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: { message: "Invalid JSON body" } }, 400);
+  }
+
+  const locations: LocationInput[] = Array.isArray(body?.locations) ? body.locations : [];
+  const previousEntryId = typeof body?.previousEntryId === "string" ? body.previousEntryId : undefined;
+
+  const normalizedLocations = locations
+    .map((loc, index): LocationInput | null => {
+      if (!loc || typeof loc.location !== "string") {
+        return null;
+      }
+      const trimmed = loc.location.trim();
+      if (!trimmed) {
+        return null;
+      }
+      const qtyNumber = typeof loc.qty === "number" ? loc.qty : Number(loc.qty);
+      const posNumber =
+        loc.pos === null || loc.pos === undefined
+          ? index + 1
+          : typeof loc.pos === "number"
+            ? loc.pos
+            : Number(loc.pos);
+
+      return {
+        location: trimmed,
+        qty: Number.isFinite(qtyNumber) ? qtyNumber : 0,
+        pos: Number.isFinite(posNumber) ? posNumber : index + 1,
+      };
+    })
+    .filter((loc): loc is LocationInput => !!loc);
+
+  const sb = await createSupabaseServerClient();
+
+  // Validate entry exists (and user has access via RLS)
+  const { data: entry, error: entryError } = await sb
+    .from("tcm_user_tally_card_entries")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (entryError) {
+    return json({ error: { message: entryError.message } }, 400);
+  }
+
+  if (!entry) {
+    return json({ error: { message: "Entry not found" } }, 404);
+  }
+
+  const deleteEntryIds = [id];
+  if (previousEntryId && previousEntryId !== id) {
+    deleteEntryIds.push(previousEntryId);
+  }
+
+  // Delete existing locations for relevant entry IDs
+  const { error: deleteError } = await sb
+    .from("tcm_user_tally_card_entry_locations")
+    .delete()
+    .in("entry_id", deleteEntryIds);
+
+  if (deleteError) {
+    return json({ error: { message: deleteError.message } }, 400);
+  }
+
+  if (normalizedLocations.length === 0) {
+    return json({ locations: [] }, 200);
+  }
+
+  const insertPayload = normalizedLocations.map((loc) => ({
+    entry_id: id,
+    location: loc.location,
+    qty: loc.qty,
+    pos: loc.pos ?? null,
+  }));
+
+  const { data: inserted, error: insertError } = await sb
+    .from("tcm_user_tally_card_entry_locations")
+    .insert(insertPayload)
+    .select("id, entry_id, location, qty, pos")
+    .order("pos", { ascending: true });
+
+  if (insertError) {
+    return json({ error: { message: insertError.message } }, 400);
+  }
+
+  return json({ locations: inserted ?? [] }, 200);
+}
+

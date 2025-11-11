@@ -62,10 +62,10 @@ export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Si
       <SidebarHeader className="border-b">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+            <SidebarMenuButton asChild>
               <a href="#" className="flex items-center gap-2">
                 <Command className="h-5 w-5 shrink-0" />
-                <span className="truncate text-sm font-semibold sm:text-base">{APP_CONFIG.name}</span>
+                <span className="truncate text-base font-semibold">{APP_CONFIG.name}</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

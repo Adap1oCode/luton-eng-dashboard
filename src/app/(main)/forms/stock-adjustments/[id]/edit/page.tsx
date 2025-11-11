@@ -27,15 +27,16 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
 
   // Use cfg.key as the resource path segment (you set this to "stock-adjustments")
   const resourceKey = stockAdjustmentCreateConfig.key;
+  const isDev = process.env.NODE_ENV !== "production";
+  const { createClient } = await import("@/lib/supabase-server");
+  const sb = await createClient();
+  let anchorTallyCardNumber: string | undefined;
 
   // For SCD2, we need to find the latest entry_id for this tally_card_number
   // The view only shows the latest entry, so if the id in URL is not the latest,
   // we need to find the latest one
   let entryIdToUse = id;
   try {
-    const { createClient } = await import("@/lib/supabase-server");
-    const sb = await createClient();
-    
     // First, get the tally_card_number for this entry
     const { data: entryData } = await sb
       .from("tcm_user_tally_card_entries")
@@ -43,11 +44,15 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
       .eq("id", id)
       .maybeSingle();
     
-    console.log("[EditStockAdjustmentPage] Entry lookup:", {
-      url_id: id,
-      found_entry: !!entryData,
-      tally_card_number: entryData?.tally_card_number,
-    });
+    anchorTallyCardNumber = entryData?.tally_card_number ?? anchorTallyCardNumber;
+
+    if (isDev) {
+      console.log("[EditStockAdjustmentPage] Entry lookup:", {
+        url_id: id,
+        found_entry: !!entryData,
+        tally_card_number: entryData?.tally_card_number,
+      });
+    }
     
     if (entryData?.tally_card_number) {
       // Find the latest entry_id for this tally_card_number
@@ -61,17 +66,19 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
         .limit(1)
         .maybeSingle();
       
-      console.log("[EditStockAdjustmentPage] Latest entry lookup:", {
-        tally_card_number: entryData.tally_card_number,
-        latest_id: latestEntry?.id,
-        latest_updated_at: latestEntry?.updated_at,
-        url_id: id,
-        ids_match: latestEntry?.id === id,
-      });
+      if (isDev) {
+        console.log("[EditStockAdjustmentPage] Latest entry lookup:", {
+          tally_card_number: entryData.tally_card_number,
+          latest_id: latestEntry?.id,
+          latest_updated_at: latestEntry?.updated_at,
+          url_id: id,
+          ids_match: latestEntry?.id === id,
+        });
+      }
       
       if (latestEntry?.id) {
         entryIdToUse = latestEntry.id;
-        if (latestEntry.id !== id) {
+        if (latestEntry.id !== id && isDev) {
           console.log("[EditStockAdjustmentPage] Using latest entry ID instead of URL ID:", {
             url_id: id,
             latest_id: latestEntry.id,
@@ -81,10 +88,14 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     }
   } catch (err) {
     // If we can't find the latest, use the original id
-    console.warn("[EditStockAdjustmentPage] Failed to find latest entry_id, using provided id:", err);
+    if (isDev) {
+      console.warn("[EditStockAdjustmentPage] Failed to find latest entry_id, using provided id:", err);
+    }
   }
-  
-  console.log("[EditStockAdjustmentPage] Final entryIdToUse:", entryIdToUse);
+
+  if (isDev) {
+    console.log("[EditStockAdjustmentPage] Final entryIdToUse:", entryIdToUse);
+  }
 
   let prep: any;
   try {
@@ -116,7 +127,9 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     historyUI = resolved.config.history?.ui;
   } catch (err) {
     // If resource resolution fails, historyUI will be undefined (graceful degradation)
-    console.warn("Failed to resolve resource for history config:", err);
+    if (isDev) {
+      console.warn("Failed to resolve resource for history config:", err);
+    }
   }
 
   // Extract optionsKeys from form config and load options server-side
@@ -125,26 +138,32 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
   // Get warehouse_id from tally card to filter locations
   let warehouseId: string | undefined;
   try {
-    const { createClient } = await import("@/lib/supabase-server");
-    const sb = await createClient();
-    
-    // Get tally_card_number from the entry
-    const tallyCardNumber = prep.defaults?.tally_card_number;
-    if (tallyCardNumber) {
-      // Fetch warehouse_id from tally_cards table
+    const tallyCardNumberRaw = prep.defaults?.tally_card_number ?? anchorTallyCardNumber;
+    const tallyCardNumberValue =
+      typeof tallyCardNumberRaw === "number"
+        ? String(tallyCardNumberRaw)
+        : typeof tallyCardNumberRaw === "string"
+          ? tallyCardNumberRaw
+          : undefined;
+
+    if (tallyCardNumberValue) {
       const { data: tallyCard } = await sb
         .from("tcm_tally_cards")
         .select("warehouse_id")
-        .eq("tally_card_number", tallyCardNumber)
+        .eq("tally_card_number", tallyCardNumberValue)
         .maybeSingle();
-      
+
       if (tallyCard?.warehouse_id) {
         warehouseId = String(tallyCard.warehouse_id);
-        console.log("[EditStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
+        if (isDev) {
+          console.log("[EditStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
+        }
       }
     }
   } catch (err) {
-    console.warn("[EditStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
+    if (isDev) {
+      console.warn("[EditStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
+    }
   }
   
   // Load options with warehouse filter for locations
@@ -157,73 +176,90 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
   const defaults = prep.defaults ?? {};
   
   // Debug: Log what we got from the API
-  console.log("[EditStockAdjustmentPage] Loaded defaults:", {
-    id: entryIdToUse,
-    qty: defaults.qty,
-    location: defaults.location,
-    multi_location: defaults.multi_location,
-    hasLocations: !!defaults.locations,
-    locationsCount: defaults.locations?.length || 0,
-  });
+  if (isDev) {
+    console.log("[EditStockAdjustmentPage] Loaded defaults:", {
+      id: entryIdToUse,
+      qty: defaults.qty,
+      location: defaults.location,
+      multi_location: defaults.multi_location,
+      hasLocations: !!defaults.locations,
+      locationsCount: defaults.locations?.length || 0,
+    });
+  }
   
   if (defaults.multi_location) {
-    // Load locations server-side for multi_location entries
-    // First try the latest entry_id, but if no locations found, try finding them by tally_card_number
     try {
-      const { createClient } = await import("@/lib/supabase-server");
-      const sb = await createClient();
-      
-      // Try to get locations for the latest entry_id
-      let { data: locationsData } = await sb
-        .from("tcm_user_tally_card_entry_locations")
-        .select("id, location, qty, pos")
-        .eq("entry_id", entryIdToUse)
-        .order("pos", { ascending: true });
-      
-      // If no locations found for latest entry_id, find all entry_ids for this tally_card_number
-      // and get locations from the most recent one that has locations
-      if (!locationsData || locationsData.length === 0) {
+      const tallyCardValue = defaults.tally_card_number ?? anchorTallyCardNumber;
+      const tallyCardNumber =
+        typeof tallyCardValue === "number"
+          ? String(tallyCardValue)
+          : typeof tallyCardValue === "string" && tallyCardValue.length > 0
+            ? tallyCardValue
+            : undefined;
+
+      let targetEntryIds: string[] = [entryIdToUse];
+
+      if (!tallyCardNumber) {
         const { data: entryData } = await sb
           .from("tcm_user_tally_card_entries")
           .select("tally_card_number")
           .eq("id", entryIdToUse)
           .maybeSingle();
-        
+
         if (entryData?.tally_card_number) {
-          // Get all entry_ids for this tally_card_number, ordered by updated_at DESC
-          const { data: allEntries } = await sb
+          targetEntryIds = [entryIdToUse];
+          const { data: relatedEntries } = await sb
             .from("tcm_user_tally_card_entries")
             .select("id")
             .eq("tally_card_number", entryData.tally_card_number)
-            .order("updated_at", { ascending: false });
-          
-          // Try each entry_id until we find one with locations
-          if (allEntries) {
-            for (const entry of allEntries) {
-              const { data: locs } = await sb
-                .from("tcm_user_tally_card_entry_locations")
-                .select("id, location, qty, pos")
-                .eq("entry_id", entry.id)
-                .order("pos", { ascending: true });
-              
-              if (locs && locs.length > 0) {
-                locationsData = locs;
-                console.log(`[EditStockAdjustmentPage] Found locations for entry_id ${entry.id} (not latest)`);
-                break;
-              }
+            .order("updated_at", { ascending: false })
+            .order("id", { ascending: false });
+
+          if (relatedEntries && relatedEntries.length > 0) {
+            targetEntryIds = Array.from(new Set([entryIdToUse, ...relatedEntries.map((entry) => entry.id)]));
+          }
+        }
+      } else {
+        const { data: relatedEntries } = await sb
+          .from("tcm_user_tally_card_entries")
+          .select("id")
+          .eq("tally_card_number", tallyCardNumber)
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: false });
+
+        if (relatedEntries && relatedEntries.length > 0) {
+          targetEntryIds = Array.from(new Set([entryIdToUse, ...relatedEntries.map((entry) => entry.id)]));
+        }
+      }
+
+      let locationsData: Array<{ id: string; entry_id: string; location: string; qty: number; pos: number | null }> =
+        [];
+      if (targetEntryIds.length > 0) {
+        const { data: fetchedLocations } = await sb
+          .from("tcm_user_tally_card_entry_locations")
+          .select("id, entry_id, location, qty, pos")
+          .in("entry_id", targetEntryIds)
+          .order("entry_id", { ascending: false })
+          .order("pos", { ascending: true });
+
+        if (fetchedLocations && fetchedLocations.length > 0) {
+          for (const candidateId of targetEntryIds) {
+            const candidateLocations = fetchedLocations.filter((loc) => loc.entry_id === candidateId);
+            if (candidateLocations.length > 0) {
+              locationsData = candidateLocations;
+              break;
             }
           }
         }
       }
-      
-      defaults.locations = locationsData?.map((loc: any, idx: number) => ({
-        id: loc.id || `temp-${idx}`,
-        location: loc.location,
-        qty: loc.qty,
-        pos: loc.pos ?? (idx + 1),
-      })) || [];
-      
-      console.log("[EditStockAdjustmentPage] Loaded locations:", defaults.locations.length);
+
+      defaults.locations =
+        locationsData?.map((loc: any, idx: number) => ({
+          id: loc.id || `temp-${idx}`,
+          location: loc.location,
+          qty: loc.qty,
+          pos: loc.pos ?? (idx + 1),
+        })) ?? [];
     } catch (err) {
       console.warn("Failed to load locations server-side:", err);
       defaults.locations = [];

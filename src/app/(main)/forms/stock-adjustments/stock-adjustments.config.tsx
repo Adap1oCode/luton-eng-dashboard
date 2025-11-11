@@ -11,6 +11,7 @@ import type {
   ToolbarConfig,
   ChipsConfig,
   ActionConfig,
+  QuickFilter,
 } from "@/components/forms/shell/toolbar/types";
 import {
   makeActionsColumn,
@@ -18,6 +19,8 @@ import {
   type TColumnDef,
 } from "@/components/data-table/view-defaults";
 import type { InlineEditConfig } from "@/components/data-table/inline-edit-cell";
+import { dateFilterToQuery } from "@/lib/filters/date-filter";
+import { ItemNumberCell } from "@/components/data-table/cells/item-number-cell";
 
 // -----------------------------------------------------------------------------
 // Constants (inline - no separate constants.ts file)
@@ -31,15 +34,6 @@ export const RESOURCE_TITLE = "Stock Adjustments" as const;
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
-export type QuickFilter = {
-  id: string;
-  label: string;
-  type: "text" | "enum" | "boolean" | "date";
-  options?: Array<{ value: string; label: string }>;
-  defaultValue?: string;
-  toQueryParam?: (value: string) => Record<string, any>;
-};
-
 export type StockAdjustmentRow = {
   id: string;
   full_name: string;
@@ -70,24 +64,6 @@ export function statusToQuery(status: string): Record<string, any> {
   return {};
 }
 
-/**
- * Date filter → query parameter mapping.
- * Converts "LAST_X_DAYS" to updated_at_gte with ISO date string.
- */
-export function dateFilterToQuery(dateFilter: string): Record<string, any> {
-  if (dateFilter === "ALL") return {};
-  
-  const days = parseInt(dateFilter.replace("LAST_", "").replace("_DAYS", ""));
-  if (isNaN(days)) return {};
-  
-  // Calculate date X days ago
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  date.setHours(0, 0, 0, 0); // Start of day
-  
-  // Return ISO string for Supabase
-  return { updated_at_gte: date.toISOString() };
-}
 
 /**
  * Warehouse filter → query parameter mapping.
@@ -199,23 +175,7 @@ export function buildColumns(onItemNumberClick?: (itemNumber: string | number | 
       header: "Item Number",
       cell: ({ row }) => {
         const value = row.getValue<number | null>("item_number");
-        if (!value) {
-          return <span className="text-muted-foreground">—</span>;
-        }
-        if (onItemNumberClick) {
-          return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onItemNumberClick(value);
-              }}
-              className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200 cursor-pointer"
-            >
-              {String(value)}
-            </button>
-          );
-        }
-        return <span>{String(value)}</span>;
+        return <ItemNumberCell value={value} onClick={onItemNumberClick} />;
       },
       enableSorting: true,
       size: 160,

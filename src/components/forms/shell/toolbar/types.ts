@@ -47,3 +47,12 @@ export type ActionEndpoint = {
 };
 
 export type ActionConfig = Record<string, ActionEndpoint>;
+
+export type QuickFilter = {
+  id: string;
+  label: string;
+  type: "text" | "enum" | "boolean" | "date";
+  options?: Array<{ value: string; label: string }>;
+  defaultValue?: string;
+  toQueryParam?: (value: string) => Record<string, any>;
+};

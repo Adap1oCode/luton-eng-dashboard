@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
-import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
+import { InventoryInfoDialog } from "@/components/dialogs/inventory-info-dialog";
+import { useInventoryDialog } from "@/hooks/use-inventory-dialog";
 
 import type { CompareStockRow } from "./compare-stock.config";
 import { compareStockViewConfig, buildColumns } from "./compare-stock.config";
@@ -21,13 +22,7 @@ export function CompareStockTableClient({
   page,
   pageSize,
 }: CompareStockTableClientProps) {
-  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
-  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
-
-  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
-    setSelectedItemNumber(itemNumber);
-    setShowInventoryDialog(true);
-  }, []);
+  const { showDialog, setShowDialog, selectedItemNumber, handleItemNumberClick } = useInventoryDialog();
 
   const viewConfigWithColumns = useMemo<BaseViewConfig<CompareStockRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
     const config = {
@@ -65,8 +60,8 @@ export function CompareStockTableClient({
         initialColumnVisibility={initialColumnVisibility}
       />
       <InventoryInfoDialog
-        open={showInventoryDialog}
-        onOpenChange={setShowInventoryDialog}
+        open={showDialog}
+        onOpenChange={setShowDialog}
         itemNumber={selectedItemNumber}
       />
     </>

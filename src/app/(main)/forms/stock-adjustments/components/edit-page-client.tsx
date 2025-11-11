@@ -4,6 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import EditWithTabs from "@/components/history/edit-with-tabs";
 import type { FormConfig, ResolvedOptions } from "@/lib/forms/types";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Dynamically import form wrapper with SSR disabled to avoid Radix UI hydration warnings
 // This prevents server-side rendering of Radix UI components which generate different IDs on server vs client
@@ -51,16 +52,18 @@ export default function EditPageClient({
       resourceKey={resourceKey}
       recordId={recordId}
       formNode={
-        <StockAdjustmentFormWrapper
-          formId={formId}
-          config={formConfig}
-          defaults={formDefaults}
-          options={formOptions}
-          entryId={entryId}
-          action={action}
-          method={method}
-          submitLabel={submitLabel}
-        />
+        <ErrorBoundary>
+          <StockAdjustmentFormWrapper
+            formId={formId}
+            config={formConfig}
+            defaults={formDefaults}
+            options={formOptions}
+            entryId={entryId}
+            action={action}
+            method={method}
+            submitLabel={submitLabel}
+          />
+        </ErrorBoundary>
       }
       historyUI={historyUI}
     />

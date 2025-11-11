@@ -11,7 +11,7 @@ import * as React from "react";
 
 // Public props kept small and stable so resource pages stay tiny
 export type FormShellProps = {
-  // Small page title visible above the header card (same as list pages)
+  // Title prop kept for backward compatibility but no longer rendered (removed top title)
   title: string;
 
   // Big header inside the header card
@@ -66,15 +66,10 @@ export default function FormShell({
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Outer page padding (same as Requisition) */}
         <div className="w-full p-4 sm:p-6">
-          {/* Small page title above everything for parity with list pages */}
-          <div className={`mx-auto mb-6 ${contentMaxWidthClassName}`}>
-            <h1 className="text-foreground text-2xl font-bold sm:text-3xl">{title}</h1>
-          </div>
-
-          {/* Center the header, sections, and footer. No default max width. */}
-          <div className={`mx-auto space-y-6 ${contentMaxWidthClassName}`}>
-            {/* Header card */}
-            <section aria-labelledby="form-header" className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          {/* Main content container - single rounded card */}
+          <div className={`mx-auto rounded-md bg-white shadow-sm dark:bg-gray-800 p-6 space-y-6 ${contentMaxWidthClassName}`}>
+            {/* Header section */}
+            <section aria-labelledby="form-header">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="flex-shrink-0 rounded-lg bg-gray-100 p-3 dark:bg-gray-700">
                   {headerIcon ?? (
@@ -103,9 +98,9 @@ export default function FormShell({
               </div>
             </section>
 
-            {/* Optional alert region (separate white card) */}
+            {/* Optional alert region */}
             {alertSlot ? (
-              <section aria-live="polite" className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+              <section aria-live="polite">
                 {alertSlot}
               </section>
             ) : null}
@@ -137,14 +132,13 @@ function FooterActions({ sticky, children }: { sticky: boolean; children: React.
   return (
     <footer
       className={[
-        "rounded-lg bg-white shadow-sm dark:bg-gray-800",
-        "border border-gray-200 dark:border-gray-700",
+        "border-t border-gray-200 dark:border-gray-700 pt-4 -mx-6 -mb-6 px-6 pb-6",
         sticky ? "sticky" : "",
       ].join(" ")}
       style={sticky ? { bottom: 0 } : undefined}
       aria-label="Form Actions"
     >
-      <div className="flex flex-col items-start justify-between gap-4 px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start justify-between gap-4 py-3 sm:flex-row sm:items-center">
         {children}
       </div>
     </footer>

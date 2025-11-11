@@ -1,16 +1,15 @@
+// -----------------------------------------------------------------------------
+// FILE: src/app/(main)/forms/compare-stock/compare-stock.config.tsx
+// TYPE: Unified config for Compare Stock screen
+// PURPOSE: Single config file (aligned with products/users pattern)
+// NOTE: JSX in buildColumns() is fine - functions are called in client context
+// -----------------------------------------------------------------------------
+
 import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
-import type { ToolbarConfig, ActionConfig } from "@/components/forms/shell/toolbar/types";
+import type { ToolbarConfig, ActionConfig, QuickFilter } from "@/components/forms/shell/toolbar/types";
 import type { BaseViewConfig, TColumnDef } from "@/components/data-table/view-defaults";
-
-export type QuickFilter = {
-  id: string;
-  label: string;
-  type: "text" | "enum" | "boolean" | "date";
-  options?: Array<{ value: string; label: string }>;
-  defaultValue?: string;
-  toQueryParam?: (value: string) => Record<string, any>;
-};
+import { ItemNumberCell } from "@/components/data-table/cells/item-number-cell";
 
 export type CompareStockRow = {
   id: string;
@@ -145,23 +144,7 @@ export function buildColumns(onItemNumberClick?: (itemNumber: string | number | 
       header: "Item Number",
       cell: ({ row }) => {
         const value = row.getValue<string | null>("item_number");
-        if (!value) {
-          return <span className="text-muted-foreground">—</span>;
-        }
-        if (onItemNumberClick) {
-          return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onItemNumberClick(value);
-              }}
-              className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200 cursor-pointer"
-            >
-              {value}
-            </button>
-          );
-        }
-        return <span>{value}</span>;
+        return <ItemNumberCell value={value} onClick={onItemNumberClick} />;
       },
       enableSorting: false,
       size: 160,

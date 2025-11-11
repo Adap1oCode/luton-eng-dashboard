@@ -19,8 +19,8 @@ export default function SectionCard({ title, defaultOpen = true, children, heade
   const [open, setOpen] = React.useState(defaultOpen);
 
   return (
-    <div className="mb-6 rounded-lg bg-white shadow-sm dark:bg-gray-800">
-      <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
+    <div className="mb-6">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         <div className="flex items-center gap-2">
           {headerRight}

@@ -6,6 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { DynamicForm } from "@/components/forms/dynamic-form";
 import { useRouter } from "next/navigation";
 import { useNotice } from "@/components/ui/notice";
+import { BackgroundLoader } from "@/components/ui/background-loader";
 import { extractErrorMessage } from "@/lib/forms/extract-error";
 import StockAdjustmentFormWithLocations from "./stock-adjustment-form-with-locations";
 import SubmitButtonWrapper from "./submit-button-wrapper";
@@ -68,6 +69,23 @@ export default function StockAdjustmentFormWrapper({
   const notice = useNotice();
   const [submitting, setSubmitting] = React.useState(false);
   const [currentLocations, setCurrentLocations] = React.useState<any[]>([]);
+  const [loadingMessage, setLoadingMessage] = React.useState<string | null>(null);
+  const isDev = process.env.NODE_ENV !== "production";
+  const devLog = (...args: Parameters<typeof console.log>) => {
+    if (isDev) {
+      console.log(...args);
+    }
+  };
+  const devWarn = (...args: Parameters<typeof console.warn>) => {
+    if (isDev) {
+      console.warn(...args);
+    }
+  };
+  const devError = (...args: Parameters<typeof console.error>) => {
+    if (isDev) {
+      console.error(...args);
+    }
+  };
   
   // Stable callback for LocationsCapture
   const handleLocationsReady = React.useCallback((locations: any[]) => {
@@ -100,7 +118,8 @@ export default function StockAdjustmentFormWrapper({
   }, [config]);
 
   return (
-    <DynamicForm
+    <>
+      <DynamicForm
       id={formId}
       config={configWithToggle}
       defaults={defaults}
@@ -109,6 +128,18 @@ export default function StockAdjustmentFormWrapper({
           onSubmit={async (values) => {
         if (submitting) return;
         setSubmitting(true);
+        setLoadingMessage("Saving stock adjustment…");
+
+        const baselineLocations = Array.isArray(defaults?.locations)
+          ? defaults.locations.map((loc: any, idx: number) => ({
+              location: String(loc?.location ?? "").trim(),
+              qty: typeof loc?.qty === "number" ? loc.qty : Number(loc?.qty) || 0,
+              pos: typeof loc?.pos === "number" ? loc.pos : idx + 1,
+            }))
+          : [];
+        let rollbackEntryId = entryId;
+        let currentOperation = "Saving stock adjustment";
+
         try {
           // Pre-process values: if multi_location is true, clear parent location/qty
           const processedValues = { ...values };
@@ -149,7 +180,7 @@ export default function StockAdjustmentFormWrapper({
                 pos: idx + 1,
               }));
               locationsToUse.push(...parsedLocations);
-              console.log("[StockAdjustmentFormWrapper] Parsed location string into locations array:", parsedLocations);
+            devLog("[StockAdjustmentFormWrapper] Parsed location string into locations array:", parsedLocations);
             }
           }
           
@@ -162,33 +193,34 @@ export default function StockAdjustmentFormWrapper({
           // 4. Second call updates parent with aggregated values (qty, location string)
           const firstCallPayload = { ...processedValues };
           
-          console.log("[StockAdjustmentFormWrapper] Before stripping - firstCallPayload keys:", Object.keys(firstCallPayload));
-          console.log("[StockAdjustmentFormWrapper] Before stripping - isMultiLocation:", isMultiLocation);
-          console.log("[StockAdjustmentFormWrapper] Before stripping - multi_location from values:", processedValues.multi_location);
-          console.log("[StockAdjustmentFormWrapper] Before stripping - multi_location from defaults:", defaults?.multi_location);
-          console.log("[StockAdjustmentFormWrapper] Before stripping - locationsToUse.length:", locationsToUse.length);
-          console.log("[StockAdjustmentFormWrapper] Before stripping - has location:", 'location' in firstCallPayload, firstCallPayload.location);
-          console.log("[StockAdjustmentFormWrapper] Before stripping - has qty:", 'qty' in firstCallPayload, firstCallPayload.qty);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - firstCallPayload keys:", Object.keys(firstCallPayload));
+          devLog("[StockAdjustmentFormWrapper] Before stripping - isMultiLocation:", isMultiLocation);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - multi_location from values:", processedValues.multi_location);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - multi_location from defaults:", defaults?.multi_location);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - locationsToUse.length:", locationsToUse.length);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - has location:", "location" in firstCallPayload, firstCallPayload.location);
+          devLog("[StockAdjustmentFormWrapper] Before stripping - has qty:", "qty" in firstCallPayload, firstCallPayload.qty);
           
           if (isMultiLocation) {
             const hadLocation = 'location' in firstCallPayload;
             const hadQty = 'qty' in firstCallPayload;
             delete firstCallPayload.location;
             delete firstCallPayload.qty;
-            console.log("[StockAdjustmentFormWrapper] Multi-location mode: Stripped location and qty from first SCD2 call", {
+            devLog("[StockAdjustmentFormWrapper] Multi-location mode: Stripped location and qty from first SCD2 call", {
               hadLocation,
               hadQty,
               remainingKeys: Object.keys(firstCallPayload),
             });
           } else {
-            console.log("[StockAdjustmentFormWrapper] Single-location mode: Keeping location and qty in first SCD2 call");
+            devLog("[StockAdjustmentFormWrapper] Single-location mode: Keeping location and qty in first SCD2 call");
           }
           
           const endpoint = action ?? `/api/forms/${config.key}`;
           
-          console.log("[StockAdjustmentFormWrapper] First SCD2 call - endpoint:", endpoint);
-          console.log("[StockAdjustmentFormWrapper] First SCD2 call - payload:", JSON.stringify(firstCallPayload, null, 2));
+          devLog("[StockAdjustmentFormWrapper] First SCD2 call - endpoint:", endpoint);
+          devLog("[StockAdjustmentFormWrapper] First SCD2 call - payload:", JSON.stringify(firstCallPayload, null, 2));
           
+          currentOperation = "Saving stock adjustment details";
           let res: Response;
           try {
             res = await fetch(endpoint, {
@@ -197,13 +229,13 @@ export default function StockAdjustmentFormWrapper({
               body: JSON.stringify(firstCallPayload),
             });
           } catch (fetchError: any) {
-            console.error("[StockAdjustmentFormWrapper] Fetch failed:", fetchError);
+            devError("[StockAdjustmentFormWrapper] Fetch failed:", fetchError);
             throw new Error(`Network error: ${fetchError?.message || "Failed to connect to server"}`);
           }
 
           if (!res.ok) {
             const msg = await extractErrorMessage(res);
-            console.error("[StockAdjustmentFormWrapper] API error:", res.status, msg);
+            devError("[StockAdjustmentFormWrapper] API error:", res.status, msg);
             throw new Error(msg);
           }
 
@@ -212,8 +244,9 @@ export default function StockAdjustmentFormWrapper({
           // Get the entry ID (new for create, updated for edit via SCD2)
           // IMPORTANT: With SCD2, if a new row was created, result.row.id will be the NEW ID
           currentEntryId = result?.row?.id || result?.id || entryId;
+          rollbackEntryId = currentEntryId;
           
-          console.log("[StockAdjustmentFormWrapper] Update response:", {
+          devLog("[StockAdjustmentFormWrapper] Update response:", {
             old_entryId: entryId,
             new_entryId: currentEntryId,
             result_row_id: result?.row?.id,
@@ -229,99 +262,48 @@ export default function StockAdjustmentFormWrapper({
 
           // Step 2: If multi_location is true, update locations via resource API
           if (isMultiLocation) {
-            // Filter and map locations - remove temp IDs, ensure clean format
             const cleanLocations = locationsToUse
-              .filter((loc: any) => loc && loc.location && typeof loc.location === "string" && loc.location.trim())
+              .filter((loc: any) => loc && typeof loc.location === "string" && loc.location.trim())
               .map((loc: any, idx: number) => ({
-                entry_id: currentEntryId,
                 location: String(loc.location).trim(),
                 qty: typeof loc.qty === "number" ? loc.qty : Number(loc.qty) || 0,
-                pos: typeof loc.pos === "number" ? loc.pos : (idx + 1),
+                pos: typeof loc.pos === "number" ? loc.pos : idx + 1,
               }));
-            
-            console.log("[StockAdjustmentFormWrapper] Updating locations via resource API:", cleanLocations.length);
-            
-            // Get existing locations for this entry
-            const existingRes = await fetch(
-              `/api/tcm_user_tally_card_entry_locations?entry_id=${currentEntryId}`
-            );
-            
-            if (!existingRes.ok) {
-              throw new Error("Failed to fetch existing locations");
+
+            devLog("[StockAdjustmentFormWrapper] Synchronizing locations via batch endpoint:", cleanLocations.length);
+            setLoadingMessage("Updating location breakdown…");
+            currentOperation = "Updating location breakdown";
+            const syncRes = await fetch(`/api/stock-adjustments/${currentEntryId}/locations`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                previousEntryId: entryId,
+                locations: cleanLocations,
+              }),
+            });
+
+            if (!syncRes.ok) {
+              const errorText = await syncRes.text();
+              throw new Error(`Failed to save locations: ${errorText || syncRes.statusText}`);
             }
-            
-            const existingData = await existingRes.json();
-            const existingLocations = existingData.rows || [];
-            
-            // Delete all existing locations
-            if (existingLocations.length > 0) {
-              const deleteIds = existingLocations.map((loc: any) => loc.id);
-              const deleteRes = await fetch(`/api/tcm_user_tally_card_entry_locations/bulk`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids: deleteIds }),
-              });
-              
-              if (!deleteRes.ok) {
-                throw new Error("Failed to delete existing locations");
-              }
-            }
-            
-            // Insert new locations
-            if (cleanLocations.length > 0) {
-              console.log("[StockAdjustmentFormWrapper] Inserting", cleanLocations.length, "locations with entry_id:", currentEntryId);
-              let insertedCount = 0;
-              for (const loc of cleanLocations) {
-                console.log("[StockAdjustmentFormWrapper] Creating location:", loc.location, "for entry_id:", loc.entry_id);
-                const createRes = await fetch(`/api/tcm_user_tally_card_entry_locations`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(loc),
-                });
-                
-                if (!createRes.ok) {
-                  const errorText = await createRes.text();
-                  console.error("[StockAdjustmentFormWrapper] Failed to create location:", loc.location, "Error:", errorText);
-                  throw new Error(`Failed to create location: ${loc.location} - ${errorText}`);
-                }
-                insertedCount++;
-              }
-              console.log("[StockAdjustmentFormWrapper] Successfully inserted", insertedCount, "locations");
-            } else {
-              console.warn("[StockAdjustmentFormWrapper] No locations to insert");
-            }
-            
-            // Step 3: Aggregate locations and update parent with aggregated values
-            // CRITICAL: We must fetch the locations we just saved to calculate aggregates
-            // This ensures we're using the actual saved data, not form state
-            console.log("[StockAdjustmentFormWrapper] Fetching saved locations for aggregation, entry_id:", currentEntryId);
-            const locationsRes = await fetch(
-              `/api/tcm_user_tally_card_entry_locations?entry_id=${currentEntryId}`
-            );
-            
-            if (!locationsRes.ok) {
-              const errorText = await locationsRes.text();
-              console.error("[StockAdjustmentFormWrapper] Failed to fetch locations for aggregation:", errorText);
-              throw new Error(`Failed to fetch locations for aggregation: ${errorText}`);
-            }
-            
-            const locationsData = await locationsRes.json();
-            const finalLocations = locationsData.rows || [];
-            
-            console.log("[StockAdjustmentFormWrapper] Aggregating", finalLocations.length, "locations");
-            
-            const totalQty = finalLocations.reduce((sum: number, loc: any) => sum + (loc.qty || 0), 0);
-            const locationsText = finalLocations.map((loc: any) => loc.location).filter(Boolean).join(", ") || null;
-            
-            console.log("[StockAdjustmentFormWrapper] Aggregated values:", {
+
+            const syncPayload = await syncRes.json().catch(() => ({ locations: [] }));
+            const savedLocations = Array.isArray(syncPayload.locations) ? syncPayload.locations : [];
+
+            const totalQty = savedLocations.reduce((sum: number, loc: any) => sum + (loc.qty || 0), 0);
+            const locationsText = savedLocations.map((loc: any) => loc.location).filter(Boolean).join(", ") || null;
+
+            devLog("[StockAdjustmentFormWrapper] Aggregated values:", {
               totalQty,
               locationsText,
-              locationsCount: finalLocations.length,
+              locationsCount: savedLocations.length,
             });
-            
+
             // Update parent with aggregated values via SCD2
             // This second call will create a new SCD2 row if qty or location string changed
-            console.log("[StockAdjustmentFormWrapper] Making second SCD2 call with aggregated values");
+            setLoadingMessage("Finalizing stock adjustment…");
+            devLog("[StockAdjustmentFormWrapper] Making second SCD2 call with aggregated values");
+            currentOperation = "Finalizing quantity totals";
             const scd2Res = await fetch(`/api/stock-adjustments/${currentEntryId}/actions/patch-scd2`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -340,7 +322,7 @@ export default function StockAdjustmentFormWrapper({
             // Update currentEntryId in case SCD2 created a new row
             const newEntryId = scd2Result?.row?.id || currentEntryId;
             
-            console.log("[StockAdjustmentFormWrapper] Second SCD2 call result:", {
+            devLog("[StockAdjustmentFormWrapper] Second SCD2 call result:", {
               old_entryId: currentEntryId,
               new_entryId: newEntryId,
               ids_match: newEntryId === currentEntryId,
@@ -349,108 +331,64 @@ export default function StockAdjustmentFormWrapper({
             
             // If SCD2 created a new row, we need to move locations to the new entry_id
             if (newEntryId !== currentEntryId) {
-              console.log("[StockAdjustmentFormWrapper] SCD2 created new row, moving locations from", currentEntryId, "to", newEntryId);
-              
-              // Fetch locations from old entry_id
-              const oldLocationsRes = await fetch(
-                `/api/tcm_user_tally_card_entry_locations?entry_id=${currentEntryId}`
-              );
-              
-              if (oldLocationsRes.ok) {
-                const oldLocationsData = await oldLocationsRes.json();
-                const oldLocations = oldLocationsData.rows || [];
-                
-                console.log("[StockAdjustmentFormWrapper] Found locations to move:", oldLocations.length);
-                
-                if (oldLocations.length > 0) {
-                  // Delete old locations
-                  const deleteIds = oldLocations.map((loc: any) => loc.id);
-                  const deleteRes = await fetch(`/api/tcm_user_tally_card_entry_locations/bulk`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ids: deleteIds }),
-                  });
-                  
-                  if (!deleteRes.ok) {
-                    console.error("[StockAdjustmentFormWrapper] Failed to delete old locations");
-                    throw new Error("Failed to delete old locations");
-                  }
-                  
-                  console.log("[StockAdjustmentFormWrapper] Deleted", deleteIds.length, "old locations");
-                  
-                  // Insert locations with new entry_id
-                  let insertedCount = 0;
-                  for (const loc of oldLocations) {
-                    const createRes = await fetch(`/api/tcm_user_tally_card_entry_locations`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        entry_id: newEntryId,
-                        location: loc.location,
-                        qty: loc.qty,
-                        pos: loc.pos,
-                      }),
-                    });
-                    
-                    if (!createRes.ok) {
-                      console.error("[StockAdjustmentFormWrapper] Failed to create location:", loc.location);
-                      throw new Error(`Failed to create location: ${loc.location}`);
-                    }
-                    insertedCount++;
-                  }
-                  
-                  console.log("[StockAdjustmentFormWrapper] Inserted", insertedCount, "locations with new entry_id:", newEntryId);
-                } else {
-                  console.warn("[StockAdjustmentFormWrapper] No locations found to move from entry_id:", currentEntryId);
-                }
-              } else {
-                console.warn("[StockAdjustmentFormWrapper] Failed to fetch old locations, status:", oldLocationsRes.status);
+              setLoadingMessage("Synchronizing latest revision…");
+              devLog("[StockAdjustmentFormWrapper] SCD2 created new row, synchronizing locations to new entry", newEntryId);
+              currentOperation = "Linking locations to latest revision";
+              const moveRes = await fetch(`/api/stock-adjustments/${newEntryId}/locations`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  previousEntryId: currentEntryId,
+                  locations: savedLocations.map((loc: any, idx: number) => ({
+                    location: loc.location,
+                    qty: loc.qty,
+                    pos: loc.pos ?? idx + 1,
+                  })),
+                }),
+              });
+
+              if (!moveRes.ok) {
+                const moveText = await moveRes.text();
+                throw new Error(`Failed to move locations to latest entry: ${moveText || moveRes.statusText}`);
               }
-              
+
               currentEntryId = newEntryId;
+              rollbackEntryId = newEntryId;
             } else {
-              console.log("[StockAdjustmentFormWrapper] No new row created, locations already at correct entry_id:", currentEntryId);
+              devLog("[StockAdjustmentFormWrapper] No new row created, locations already at correct entry_id:", currentEntryId);
             }
           } else {
             // Single location mode: clear any existing locations
             if (currentEntryId) {
-              const existingRes = await fetch(
-                `/api/tcm_user_tally_card_entry_locations?entry_id=${currentEntryId}`
-              );
-              
-              if (existingRes.ok) {
-                const existingData = await existingRes.json();
-                const existingLocations = existingData.rows || [];
-                
-                if (existingLocations.length > 0) {
-                  const deleteIds = existingLocations.map((loc: any) => loc.id);
-                  await fetch(`/api/tcm_user_tally_card_entry_locations/bulk`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ids: deleteIds }),
-                  });
-                }
-              }
+              currentOperation = "Clearing previous location breakdown";
+              setLoadingMessage("Clearing location history…");
+              await fetch(`/api/stock-adjustments/${currentEntryId}/locations`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  previousEntryId: entryId,
+                  locations: [],
+                }),
+              });
             }
           }
 
           // Redirect to edit page using the FINAL entry ID (after all SCD2 operations)
           // CRITICAL: With SCD2, currentEntryId may have changed multiple times
           // We must use the final value to ensure we load the correct (latest) record
-          console.log("[StockAdjustmentFormWrapper] Final redirect with entry ID:", currentEntryId);
+          setLoadingMessage("Refreshing latest data…");
+          devLog("[StockAdjustmentFormWrapper] Final redirect with entry ID:", currentEntryId);
           
           if (currentEntryId) {
             const base = config.key ? `/forms/${config.key}` : `/forms`;
             const redirectUrl = `${base}/${currentEntryId}/edit`;
-            console.log("[StockAdjustmentFormWrapper] Redirecting to:", redirectUrl);
+            devLog("[StockAdjustmentFormWrapper] Redirecting to:", redirectUrl);
             
-            // Use replace to avoid adding to history, then refresh to force re-fetch
-            router.replace(redirectUrl);
-            // Force refresh to ensure fresh data is loaded (especially important for SCD2 where new row may have been created)
-            // Small delay to ensure navigation completes before refresh
-            setTimeout(() => {
+            if (currentEntryId === entryId) {
               router.refresh();
-            }, 100);
+            } else {
+              router.replace(redirectUrl);
+            }
             
             notice.open({
               variant: "success",
@@ -459,8 +397,9 @@ export default function StockAdjustmentFormWrapper({
                 ? "Stock adjustment updated successfully." 
                 : "Stock adjustment created successfully.",
             });
+            setLoadingMessage(null);
           } else {
-            console.warn("[StockAdjustmentFormWrapper] No entry ID for redirect, refreshing current page");
+            devWarn("[StockAdjustmentFormWrapper] No entry ID for redirect, refreshing current page");
             router.refresh();
             notice.open({
               variant: "success",
@@ -469,29 +408,77 @@ export default function StockAdjustmentFormWrapper({
                 ? "Stock adjustment updated successfully." 
                 : "Stock adjustment created successfully.",
             });
+            setLoadingMessage(null);
           }
         } catch (err) {
-          const message =
+          if (rollbackEntryId && typeof rollbackEntryId === "string") {
+            try {
+              const rollbackLocationsPayload =
+                defaults?.multi_location && baselineLocations.length > 0 ? baselineLocations : [];
+              await fetch(`/api/stock-adjustments/${rollbackEntryId}/locations`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  previousEntryId: entryId,
+                  locations: rollbackLocationsPayload,
+                }),
+              });
+
+              const rollbackParentPayload: Record<string, any> = {
+                multi_location: Boolean(defaults?.multi_location),
+              };
+
+              if (defaults?.qty !== undefined) {
+                rollbackParentPayload.qty = defaults.qty ?? null;
+              }
+              if (defaults?.location !== undefined) {
+                rollbackParentPayload.location = defaults.location ?? null;
+              }
+              if (defaults?.reason_code !== undefined) {
+                rollbackParentPayload.reason_code = defaults.reason_code ?? null;
+              }
+              if (defaults?.note !== undefined) {
+                rollbackParentPayload.note = defaults.note ?? null;
+              }
+
+              await fetch(`/api/stock-adjustments/${rollbackEntryId}/actions/patch-scd2`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(rollbackParentPayload),
+              });
+            } catch (rollbackError) {
+              devError("[StockAdjustmentFormWrapper] Rollback failed:", rollbackError);
+            }
+          }
+
+          const baseMessage =
             err instanceof Error
               ? err.message
               : typeof err === "string"
                 ? err
                 : "Error saving. Please review and try again.";
+          const message = `${currentOperation} failed: ${baseMessage}`;
 
           notice.open({
             variant: "error",
             title: "Update failed",
             message,
           });
+          setLoadingMessage(null);
         } finally {
           setSubmitting(false);
+          setLoadingMessage(null);
         }
       }}
     >
-      <LocationsCapture onLocationsReady={handleLocationsReady} />
-      <StockAdjustmentFormWithLocations entryId={entryId} options={options} />
-      <SubmitButtonWrapper formId={formId} />
-    </DynamicForm>
+        <LocationsCapture onLocationsReady={handleLocationsReady} />
+        <StockAdjustmentFormWithLocations entryId={entryId} options={options} />
+        <SubmitButtonWrapper formId={formId} />
+      </DynamicForm>
+      {loadingMessage ? (
+        <BackgroundLoader message={loadingMessage} position="top-center" size="md" />
+      ) : null}
+    </>
   );
 }
 

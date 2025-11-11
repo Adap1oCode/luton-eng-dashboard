@@ -40,17 +40,17 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full"
             >
-              <Avatar className="h-6 w-6 shrink-0 rounded-lg grayscale sm:h-8 sm:w-8">
+            <Avatar className="h-8 w-8 shrink-0 rounded-lg grayscale">
                 <AvatarImage src={user.avatar ?? undefined} alt={user.name} />
-                <AvatarFallback className="rounded-lg text-xs">{getInitials(user.name)}</AvatarFallback>
+              <AvatarFallback className="rounded-lg text-sm">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate text-xs font-medium sm:text-sm">{user.name}</span>
+              <span className="truncate font-medium">{user.name}</span>
                 {user.role ? (
-                  <span className="text-muted-foreground truncate text-xs">{user.role}</span>
+                <span className="text-muted-foreground truncate text-xs">{user.role}</span>
                 ) : null}
               </div>
-              <EllipsisVertical className="ml-auto size-3 shrink-0 sm:size-4" />
+            <EllipsisVertical className="ml-auto size-4 shrink-0" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 

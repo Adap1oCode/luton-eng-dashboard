@@ -21,10 +21,16 @@ export default function SubmitButtonWrapper({ formId }: Props) {
     control,
     name: ["reason_code", "multi_location", "location", "qty", "locations"],
   });
+  const isDev = process.env.NODE_ENV !== "production";
+  const devLog = (...args: Parameters<typeof console.log>) => {
+    if (isDev) {
+      console.log(...args);
+    }
+  };
 
   const isComplete = useMemo(() => {
     // Debug logging
-    console.log("[SubmitButtonWrapper] isComplete check:", {
+    devLog("[SubmitButtonWrapper] isComplete check:", {
       reasonCode,
       multiLocation,
       locations: locations,
@@ -35,32 +41,32 @@ export default function SubmitButtonWrapper({ formId }: Props) {
 
     const hasReason = typeof reasonCode === "string" && reasonCode.trim().length > 0;
     if (!hasReason) {
-      console.log("[SubmitButtonWrapper] Missing reason code");
+      devLog("[SubmitButtonWrapper] Missing reason code");
       return false;
     }
 
     if (multiLocation) {
       if (!Array.isArray(locations) || locations.length === 0) {
-        console.log("[SubmitButtonWrapper] Multi-location mode but no locations array or empty");
+        devLog("[SubmitButtonWrapper] Multi-location mode but no locations array or empty");
         return false;
       }
       const allValid = locations.every((loc: any) => {
         if (!loc) {
-          console.log("[SubmitButtonWrapper] Location entry is null/undefined:", loc);
+          devLog("[SubmitButtonWrapper] Location entry is null/undefined:", loc);
           return false;
         }
         const hasLocation = typeof loc.location === "string" && loc.location.trim().length > 0;
         const qtyValue = typeof loc.qty === "number" ? loc.qty : Number(loc.qty);
         const hasQty = Number.isFinite(qtyValue);
         if (!hasLocation) {
-          console.log("[SubmitButtonWrapper] Location entry missing location string:", loc);
+          devLog("[SubmitButtonWrapper] Location entry missing location string:", loc);
         }
         if (!hasQty) {
-          console.log("[SubmitButtonWrapper] Location entry missing valid qty:", loc);
+          devLog("[SubmitButtonWrapper] Location entry missing valid qty:", loc);
         }
         return hasLocation && hasQty;
       });
-      console.log("[SubmitButtonWrapper] Multi-location validation result:", allValid);
+      devLog("[SubmitButtonWrapper] Multi-location validation result:", allValid);
       return allValid;
     }
 
@@ -69,7 +75,7 @@ export default function SubmitButtonWrapper({ formId }: Props) {
     const hasQty = qty !== null && qty !== undefined && qty !== "" && Number.isFinite(qtyValue);
 
     const result = hasLocation && hasQty;
-    console.log("[SubmitButtonWrapper] Single-location validation result:", result);
+    devLog("[SubmitButtonWrapper] Single-location validation result:", result);
     return result;
   }, [reasonCode, multiLocation, location, qty, locations]);
 

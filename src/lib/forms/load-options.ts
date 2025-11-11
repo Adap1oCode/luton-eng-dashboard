@@ -4,6 +4,8 @@
 // Server-side utility to load dropdown options from resources.
 // Transforms resource data into Option[] format for form dropdowns.
 
+import { performance } from "perf_hooks";
+
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
 import { OPTIONS_PROVIDERS } from "./options-providers";
 import type { ResolvedOptions, Option } from "./types";
@@ -40,12 +42,14 @@ export async function loadOptions(
   currentValues?: Record<string, any>,
   dynamicFilters?: Record<string, Record<string, any>>
 ): Promise<ResolvedOptions> {
+  const perfStart = performance.now();
   console.log(`[loadOptions] Called with keys:`, keys);
   const results: ResolvedOptions = {};
 
   // Load all options in parallel for better performance
   await Promise.all(
     keys.map(async (key) => {
+      const keyStart = performance.now();
       const provider = OPTIONS_PROVIDERS[key];
       
       if (!provider) {
@@ -83,12 +87,15 @@ export async function loadOptions(
         });
 
         // Fetch from resource API endpoint
+        const fetchStart = performance.now();
         const result = await fetchResourcePage<any>({
           endpoint: `/api/${provider.resourceKey}`,
           page: 1,
           pageSize: 500, // Reasonable limit for dropdowns (not too large)
           extraQuery,
         });
+        const fetchEnd = performance.now();
+        console.log(`[loadOptions] Fetched ${provider.resourceKey} (${key}): ${(fetchEnd - fetchStart).toFixed(2)}ms`);
 
         const { rows, total } = result;
         console.log(`[loadOptions] Fetched ${rows?.length ?? 0} rows (total: ${total}) for "${key}":`, {
@@ -204,6 +211,8 @@ export async function loadOptions(
         }
 
         results[key] = options;
+        const keyEnd = performance.now();
+        console.log(`[loadOptions] Completed ${key}: ${(keyEnd - keyStart).toFixed(2)}ms`);
       } catch (error) {
         console.error(`[loadOptions] Failed to load options for key "${key}":`, error);
         // Continue loading other options even if one fails
@@ -212,6 +221,8 @@ export async function loadOptions(
     })
   );
 
+  const perfEnd = performance.now();
+  console.log(`[loadOptions] Total time: ${(perfEnd - perfStart).toFixed(2)}ms`);
   console.log(`[loadOptions] Final results:`, Object.keys(results).map(k => ({ key: k, count: results[k].length })));
   return results;
 }

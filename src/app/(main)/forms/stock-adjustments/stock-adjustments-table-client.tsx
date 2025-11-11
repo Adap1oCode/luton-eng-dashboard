@@ -7,10 +7,11 @@
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
-import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
+import { InventoryInfoDialog } from "@/components/dialogs/inventory-info-dialog";
+import { useInventoryDialog } from "@/hooks/use-inventory-dialog";
 import type { StockAdjustmentRow } from "./stock-adjustments.config";
 import { stockAdjustmentsViewConfig, buildColumns } from "./stock-adjustments.config";
 
@@ -27,13 +28,7 @@ export function StockAdjustmentsTableClient({
   page,
   pageSize,
 }: StockAdjustmentsTableClientProps) {
-  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
-  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
-
-  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
-    setSelectedItemNumber(itemNumber);
-    setShowInventoryDialog(true);
-  }, []);
+  const { showDialog, setShowDialog, selectedItemNumber, handleItemNumberClick } = useInventoryDialog();
 
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
@@ -77,8 +72,8 @@ export function StockAdjustmentsTableClient({
         initialColumnVisibility={initialColumnVisibility}
       />
       <InventoryInfoDialog
-        open={showInventoryDialog}
-        onOpenChange={setShowInventoryDialog}
+        open={showDialog}
+        onOpenChange={setShowDialog}
         itemNumber={selectedItemNumber}
       />
     </>
