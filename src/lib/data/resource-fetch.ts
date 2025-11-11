@@ -22,6 +22,11 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
     ),
   });
 
+  const headers: Record<string, string> = {
+    "Cache-Control": "no-store",
+    ...(cookieHeader ?? {}),
+  };
+
   let res: Response;
   try {
     // Add timeout to prevent hanging
@@ -29,10 +34,9 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     res = await fetch(`${base}${endpoint}?${qs.toString()}`, {
-      // Enable caching for better performance
-      cache: "force-cache",
-      next: { revalidate: 300 }, // Revalidate every 5 minutes
-      headers: cookieHeader,
+      cache: "no-store",
+      next: { revalidate: 0 },
+      headers,
       signal: controller.signal,
     });
     
@@ -78,14 +82,16 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
   }
 
   const payload: any = (await res.json()) ?? {};
-  console.log(`[fetchResourcePage] Response for ${endpoint}:`, {
-    hasRows: !!payload.rows,
-    hasData: !!payload.data,
-    rowsCount: payload.rows?.length ?? 0,
-    dataCount: payload.data?.length ?? 0,
-    total: payload.total ?? payload.count,
-    payloadKeys: Object.keys(payload),
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[fetchResourcePage] Response for ${endpoint}:`, {
+      hasRows: !!payload.rows,
+      hasData: !!payload.data,
+      rowsCount: payload.rows?.length ?? 0,
+      dataCount: payload.data?.length ?? 0,
+      total: payload.total ?? payload.count,
+      payloadKeys: Object.keys(payload),
+    });
+  }
   
   const rows = (payload.rows ?? payload.data ?? []) as T[];
   const totalCandidate = Number(payload.total ?? payload.count);

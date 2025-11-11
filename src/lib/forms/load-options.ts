@@ -4,9 +4,18 @@
 // Server-side utility to load dropdown options from resources.
 // Transforms resource data into Option[] format for form dropdowns.
 
+import { performance } from "perf_hooks";
+
 import { fetchResourcePage } from "@/lib/data/resource-fetch";
 import { OPTIONS_PROVIDERS } from "./options-providers";
 import type { ResolvedOptions, Option } from "./types";
+
+const isDev = process.env.NODE_ENV !== "production";
+const devLog = (...args: Parameters<typeof console.log>) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
 
 /**
  * Loads options for the given optionsKeys.
@@ -40,12 +49,14 @@ export async function loadOptions(
   currentValues?: Record<string, any>,
   dynamicFilters?: Record<string, Record<string, any>>
 ): Promise<ResolvedOptions> {
-  console.log(`[loadOptions] Called with keys:`, keys);
+  const perfStart = performance.now();
+  devLog(`[loadOptions] Called with keys:`, keys);
   const results: ResolvedOptions = {};
 
   // Load all options in parallel for better performance
   await Promise.all(
     keys.map(async (key) => {
+      const keyStart = performance.now();
       const provider = OPTIONS_PROVIDERS[key];
       
       if (!provider) {
@@ -58,7 +69,7 @@ export async function loadOptions(
         // Handle static options (e.g., reason codes from config)
         if (provider.staticOptions) {
           const staticOpts = await provider.staticOptions();
-          console.log(`[loadOptions] Loaded ${staticOpts.length} static options for "${key}"`);
+          devLog(`[loadOptions] Loaded ${staticOpts.length} static options for "${key}"`);
           results[key] = staticOpts;
           return;
         }
@@ -74,24 +85,27 @@ export async function loadOptions(
           Object.assign(extraQuery, dynamicFilters[key]);
         }
         
-        console.log(`[loadOptions] DEBUG: Provider filter:`, provider.filter, `Dynamic filters:`, dynamicFilters?.[key], `Using extraQuery:`, extraQuery);
+        devLog(`[loadOptions] DEBUG: Provider filter:`, provider.filter, `Dynamic filters:`, dynamicFilters?.[key], `Using extraQuery:`, extraQuery);
 
-        console.log(`[loadOptions] Loading options for key "${key}":`, {
+        devLog(`[loadOptions] Loading options for key "${key}":`, {
           resourceKey: provider.resourceKey,
           endpoint: `/api/${provider.resourceKey}`,
           extraQuery,
         });
 
         // Fetch from resource API endpoint
+        const fetchStart = performance.now();
         const result = await fetchResourcePage<any>({
           endpoint: `/api/${provider.resourceKey}`,
           page: 1,
           pageSize: 500, // Reasonable limit for dropdowns (not too large)
           extraQuery,
         });
+        const fetchEnd = performance.now();
+        devLog(`[loadOptions] Fetched ${provider.resourceKey} (${key}): ${(fetchEnd - fetchStart).toFixed(2)}ms`);
 
         const { rows, total } = result;
-        console.log(`[loadOptions] Fetched ${rows?.length ?? 0} rows (total: ${total}) for "${key}":`, {
+        devLog(`[loadOptions] Fetched ${rows?.length ?? 0} rows (total: ${total}) for "${key}":`, {
           endpoint: `/api/${provider.resourceKey}`,
           extraQuery,
           rows: rows?.slice(0, 3),
@@ -132,7 +146,7 @@ export async function loadOptions(
               return option;
             });
 
-        console.log(`[loadOptions] Transformed ${options.length} options for "${key}":`, options.slice(0, 3));
+        devLog(`[loadOptions] Transformed ${options.length} options for "${key}":`, options.slice(0, 3));
 
         // For edit pages: Ensure current value is included if it's not in the loaded options
         // This handles cases where the current item_number might not be in the first 500 results
@@ -143,7 +157,7 @@ export async function loadOptions(
             const alreadyIncluded = options.some((opt) => opt.id === currentValueStr);
             
             if (!alreadyIncluded) {
-              console.log(`[loadOptions] Current value "${currentValueStr}" not found in loaded options for "${key}", fetching it...`);
+              devLog(`[loadOptions] Current value "${currentValueStr}" not found in loaded options for "${key}", fetching it...`);
               
               try {
                 // Fetch the specific item by its ID (using the primary key field)
@@ -188,7 +202,7 @@ export async function loadOptions(
                     
                     // Add to the beginning of options array so it's visible
                     options.unshift(singleItemOption);
-                    console.log(`[loadOptions] Added current value to options for "${key}":`, singleItemOption);
+                    devLog(`[loadOptions] Added current value to options for "${key}":`, singleItemOption);
                   }
                 } else {
                   console.warn(`[loadOptions] Failed to fetch current value "${currentValueStr}" for "${key}":`, singleItemRes.status);
@@ -198,12 +212,14 @@ export async function loadOptions(
                 // Continue without the current value - user can still select from available options
               }
             } else {
-              console.log(`[loadOptions] Current value "${currentValueStr}" already included in options for "${key}"`);
+              devLog(`[loadOptions] Current value "${currentValueStr}" already included in options for "${key}"`);
             }
           }
         }
 
         results[key] = options;
+        const keyEnd = performance.now();
+        devLog(`[loadOptions] Completed ${key}: ${(keyEnd - keyStart).toFixed(2)}ms`);
       } catch (error) {
         console.error(`[loadOptions] Failed to load options for key "${key}":`, error);
         // Continue loading other options even if one fails
@@ -212,7 +228,9 @@ export async function loadOptions(
     })
   );
 
-  console.log(`[loadOptions] Final results:`, Object.keys(results).map(k => ({ key: k, count: results[k].length })));
+  const perfEnd = performance.now();
+  devLog(`[loadOptions] Total time: ${(perfEnd - perfStart).toFixed(2)}ms`);
+  devLog(`[loadOptions] Final results:`, Object.keys(results).map(k => ({ key: k, count: results[k].length })));
   return results;
 }
 

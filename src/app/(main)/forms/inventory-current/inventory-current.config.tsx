@@ -202,7 +202,7 @@ function buildColumns(): TColumnDef<InventoryCurrentRow>[] {
 // -----------------------------------------------------------------------------
 // View Config
 // -----------------------------------------------------------------------------
-export const inventoryCurrentViewConfig: BaseViewConfig<InventoryCurrentRow> = {
+export const inventoryCurrentViewConfig: BaseViewConfig<InventoryCurrentRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY, // Not used for read-only, but required by type
   formsRouteSegment: ROUTE_SEGMENT,
   idField: "item_number", // Use item_number as identifier
@@ -258,5 +258,8 @@ export const config = {
   viewConfig: inventoryCurrentViewConfig,
   toolbar: inventoryCurrentToolbar,
   actions: inventoryCurrentActions,
+  routeSegment: ROUTE_SEGMENT,
+  permissionPrefix: PERMISSION_PREFIX,
+  chips: undefined,
 };
 

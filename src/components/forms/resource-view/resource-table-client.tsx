@@ -409,6 +409,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     initialData: { rows: initialRows, total: initialTotal },
     initialDataUpdatedAt: Date.now(), // Mark SSR data as fresh
     staleTime: 5 * 60 * 1000, // 5 minutes (matches ResourceListClient)
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: (failureCount, error) => {

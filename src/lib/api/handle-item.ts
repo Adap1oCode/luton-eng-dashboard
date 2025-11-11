@@ -1,4 +1,5 @@
 // src/lib/api/handle-item.ts
+import { performance } from "perf_hooks";
 import { NextResponse } from "next/server";
 
 import { resolveResource } from "@/lib/api/resolve-resource";
@@ -49,17 +50,32 @@ function maybeApplyAppTimestamps(row: Record<string, any>, select: string | unde
 
 /** GET one */
 export async function getOneHandler(_req: Request, resourceKey: string, id: string) {
+  const perfStart = performance.now();
   const invalid = validateParams(resourceKey, id);
   if (invalid) return invalid;
 
   try {
+    const resolveStart = performance.now();
     const entry = await resolveResource(resourceKey);
+    const resolveEnd = performance.now();
+    console.log(`[getOneHandler] resolveResource: ${(resolveEnd - resolveStart).toFixed(2)}ms`);
+    
+    const providerStart = performance.now();
     const provider = createSupabaseServerProvider(entry.config as any);
+    const providerEnd = performance.now();
+    console.log(`[getOneHandler] createSupabaseServerProvider: ${(providerEnd - providerStart).toFixed(2)}ms`);
 
+    const getStart = performance.now();
     const row = await provider.get(id);
+    const getEnd = performance.now();
+    console.log(`[getOneHandler] provider.get(${id}): ${(getEnd - getStart).toFixed(2)}ms`);
+    
     if (!row) {
       return json({ error: { message: "Not found" } }, 404);
     }
+
+    const perfEnd = performance.now();
+    console.log(`[getOneHandler] Total time: ${(perfEnd - perfStart).toFixed(2)}ms`);
 
     return json({ row }, 200);
   } catch (err) {

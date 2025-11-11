@@ -169,30 +169,8 @@ export function DynamicForm({
   // Normalize defaults BEFORE passing to useForm to ensure select fields with number values
   // are converted to strings on initial mount (not just on updates)
   const normalizedDefaults = React.useMemo(() => {
-    const normalized = normalizeDefaults(defaults);
-    // Debug logging for item_number field
-    if (defaults.item_number !== undefined) {
-      console.log("[DynamicForm] item_number normalization:", {
-        original: defaults.item_number,
-        originalType: typeof defaults.item_number,
-        normalized: normalized.item_number,
-        normalizedType: typeof normalized.item_number,
-      });
-    }
-    return normalized;
+    return normalizeDefaults(defaults);
   }, [defaults, config]);
-
-  // DEBUG: Visual marker for item_number normalization
-  const itemNumberDebug = React.useMemo(() => {
-    if (defaults.item_number === undefined) return null;
-    return {
-      original: defaults.item_number,
-      originalType: typeof defaults.item_number,
-      normalized: normalizedDefaults.item_number,
-      normalizedType: typeof normalizedDefaults.item_number,
-      changed: String(defaults.item_number) !== String(normalizedDefaults.item_number),
-    };
-  }, [defaults.item_number, normalizedDefaults.item_number]);
 
   const methods = useForm({
     defaultValues: normalizedDefaults,
@@ -243,28 +221,6 @@ export function DynamicForm({
 
   return (
     <FormProvider {...methods}>
-      {/* DEBUG: Visual marker for item_number normalization */}
-      {itemNumberDebug && (
-        <div className="mb-4 rounded border-2 border-blue-500 bg-blue-50 p-3 text-sm dark:bg-blue-900/20">
-          <div className="font-bold text-blue-700 dark:text-blue-400">🔍 DEBUG: item_number Normalization</div>
-          <div className="mt-1 grid grid-cols-2 gap-2">
-            <div>
-              <div className="font-semibold">Original Default:</div>
-              <code className="bg-white px-1">{String(itemNumberDebug.original)}</code> (type: {itemNumberDebug.originalType})
-            </div>
-            <div>
-              <div className="font-semibold">Normalized Default:</div>
-              <code className="bg-white px-1">{String(itemNumberDebug.normalized)}</code> (type: {itemNumberDebug.normalizedType})
-            </div>
-          </div>
-          {itemNumberDebug.changed && (
-            <div className="mt-2 text-green-600">✅ Conversion applied: {itemNumberDebug.originalType} → {itemNumberDebug.normalizedType}</div>
-          )}
-          {!itemNumberDebug.changed && (
-            <div className="mt-2 text-yellow-600">⚠️ No conversion needed (already {itemNumberDebug.normalizedType})</div>
-          )}
-        </div>
-      )}
       <form
         id={id}
         onSubmit={methods.handleSubmit(
@@ -282,8 +238,6 @@ export function DynamicForm({
             const flattened = flattenErrors(errors);
             if (flattened.length > 0) {
               console.error("Form validation errors:", flattened);
-            } else {
-              console.warn("Form submission blocked by validation, but no field-level errors were reported. Check schema refinements or custom validators.");
             }
           }
         )}

@@ -159,10 +159,10 @@ export function LoginFormV1() {
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
+      <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="mb-3 text-3xl font-bold text-gray-900">Login</h1>
+          <h1 className="mb-3 text-3xl font-bold text-foreground">Login</h1>
         </div>
 
         {/* Form */}
@@ -174,7 +174,7 @@ export function LoginFormV1() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="email" className="text-base font-medium text-gray-700">Email Address</FormLabel>
+                  <FormLabel htmlFor="email" className="text-base font-medium">Email Address</FormLabel>
                   <FormControl>
                     <Input
                       id="email"
@@ -182,7 +182,7 @@ export function LoginFormV1() {
                       placeholder="you@example.com"
                       autoComplete="email"
                       inputMode="email"
-                      className="h-12 rounded-lg border-gray-300 text-base focus:border-orange-500 focus:ring-orange-500"
+                      className="h-12 rounded-lg text-base"
                       disabled={pending}
                       {...field}
                     />
@@ -199,8 +199,8 @@ export function LoginFormV1() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel htmlFor="password" className="text-base font-medium text-gray-700">Password</FormLabel>
-                    <span className="text-xs text-gray-500">Leave empty for a magic link</span>
+                    <FormLabel htmlFor="password" className="text-base font-medium">Password</FormLabel>
+                    <span className="text-xs text-muted-foreground">Leave empty for a magic link</span>
                   </div>
                   <FormControl>
                     <div className="relative">
@@ -209,7 +209,7 @@ export function LoginFormV1() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         autoComplete="current-password"
-                        className="h-12 rounded-lg border-gray-300 pr-12 text-base focus:border-orange-500 focus:ring-orange-500"
+                        className="h-12 rounded-lg pr-12 text-base"
                         disabled={pending}
                         {...field}
                       />
@@ -224,9 +224,9 @@ export function LoginFormV1() {
                         disabled={pending}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          <EyeOff className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                         ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          <Eye className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                         )}
                       </Button>
                     </div>
@@ -247,16 +247,16 @@ export function LoginFormV1() {
                       id="login-remember"
                       checked={!!field.value}
                       onCheckedChange={(v) => field.onChange(Boolean(v))}
-                      className="mt-1 border-gray-300 focus:ring-orange-500 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500"
+                      className="mt-1"
                       aria-describedby="remember-desc"
                       disabled={pending}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel htmlFor="login-remember" className="cursor-pointer text-base font-medium text-gray-600">
+                    <FormLabel htmlFor="login-remember" className="cursor-pointer text-base font-medium">
                       Remember me for 30 days
                     </FormLabel>
-                    <p id="remember-desc" className="text-xs text-gray-500">
+                    <p id="remember-desc" className="text-xs text-muted-foreground">
                       Don&apos;t use on a shared device.
                     </p>
                   </div>
@@ -266,7 +266,9 @@ export function LoginFormV1() {
 
             {/* Submit */}
             <Button
-              className="mt-8 h-12 w-full rounded-lg bg-orange-500 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-orange-600 hover:shadow-lg"
+              variant="default"
+              size="lg"
+              className="mt-8 h-12 w-full rounded-lg text-base font-semibold"
               type="submit"
               disabled={pending}
               aria-busy={pending}
@@ -279,10 +281,10 @@ export function LoginFormV1() {
         {/* Divider */}
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-sm uppercase">
-            <span className="bg-white px-4 font-medium tracking-wider text-gray-500">OR CONTINUE WITH</span>
+            <span className="bg-card px-4 font-medium tracking-wider text-muted-foreground">OR CONTINUE WITH</span>
           </div>
         </div>
 
@@ -292,7 +294,7 @@ export function LoginFormV1() {
             type="button"
             variant="outline"
             size="lg"
-            className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            className="h-12 w-full"
             onClick={() => toast.info("GitHub OAuth not configured yet")}
             aria-label="Continue with GitHub"
             disabled={pending}
@@ -304,7 +306,7 @@ export function LoginFormV1() {
             type="button"
             variant="outline"
             size="lg"
-            className="h-12 w-full border-gray-300 text-gray-700 transition-all duration-200 hover:bg-gray-50"
+            className="h-12 w-full"
             onClick={() => toast.info("Google OAuth not configured yet")}
             aria-label="Continue with Google"
             disabled={pending}

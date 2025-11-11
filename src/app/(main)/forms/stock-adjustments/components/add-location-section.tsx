@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { SearchableSelect, type SearchableSelectOption } from "@/components/form
 
 import type { LocationRow } from "./locations-table";
 import type { Option } from "@/lib/forms/types";
+import { isValidLocationEntry } from "../lib/validate-location-entry";
 
 type Props = {
   onAdd: (location: string, qty: number) => void;
@@ -21,13 +22,14 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
   const [location, setLocation] = useState("");
   const [qty, setQty] = useState<number | "">("");
 
+  // Compute if the Add button should be disabled
+  const isAddDisabled = useMemo(() => {
+    return !isValidLocationEntry(location, qty);
+  }, [location, qty]);
+
   const handleAdd = () => {
-    if (!location.trim()) {
-      alert("Location is required");
-      return;
-    }
-    if (qty === "" || qty === 0) {
-      alert("Quantity is required and must not be zero");
+    // Defensive validation (should never trigger since button is disabled)
+    if (!isValidLocationEntry(location, qty)) {
       return;
     }
     onAdd(location.trim(), Number(qty));
@@ -39,7 +41,9 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
     if (e.key === "Enter") {
       e.preventDefault(); // Prevent form submission
       e.stopPropagation(); // Stop event bubbling
-      handleAdd();
+      if (!isAddDisabled) {
+        handleAdd();
+      }
     }
   };
 
@@ -99,7 +103,9 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
               <Button 
                 type="button" 
                 onClick={handleAdd} 
-                className="w-full sm:w-auto"
+                disabled={isAddDisabled}
+                className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isAddDisabled ? "Select location and enter quantity to add" : undefined}
               >
                 Add Location
               </Button>

@@ -143,34 +143,27 @@ export const sidebarItems: NavGroup[] = [
   // Tally Card Manager
   {
     id: 4,
-    items: [
-      {
-        title: "Tally Card Manager",
-        url: "/forms/tally-cards",
-        icon: Grid2x2,
-        requiredAny: ["menu:forms:tally_cards", "menu:forms:stock_adjustments", "menu:forms:user_tally_card_entries"],
-        subItems: [
-          {
-            title: "Tally Cards",
-            url: "/forms/tally-cards",
-            icon: Grid2x2,
-            requiredAny: ["menu:forms:tally_cards"],
-          },
-          {
-            title: "Stock Adjustments",
-            url: "/forms/stock-adjustments",
-            icon: ArrowLeftRight,
-            requiredAny: ["menu:forms:stock_adjustments"],
-          },
-          {
-            title: "Compare Stock",
-            url: "/forms/compare-stock-adjustments",
-            icon: GitCompare,
-            requiredAny: ["menu:forms:stock_adjustments"],
-          },
-        ],
-      },
-    ],
+  label: "Tally Card Manager",
+  items: [
+    {
+      title: "Tally Cards",
+      url: "/forms/tally-cards",
+      icon: Grid2x2,
+      requiredAny: ["menu:forms:tally_cards"],
+    },
+    {
+      title: "Stock Adjustments",
+      url: "/forms/stock-adjustments",
+      icon: ArrowLeftRight,
+      requiredAny: ["menu:forms:stock_adjustments"],
+    },
+    {
+      title: "Compare Stock",
+      url: "/forms/compare-stock-adjustments",
+      icon: GitCompare,
+      requiredAny: ["menu:forms:stock_adjustments"],
+    },
+  ],
   },
 
   // Administration

@@ -50,7 +50,8 @@ export default function LocationsTable({
               selectedLocations.forEach((id) => onRemove(id));
             }}
             disabled={selectedLocations.size === 0}
-            className="hover:bg-destructive/90"
+            className="hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={selectedLocations.size === 0 ? "Select locations to remove" : undefined}
           >
             Remove Selected
           </Button>

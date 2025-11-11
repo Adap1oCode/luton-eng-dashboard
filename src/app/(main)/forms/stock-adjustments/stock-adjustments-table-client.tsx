@@ -10,7 +10,7 @@
 import { useMemo, useState, useCallback } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
-import { InventoryInfoDialog } from "@/components/inventory/inventory-info-dialog";
+import { InventoryInfoDialog } from "@/components/dialogs/inventory-info-dialog";
 import type { StockAdjustmentRow } from "./stock-adjustments.config";
 import { stockAdjustmentsViewConfig, buildColumns } from "./stock-adjustments.config";
 

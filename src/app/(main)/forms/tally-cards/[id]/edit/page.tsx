@@ -54,7 +54,6 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
     historyUI = resolved.config.history?.ui;
   } catch (err) {
     // If resource resolution fails, historyUI will be undefined (graceful degradation)
-    console.warn("Failed to resolve resource for history config:", err);
   }
 
   // Extract optionsKeys from form config and load options server-side
@@ -62,11 +61,6 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
   const optionsKeys = extractOptionsKeys(tallyCardCreateConfig);
   const currentValues = prep.defaults?.item_number ? { item_number: prep.defaults.item_number } : undefined;
   const loadedOptions = await loadOptions(optionsKeys, currentValues);
-  
-  // Validate that required options were loaded
-  if (!loadedOptions.warehouses || loadedOptions.warehouses.length === 0) {
-    console.error(`[EditTallyCardPage] Warning: No warehouses loaded for optionsKey "warehouses"`);
-  }
 
   return (
     <ResourceFormSSRPage

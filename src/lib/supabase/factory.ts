@@ -3,6 +3,7 @@
 // Handles search, filters, sorting, pagination + relation hydration.
 
 // Module top-level imports (تم إزالة الفراغات بين أسطر الـ imports)
+import { performance } from "perf_hooks";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 
 import { debugAuth } from "@/lib/api/debug";
@@ -287,12 +288,16 @@ export function createSupabaseProvider<T, TInput>(
     },
 
     async get(id: Id) {
+      const perfStart = performance.now();
       const sb = await getClient(mode);
       let query = sb.from(cfg.table).select(cfg.select).eq(cfg.pk, id);
 
       // Apply scoping to single record (server-only)
       if (!isBrowser && AUTH_SCOPING_ENABLED) {
+        const scopeStart = performance.now();
         const ctx = await getSessionContext();
+        const scopeCtxEnd = performance.now();
+        console.log(`[provider.get] getSessionContext: ${(scopeCtxEnd - scopeStart).toFixed(2)}ms`);
 
         // 🔒 Warehouse scoping (same enriched context passed)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
@@ -308,14 +313,27 @@ export function createSupabaseProvider<T, TInput>(
           userId: (ctx as any).effectiveUser?.appUserId ?? (ctx as any).userId,
           permissions: ctx.permissions,
         });
+        const scopeEnd = performance.now();
+        console.log(`[provider.get] Scoping application: ${(scopeEnd - scopeCtxEnd).toFixed(2)}ms`);
       }
 
+      const queryStart = performance.now();
       const { data, error } = await query.maybeSingle();
+      const queryEnd = performance.now();
+      console.log(`[provider.get] Database query (${cfg.table}.${cfg.pk}=${id}): ${(queryEnd - queryStart).toFixed(2)}ms`);
+      
       if (error) throw error;
       if (!data) return null;
 
+      const transformStart = performance.now();
       const base = cfg.toDomain(data);
       const [hydrated] = await hydrateRelations([base], cfg, sb);
+      const transformEnd = performance.now();
+      console.log(`[provider.get] Domain transform + relations: ${(transformEnd - transformStart).toFixed(2)}ms`);
+      
+      const perfEnd = performance.now();
+      console.log(`[provider.get] Total time: ${(perfEnd - perfStart).toFixed(2)}ms`);
+
       return hydrated ?? null;
     },
 
