@@ -2,7 +2,7 @@
 /**
  * CI Verification Script
  * Runs all verification steps required by the Cursor Working Agreement.
- * Cross-platform compatible (Windows, macOS, Linux) and optimized for pnpm.
+ * Cross-platform compatible (Windows, macOS, Linux) and automatically detects npm/pnpm/yarn.
  */
 
 import { spawn } from 'child_process';
@@ -25,7 +25,37 @@ const PORTS = {
   RESERVED_2: 3009,
 };
 
-const PNPM_CMD = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+function resolvePackageManager() {
+  const userAgent = process.env.npm_config_user_agent || '';
+  const isWindows = process.platform === 'win32';
+
+  if (userAgent.startsWith('pnpm/')) {
+    return {
+      name: 'pnpm',
+      command: isWindows ? 'pnpm.cmd' : 'pnpm',
+      run: (script) => ['run', script],
+      exec: (bin, ...rest) => ['exec', bin, ...rest],
+    };
+  }
+
+  if (userAgent.startsWith('yarn/')) {
+    return {
+      name: 'yarn',
+      command: isWindows ? 'yarn.cmd' : 'yarn',
+      run: (script) => ['run', script],
+      exec: (bin, ...rest) => ['exec', bin, ...rest],
+    };
+  }
+
+  return {
+    name: 'npm',
+    command: isWindows ? 'npm.cmd' : 'npm',
+    run: (script) => ['run', script],
+    exec: (bin, ...rest) => ['exec', '--', bin, ...rest],
+  };
+}
+
+const PKG = resolvePackageManager();
 const DEFAULT_HEALTH_TIMEOUT_MS = 60_000;
 const STEP_SEPARATOR = '='.repeat(64);
 
@@ -72,8 +102,8 @@ function parseFlags(argv) {
     fast: false,
     noBuild: false,
     noHealthCheck: false,
-    noE2E: false,
     port: Number(process.env.CI_VERIFY_PORT) || PORTS.CI_VERIFICATION,
+    changedBase: process.env.CI_VERIFY_CHANGED_BASE || null,
   };
 
   for (const arg of argv) {
@@ -81,13 +111,15 @@ function parseFlags(argv) {
       flags.fast = true;
       flags.noBuild = true;
       flags.noHealthCheck = true;
-      flags.noE2E = true;
     } else if (arg === '--no-build') {
       flags.noBuild = true;
     } else if (arg === '--no-health-check') {
       flags.noHealthCheck = true;
-    } else if (arg === '--no-e2e' || arg === '--skip-e2e') {
-      flags.noE2E = true;
+    } else if (arg.startsWith('--changed-base=')) {
+      const value = arg.split('=').pop();
+      if (value) {
+        flags.changedBase = value;
+      }
     } else if (arg.startsWith('--port=')) {
       const value = Number(arg.split('=').pop());
       if (!Number.isNaN(value) && value > 0) {
@@ -99,12 +131,12 @@ function parseFlags(argv) {
   return flags;
 }
 
-function runCommand({ command, args = [], env = process.env, cwd = process.cwd() }) {
+function runCommand({ command, args = [], env = process.env, cwd = process.cwd(), stdio = 'inherit' }) {
   return new Promise((resolve, reject) => {
     log(`\n${colors.blue}▶${colors.reset} Running: ${colors.bright}${command} ${args.join(' ')}${colors.reset}`);
 
     const child = spawn(command, args, {
-      stdio: 'inherit',
+      stdio,
       shell: false,
       cwd,
       env,
@@ -123,6 +155,14 @@ function runCommand({ command, args = [], env = process.env, cwd = process.cwd()
       reject(new Error(`Failed to start command "${command}": ${err.message}`));
     });
   });
+}
+
+function runScript(scriptName, extraArgs = []) {
+  const args = [...PKG.run(scriptName)];
+  if (extraArgs.length > 0) {
+    args.push('--', ...extraArgs);
+  }
+  return runCommand({ command: PKG.command, args });
 }
 
 function verifyBuildOutput() {
@@ -187,8 +227,8 @@ async function ensureAppServer(port, { logStreaming = false } = {}) {
     log(`\n${colors.blue}▶${colors.reset} Starting Next.js server on port ${port}...`);
 
     const child = spawn(
-      PNPM_CMD,
-      ['exec', 'next', 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+      PKG.command,
+      PKG.exec('next', 'start', '--hostname', '127.0.0.1', '--port', String(port)),
       {
         cwd: process.cwd(),
         env: { ...process.env, NODE_ENV: 'production', PORT: String(port) },
@@ -351,46 +391,38 @@ async function runHealthCheck({ port, routes }) {
   log(`${colors.green}✓${colors.reset} All health check routes passed`);
 }
 
-async function runPlaywrightSmoke({ port }) {
-  await ensureAppServer(port);
-
-  await runCommand({
-    command: PNPM_CMD,
-    args: ['run', 'test:e2e:smoke'],
-    env: {
-      ...process.env,
-      CI_VERIFY: 'true',
-      PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${port}`,
-    },
-  });
-}
-
 function createSteps(flags, state) {
   return [
     {
       id: 'typecheck',
       label: 'TypeScript typecheck',
       enabled: true,
-      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'typecheck'] }),
+      run: () => runScript('typecheck'),
     },
     {
       id: 'lint',
       label: 'ESLint',
       enabled: true,
-      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'lint'] }),
+      run: () => runScript('lint'),
     },
     {
       id: 'unit',
       label: 'Vitest unit tests',
       enabled: true,
-      run: () => runCommand({ command: PNPM_CMD, args: ['run', 'test:unit'] }),
+      run: () => {
+        const extraArgs = [];
+        if (flags.changedBase) {
+          extraArgs.push('--changed', flags.changedBase);
+        }
+        return runScript('test:unit', extraArgs);
+      },
     },
     {
       id: 'build',
       label: 'Next.js production build',
       enabled: !flags.noBuild,
       run: async () => {
-        await runCommand({ command: PNPM_CMD, args: ['run', 'build'] });
+        await runScript('build');
         state.buildCompleted = true;
       },
     },
@@ -410,12 +442,6 @@ function createSteps(flags, state) {
       label: 'Health-check critical routes',
       enabled: !flags.noBuild && !flags.noHealthCheck,
       run: () => runHealthCheck({ port: flags.port, routes: defaultRoutes }),
-    },
-    {
-      id: 'playwright-smoke',
-      label: 'Playwright @smoke',
-      enabled: !flags.noBuild && !flags.noE2E,
-      run: () => runPlaywrightSmoke({ port: flags.port }),
     },
   ];
 }
@@ -465,18 +491,20 @@ async function main() {
   log(`${STEP_SEPARATOR}${colors.reset}\n`);
 
   if (flags.fast) {
-    log(`${colors.yellow}Fast mode enabled (--fast): skipping build, health check, and Playwright smoke tests.${colors.reset}`);
+    log(`${colors.yellow}Fast mode enabled (--fast): skipping build and health check.${colors.reset}`);
   } else {
     const skipMessages = [];
     if (flags.noBuild) skipMessages.push('build');
     if (flags.noHealthCheck) skipMessages.push('health-check');
-    if (flags.noE2E) skipMessages.push('e2e smoke');
     if (skipMessages.length > 0) {
       log(`${colors.yellow}Skipping: ${skipMessages.join(', ')}${colors.reset}`);
     }
   }
 
   log(`${colors.blue}Using port:${colors.reset} ${flags.port}`);
+  if (flags.changedBase) {
+    log(`${colors.blue}Changed base:${colors.reset} ${flags.changedBase}`);
+  }
 
   const startTime = performance.now();
 

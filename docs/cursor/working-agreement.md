@@ -24,17 +24,23 @@ This document defines the rules Cursor must follow on this project. “Done” m
 ## Testing & Verification (what "Done" means)
 A change is **not done** unless **all** are true:
 
-1) **Typecheck:** `pnpm typecheck` (tsc --noEmit)  
-2) **Lint:** `pnpm lint`  
-3) **Production build:** `pnpm build` (Next.js)  
-4) **App boots + smoke E2E:** Start the built app and run Playwright **@smoke** tests against it  
-5) **Unit/Integration:** `pnpm test` (Vitest) passes  
+1) **Typecheck:** `npm run typecheck` (`tsc --noEmit --incremental`)  
+2) **Lint:** `npm run lint` (ESLint with on-disk cache)  
+3) **Production build:** `npm run build` (Next.js)  
+4) **App boots + smoke E2E:** Start the built app and run Playwright **@smoke** tests against it (handled by the nightly workflow, not the local verifier)  
+5) **Unit/Integration:** `npm run test` (Vitest) passes  
 6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`)
 7) **Vercel Preview:** Deployment is green  
 8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale
 
 **One-command verifier (CI + local pre-push):**  
-`pnpm ci:verify` must succeed. It runs typecheck, lint, build, boots the app, runs unit + smoke e2e.
+Run `npm run ci:verify`. The script auto-detects the active package manager (npm/pnpm/yarn), executes typecheck, lint, Vitest unit suites, performs a production build, verifies build artifacts, and boots the built app for HTTP health checks. Playwright `@smoke` coverage runs in the nightly pipeline.
+
+**Verifier quality-of-life flags:**  
+- `--fast` — skip build + health-check for quick iteration (pre-commit).  
+- `--no-build`, `--no-health-check` — independently skip heavy phases.  
+- `--changed-base=<ref>` — pass through to Vitest `--changed` filtering.  
+- `--port=<number>` — override the health-check port (defaults to 3005).
 
 ### CWA Testing Requirements
 All tests must follow Clean Web Architecture principles:

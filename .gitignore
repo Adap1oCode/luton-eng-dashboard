@@ -21,6 +21,7 @@
 .DS_Store
 *.pem
 *.sh
+.cache/
 
 # debug logs
 npm-debug.log*
