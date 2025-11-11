@@ -59,7 +59,7 @@ import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { useSavedViews } from "@/components/data-table/use-saved-views";
 import { useContainerResize } from "@/components/data-table/use-container-resize";
-import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { getDomainId, type BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import { parseListParams, type SPRecord } from "@/lib/next/search-params";
@@ -78,7 +78,7 @@ import { ViewsMenu } from "@/components/data-table/views-menu";
 
 type FilterMode = "contains" | "startsWith" | "endsWith" | "equals" | "notEquals";
 
-type ResourceTableClientProps<TRow extends { id: string }> = {
+type ResourceTableClientProps<TRow extends Record<string, any>> = {
   config: BaseViewConfig<TRow>;
   initialRows: TRow[];
   initialTotal: number;
@@ -98,7 +98,7 @@ type ResourceTableClientProps<TRow extends { id: string }> = {
 
 // move header and cell wrappers into shared data-table modules
 
-export default function ResourceTableClient<TRow extends { id: string }>({
+export default function ResourceTableClient<TRow extends Record<string, any>>({
   config,
   initialRows,
   initialTotal,
@@ -121,6 +121,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
   const search = useSearchParams();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const resolvedIdField = React.useMemo(() => (config.idField as string | undefined) ?? "id", [config.idField]);
 
   // 🔑 NEW: Support configurable ID field from view config (e.g., "id" or "entry_id")
   // Moved ABOVE any state initializers that reference it (fixes TS2448/TS2454)
@@ -829,7 +830,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
         // Use generic inline editing
         c.cell = (cellProps) => {
           const baseCell = (
-            <InlineEditCellWrapper
+              <InlineEditCellWrapper
               row={cellProps.row}
               columnId={c.id || (c as any).accessorKey}
               editingCell={editingCell}
@@ -838,13 +839,15 @@ export default function ResourceTableClient<TRow extends { id: string }>({
               onEditChange={handleInlineEditChange}
               onSave={handleInlineEditSave}
               onCancel={handleInlineEditCancel}
+                idField={resolvedIdField}
             />
           );
 
           // Add MULTI badge if needed (only in display mode, not when editing)
-          if (showMultiBadge) {
-            const isEditing = editingCell?.rowId === (cellProps.row.original as { id: string }).id && editingCell?.columnId === (c.id || (c as any).accessorKey);
-            const multiLocation = (cellProps.row.original as any)?.multi_location;
+            if (showMultiBadge) {
+              const rowId = getDomainId(cellProps.row, resolvedIdField);
+              const isEditing = editingCell?.rowId === rowId && editingCell?.columnId === (c.id || (c as any).accessorKey);
+              const multiLocation = (cellProps.row.original as any)?.multi_location;
             
             if (!isEditing && multiLocation) {
               return (
@@ -870,6 +873,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
             onEditChange={handleStatusEditChange}
             onSave={handleStatusSave}
             onCancel={handleStatusCancel}
+            idField={resolvedIdField}
           />
         );
       }

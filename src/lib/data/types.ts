@@ -29,12 +29,27 @@ export type ColumnType =
   | "text"
   | "bool"
   | "int"
+  | "integer"
   | "bigint"
   | "number"
-  | "timestamp";
+  | "numeric"
+  | "double"
+  | "timestamp"
+  | "date";
 
 export type FieldSpec = {
-  type: "uuid" | "text" | "bool" | "int" | "bigint" | "number" | "timestamp";
+  type:
+    | "uuid"
+    | "text"
+    | "bool"
+    | "int"
+    | "integer"
+    | "bigint"
+    | "number"
+    | "numeric"
+    | "double"
+    | "timestamp"
+    | "date";
   nullable?: boolean;
   write?: boolean;
   readonly?: boolean;
@@ -69,13 +84,13 @@ export type TypeFromColumn<T> = T extends "uuid"
   ? string
   : T extends "bool"
   ? boolean
-  : T extends "int"
+  : T extends "int" | "integer"
   ? number
   : T extends "bigint"
   ? number
-  : T extends "number"
+  : T extends "number" | "numeric" | "double"
   ? number
-  : T extends "timestamp"
+  : T extends "timestamp" | "date"
   ? ISODateTime
   : unknown;
 

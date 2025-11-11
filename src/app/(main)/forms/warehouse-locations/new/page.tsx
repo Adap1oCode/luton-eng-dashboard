@@ -62,9 +62,6 @@ export default async function NewWarehouseLocationPage() {
         config={transportConfig}
         defaults={defaults}
         options={loadedOptions}
-        action={transportConfig.action}
-        method={transportConfig.method as "POST" | "PATCH"}
-        submitLabel={transportConfig.submitLabel}
       />
     </FormShell>
   );

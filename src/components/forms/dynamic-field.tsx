@@ -11,7 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FormItem } from "@/components/ui/form";
 import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
 
-export type Option = { id: string; label: string };
+export type Option = {
+  id: string;
+  label: string;
+  /**
+   * Optional value distinct from the display label. Some call sites rely on `value`
+   * when mapping options into SearchableSelect, so expose it while keeping backwards compatibility.
+   */
+  value?: string | number | boolean | null;
+};
 
 export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
 

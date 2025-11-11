@@ -278,6 +278,11 @@ export type BaseViewConfig<TRow> = {
    */
   idField?: keyof TRow | string;
   /**
+   * Optional HTTP endpoint used by client-side fetchers. Some legacy views still rely on
+   * `resourceKeyForDelete`; allowing `apiEndpoint` keeps both workflows supported.
+   */
+  apiEndpoint?: string;
+  /**
    * Controls visibility of buttons in the bottom toolbar (above table rows).
    * If not specified, all buttons are shown (backward compatible).
    */
@@ -285,7 +290,7 @@ export type BaseViewConfig<TRow> = {
 };
 
 // -------- id helper (once) ----------
-function getDomainId(row: any, idField: string = "id"): string {
+export function getDomainId(row: any, idField: string = "id"): string {
   const fromOriginal = row?.original?.[idField];
   const fromCell = typeof row?.getValue === "function" ? row.getValue(idField) : undefined;
   const fallback = row?.original?.id ?? row?.id;
