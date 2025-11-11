@@ -3,7 +3,7 @@
 /**
  * Minimal client wrapper for SSR pattern.
  * Materializes columns in client context and passes to ResourceTableClient.
- * 
+ *
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
@@ -28,10 +28,12 @@ export function StockAdjustmentsTableClient({
 }: StockAdjustmentsTableClientProps) {
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
-  const viewConfigWithColumns = useMemo<BaseViewConfig<StockAdjustmentRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
+  const viewConfigWithColumns = useMemo<
+    BaseViewConfig<StockAdjustmentRow> & { columns?: any[]; apiEndpoint?: string }
+  >(() => {
     const config = {
       ...stockAdjustmentsViewConfig,
-      columns: stockAdjustmentsViewConfig.buildColumns(),
+      columns: stockAdjustmentsViewConfig.buildColumns?.() ?? [],
       // Explicitly preserve apiEndpoint from viewConfig (VIEW endpoint, not TABLE)
       apiEndpoint: stockAdjustmentsViewConfig.apiEndpoint,
     };
@@ -50,4 +52,3 @@ export function StockAdjustmentsTableClient({
     />
   );
 }
-

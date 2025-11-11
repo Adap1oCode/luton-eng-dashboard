@@ -37,10 +37,7 @@ export default async function NewWarehouseLocationPage() {
       headerDescription={cfg.subtitle}
       actions={{
         secondaryLeft: (
-          <a
-            href="/forms/warehouse-locations"
-            className="inline-flex items-center rounded-md border px-4 py-2 text-sm"
-          >
+          <a href="/forms/warehouse-locations" className="inline-flex items-center rounded-md border px-4 py-2 text-sm">
             Cancel
           </a>
         ),
@@ -57,17 +54,7 @@ export default async function NewWarehouseLocationPage() {
         ),
       }}
     >
-      <FormIsland
-        formId={formId}
-        config={transportConfig}
-        defaults={defaults}
-        options={loadedOptions}
-        action={transportConfig.action}
-        method={transportConfig.method as "POST" | "PATCH"}
-        submitLabel={transportConfig.submitLabel}
-      />
+      <FormIsland formId={formId} config={transportConfig} defaults={defaults} options={loadedOptions} />
     </FormShell>
   );
 }
-
-

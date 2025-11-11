@@ -24,10 +24,12 @@ export function InventoryCurrentTableClient({
   pageSize,
 }: InventoryCurrentTableClientProps) {
   // Materialize columns in client context
-  const viewConfigWithColumns = useMemo<BaseViewConfig<InventoryCurrentRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
+  const viewConfigWithColumns = useMemo<
+    BaseViewConfig<InventoryCurrentRow> & { columns?: any[]; apiEndpoint?: string }
+  >(() => {
     const config = {
       ...inventoryCurrentViewConfig,
-      columns: inventoryCurrentViewConfig.buildColumns(),
+      columns: inventoryCurrentViewConfig.buildColumns?.() ?? [],
       apiEndpoint: inventoryCurrentViewConfig.apiEndpoint,
     };
     delete (config as any).buildColumns;
@@ -61,4 +63,3 @@ export function InventoryCurrentTableClient({
     />
   );
 }
-

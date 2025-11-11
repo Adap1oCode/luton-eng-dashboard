@@ -8,6 +8,7 @@ import { StatusCell } from "@/components/data-table/status-cell";
 
 interface StatusCellWrapperProps<TRow> {
   row: Row<TRow>;
+  rowId: string;
   editingStatus: { rowId: string; value: string } | null;
   onEditStart: (rowId: string, status: string) => void;
   onEditChange: (value: string) => void;
@@ -15,8 +16,9 @@ interface StatusCellWrapperProps<TRow> {
   onCancel: () => void;
 }
 
-export const StatusCellWrapper = <TRow extends { id: string }>({
+export const StatusCellWrapper = <TRow,>({
   row,
+  rowId,
   editingStatus,
   onEditStart,
   onEditChange,
@@ -25,7 +27,7 @@ export const StatusCellWrapper = <TRow extends { id: string }>({
 }: StatusCellWrapperProps<TRow>) => {
   const rawStatus = row.getValue("status");
   const statusString = typeof rawStatus === "string" ? rawStatus : rawStatus == null ? "" : String(rawStatus);
-  const isEditing = editingStatus?.rowId === (row.original as { id: string }).id;
+  const isEditing = editingStatus?.rowId === rowId;
 
   return (
     <StatusCell
@@ -33,7 +35,7 @@ export const StatusCellWrapper = <TRow extends { id: string }>({
       isEditing={isEditing}
       editingStatus={editingStatus?.value ?? statusString}
       statusOptions={["Active", "Inactive", "Pending", "Completed"]}
-      onEditStart={() => onEditStart((row.original as { id: string }).id, statusString)}
+      onEditStart={() => onEditStart(rowId, statusString)}
       onEditChange={onEditChange}
       onSave={onSave}
       onCancel={onCancel}

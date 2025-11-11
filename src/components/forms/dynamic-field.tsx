@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormItem } from "@/components/ui/form";
 import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
+import type { Option as FormOption } from "@/lib/forms/types";
 
-export type Option = { id: string; label: string };
+export type Option = FormOption;
 
 export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
 

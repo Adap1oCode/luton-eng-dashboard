@@ -17,17 +17,14 @@ interface WarehousesTableClientProps {
   pageSize: number;
 }
 
-export function WarehousesTableClient({
-  initialRows,
-  initialTotal,
-  page,
-  pageSize,
-}: WarehousesTableClientProps) {
+export function WarehousesTableClient({ initialRows, initialTotal, page, pageSize }: WarehousesTableClientProps) {
   // Materialize columns in client context
-  const viewConfigWithColumns = useMemo<BaseViewConfig<WarehouseRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
+  const viewConfigWithColumns = useMemo<
+    BaseViewConfig<WarehouseRow> & { columns?: any[]; apiEndpoint?: string }
+  >(() => {
     const config = {
       ...warehousesViewConfig,
-      columns: warehousesViewConfig.buildColumns(),
+      columns: warehousesViewConfig.buildColumns?.() ?? [],
       apiEndpoint: warehousesViewConfig.apiEndpoint,
     };
     delete (config as any).buildColumns;
@@ -58,5 +55,3 @@ export function WarehousesTableClient({
     />
   );
 }
-
-

@@ -24,10 +24,12 @@ export function InventoryUniqueTableClient({
   pageSize,
 }: InventoryUniqueTableClientProps) {
   // Materialize columns in client context
-  const viewConfigWithColumns = useMemo<BaseViewConfig<InventoryUniqueRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
+  const viewConfigWithColumns = useMemo<
+    BaseViewConfig<InventoryUniqueRow> & { columns?: any[]; apiEndpoint?: string }
+  >(() => {
     const config = {
       ...inventoryUniqueViewConfig,
-      columns: inventoryUniqueViewConfig.buildColumns(),
+      columns: inventoryUniqueViewConfig.buildColumns?.() ?? [],
       apiEndpoint: inventoryUniqueViewConfig.apiEndpoint,
     };
     delete (config as any).buildColumns;
@@ -59,5 +61,3 @@ export function InventoryUniqueTableClient({
     />
   );
 }
-
-

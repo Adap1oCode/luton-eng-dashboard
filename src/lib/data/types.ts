@@ -29,12 +29,27 @@ export type ColumnType =
   | "text"
   | "bool"
   | "int"
+  | "integer"
   | "bigint"
   | "number"
-  | "timestamp";
+  | "double"
+  | "numeric"
+  | "timestamp"
+  | "date";
 
 export type FieldSpec = {
-  type: "uuid" | "text" | "bool" | "int" | "bigint" | "number" | "timestamp";
+  type:
+    | "uuid"
+    | "text"
+    | "bool"
+    | "int"
+    | "integer"
+    | "bigint"
+    | "number"
+    | "double"
+    | "numeric"
+    | "timestamp"
+    | "date";
   nullable?: boolean;
   write?: boolean;
   readonly?: boolean;
@@ -69,7 +84,7 @@ export type TypeFromColumn<T> = T extends "uuid"
   ? string
   : T extends "bool"
   ? boolean
-  : T extends "int"
+  : T extends "int" | "integer" | "double" | "numeric"
   ? number
   : T extends "bigint"
   ? number
@@ -77,6 +92,8 @@ export type TypeFromColumn<T> = T extends "uuid"
   ? number
   : T extends "timestamp"
   ? ISODateTime
+  : T extends "date"
+  ? string
   : unknown;
 
 export type WriteModelFromSchema<S extends ResourceSchemaSpec> = {

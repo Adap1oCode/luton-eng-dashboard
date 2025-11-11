@@ -8,6 +8,7 @@ import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/i
 
 interface InlineEditCellWrapperProps<TRow> {
   row: Row<TRow>;
+  rowId: string;
   columnId: string;
   editingCell: { rowId: string; columnId: string; value: any } | null;
   config: InlineEditConfig;
@@ -17,8 +18,9 @@ interface InlineEditCellWrapperProps<TRow> {
   onCancel: () => void;
 }
 
-export const InlineEditCellWrapper = <TRow extends { id: string }>({
+export const InlineEditCellWrapper = <TRow,>({
   row,
+  rowId,
   columnId,
   editingCell,
   config,
@@ -28,8 +30,7 @@ export const InlineEditCellWrapper = <TRow extends { id: string }>({
   onCancel,
 }: InlineEditCellWrapperProps<TRow>) => {
   const rawValue = row.getValue(columnId);
-  const isEditing = editingCell?.rowId === (row.original as { id: string }).id && editingCell?.columnId === columnId;
-  const rowId = (row.original as { id: string }).id;
+  const isEditing = editingCell?.rowId === rowId && editingCell?.columnId === columnId;
 
   // Wrap in container that preserves column width - prevents flicker during edit transitions
   return (

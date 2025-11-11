@@ -24,10 +24,12 @@ export function WarehouseLocationsTableClient({
   pageSize,
 }: WarehouseLocationsTableClientProps) {
   // Materialize columns in client context
-  const viewConfigWithColumns = useMemo<BaseViewConfig<WarehouseLocationRow> & { columns?: any[]; apiEndpoint?: string }>(() => {
+  const viewConfigWithColumns = useMemo<
+    BaseViewConfig<WarehouseLocationRow> & { columns?: any[]; apiEndpoint?: string }
+  >(() => {
     const config = {
       ...warehouseLocationsViewConfig,
-      columns: warehouseLocationsViewConfig.buildColumns(),
+      columns: warehouseLocationsViewConfig.buildColumns?.() ?? [],
       apiEndpoint: warehouseLocationsViewConfig.apiEndpoint,
     };
     delete (config as any).buildColumns;
@@ -59,4 +61,3 @@ export function WarehouseLocationsTableClient({
     />
   );
 }
-
