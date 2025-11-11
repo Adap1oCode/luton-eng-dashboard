@@ -141,3 +141,4 @@ LIMIT 1;
 -- Check indexes on base tables used by v_inventory_current
 -- (Need to identify base tables from view definition first)
 
+

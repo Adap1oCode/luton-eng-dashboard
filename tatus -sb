@@ -12,7 +12,6 @@
 - Responsive behavior is handled by config-driven grids (`grid gap-4 @md:grid-cols-2 @xl:grid-cols-3`), collapsing to a single column on mobile and expanding up to three columns on large breakpoints without custom media queries.
 - Action buttons lean on tweakcn button variants (e.g., `inline-flex items-center gap-2 h-8 rounded-md px-3 text-xs`) with variant props instead of bespoke class strings; only the primary submit aligns to resource-specific color tokens when needed.
 - Validation and helper text rely on shared `FormMessage` styles—no bespoke red borders; errors present beneath the control using the standardized `text-sm text-destructive` pattern.
-- Section-level toggles (e.g., multi-location) are injected via `headerRight` slots, keeping individual field stacks clean and focused on label/control pairs.
 
 ## Findings (Ordered by Severity)
 
