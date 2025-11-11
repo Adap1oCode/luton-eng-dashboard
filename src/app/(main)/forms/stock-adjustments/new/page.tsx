@@ -25,7 +25,6 @@ export default async function NewStockAdjustmentPage() {
   };
 
   const formId = "stock-adjustment-form";
-  const isDev = process.env.NODE_ENV !== "production";
 
   // Extract optionsKeys from form config and load options server-side
   const optionsKeys = extractOptionsKeys(stockAdjustmentCreateConfig);
@@ -47,14 +46,10 @@ export default async function NewStockAdjustmentPage() {
       
       if (tallyCard?.warehouse_id) {
         warehouseId = String(tallyCard.warehouse_id);
-        if (isDev) {
-          console.log("[NewStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
-        }
+        console.log("[NewStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
       }
     } catch (err) {
-      if (isDev) {
-        console.warn("[NewStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
-      }
+      console.warn("[NewStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
     }
   }
   

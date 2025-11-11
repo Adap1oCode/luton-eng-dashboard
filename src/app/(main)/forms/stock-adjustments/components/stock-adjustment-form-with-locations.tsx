@@ -20,18 +20,6 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
   const locations = watch("locations") ?? [];
 
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
-  const isDev = process.env.NODE_ENV !== "production";
-  const isLoadingRef = React.useRef(false);
-  const devLog = (...args: Parameters<typeof console.log>) => {
-    if (isDev) {
-      console.log(...args);
-    }
-  };
-  const devError = (...args: Parameters<typeof console.error>) => {
-    if (isDev) {
-      console.error(...args);
-    }
-  };
 
   // Load existing locations when editing
   // Only load if locations are not already set (from server-side defaults)
@@ -41,21 +29,11 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
       // Only fetch if locations are empty or not set
       if (!currentLocations || currentLocations.length === 0) {
         // Fetch existing child locations via resource API
-        if (isLoadingRef.current) {
-          return;
-        }
-        isLoadingRef.current = true;
-        fetch(`/api/stock-adjustments/${entryId}/locations`)
-          .then((res) => {
-            if (!res.ok) {
-              return res.json().catch(() => ({}));
-            }
-            return res.json();
-          })
+        fetch(`/api/tcm_user_tally_card_entry_locations?entry_id=${entryId}`)
+          .then((res) => res.json())
           .then((data) => {
-            const locationsPayload = Array.isArray(data?.locations) ? data.locations : data?.rows;
-            if (Array.isArray(locationsPayload) && locationsPayload.length > 0) {
-              const formatted = locationsPayload.map((loc: any, idx: number) => ({
+            if (data.rows && Array.isArray(data.rows) && data.rows.length > 0) {
+              const formatted = data.rows.map((loc: any, idx: number) => ({
                 id: loc.id || `temp-${idx}`,
                 location: loc.location,
                 qty: loc.qty,
@@ -65,14 +43,9 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
             }
           })
           .catch((err) => {
-            devError("Failed to load locations:", err);
-          })
-          .finally(() => {
-            isLoadingRef.current = false;
+            console.error("Failed to load locations:", err);
           });
       }
-    } else {
-      isLoadingRef.current = false;
     }
   }, [entryId, multiLocation, setValue, watch]);
 
@@ -115,7 +88,7 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
     };
     const updated = [...locationRows, newLocation];
     setValue("locations", updated, { shouldValidate: true, shouldDirty: true });
-    devLog("[StockAdjustmentFormWithLocations] Added location, total now:", updated.length);
+    console.log("[StockAdjustmentFormWithLocations] Added location, total now:", updated.length);
   };
 
   const handleRemoveLocation = (id: string) => {

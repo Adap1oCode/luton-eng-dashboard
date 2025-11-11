@@ -1,10 +1,10 @@
 import packageJson from "../../package.json";
 
 export const APP_CONFIG = {
-  name: "Luton Engineering - IMS Admin",
+  name: "Luton Engineering",
   version: packageJson.version,
   meta: {
-    title: "IMS Admin",
+    title: "Luton Engineering",
     description:
       "",
   },

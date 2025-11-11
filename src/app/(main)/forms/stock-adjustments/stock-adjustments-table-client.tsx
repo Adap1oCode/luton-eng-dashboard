@@ -7,11 +7,10 @@
  * This is needed because buildColumns() calls makeActionsColumn() which is client-only.
  * We can't pass functions from server to client components in Next.js.
  */
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import { InventoryInfoDialog } from "@/components/dialogs/inventory-info-dialog";
-import { useInventoryDialog } from "@/hooks/use-inventory-dialog";
 import type { StockAdjustmentRow } from "./stock-adjustments.config";
 import { stockAdjustmentsViewConfig, buildColumns } from "./stock-adjustments.config";
 
@@ -28,7 +27,13 @@ export function StockAdjustmentsTableClient({
   page,
   pageSize,
 }: StockAdjustmentsTableClientProps) {
-  const { showDialog, setShowDialog, selectedItemNumber, handleItemNumberClick } = useInventoryDialog();
+  const [showInventoryDialog, setShowInventoryDialog] = useState(false);
+  const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);
+
+  const handleItemNumberClick = useCallback((itemNumber: string | number | null) => {
+    setSelectedItemNumber(itemNumber);
+    setShowInventoryDialog(true);
+  }, []);
 
   // Materialize columns in client context (where makeActionsColumn() can execute)
   // Memoize to prevent unstable reference that triggers unnecessary recalculations
@@ -72,8 +77,8 @@ export function StockAdjustmentsTableClient({
         initialColumnVisibility={initialColumnVisibility}
       />
       <InventoryInfoDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
+        open={showInventoryDialog}
+        onOpenChange={setShowInventoryDialog}
         itemNumber={selectedItemNumber}
       />
     </>

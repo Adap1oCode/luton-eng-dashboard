@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
   const sp = await resolveSearchParams(props.searchParams);
   const { page, pageSize, filters } = parseListParams(sp, stockAdjustmentsFilterMeta, { defaultPage: 1, defaultPageSize: 50, max: 500 });
-  const isDev = process.env.NODE_ENV !== "production";
 
   // Apply all quick filter transforms if present
   const extraQuery: Record<string, any> = { raw: "true" };
@@ -49,13 +48,11 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
   const hasWarehouseScope = resourceConfig?.warehouseScope?.mode === "column";
   
   // Debug logging
-  if (isDev) {
-    console.log("[StockAdjustments Page] Warehouse scope check:", {
-      resourceKey: RESOURCE_KEY,
-      hasWarehouseScope,
-      warehouseScope: resourceConfig?.warehouseScope,
-    });
-  }
+  console.log("[StockAdjustments Page] Warehouse scope check:", {
+    resourceKey: RESOURCE_KEY,
+    hasWarehouseScope,
+    warehouseScope: resourceConfig?.warehouseScope,
+  });
 
   return (
     <PageShell

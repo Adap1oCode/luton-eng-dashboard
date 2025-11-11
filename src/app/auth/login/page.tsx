@@ -7,12 +7,12 @@ import { Command } from "lucide-react";
 import { LoginFormV1 } from "./_components/login-form";
 
 export const metadata: Metadata = {
-  title: "Login - Luton Engineering Dashboard",
-  description: "Sign in to your Luton Engineering Dashboard account to access your workspace and manage your projects.",
+  title: "Login",
+  description: "Sign in to your account to access your workspace and manage your projects.",
   robots: "noindex, nofollow", // Prevent indexing of auth pages
   openGraph: {
-    title: "Login - Luton Engineering Dashboard",
-    description: "Sign in to your Luton Engineering Dashboard account",
+    title: "Login",
+    description: "Sign in to your account",
     type: "website",
   },
 };
@@ -21,7 +21,7 @@ export default function LoginV1() {
   return (
     <div className="flex min-h-screen">
       {/* Left Side - Welcome Section */}
-      <div className="hidden bg-gradient-to-br from-orange-500 to-orange-600 lg:flex lg:w-1/3">
+      <div className="hidden bg-gradient-to-br from-primary to-primary/90 lg:flex lg:w-1/3">
         <div className="flex w-full flex-col items-center justify-center p-12 text-center">
           <div className="space-y-8">
             {/* Logo/Icon */}
@@ -48,17 +48,17 @@ export default function LoginV1() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex w-full items-center justify-center bg-gray-50 p-8 lg:w-2/3">
+      <div className="flex w-full items-center justify-center bg-muted p-8 lg:w-2/3">
         <div className="w-full max-w-lg">
           <LoginFormV1 />
 
           {/* Register Link */}
           <div className="mt-8 text-center">
-            <p className="text-base text-gray-600">
+            <p className="text-base text-muted-foreground">
               Don&apos;t have an account?{" "}
               <Link
                 href="/auth/register"
-                className="font-semibold text-orange-500 underline-offset-2 transition-colors duration-200 hover:text-orange-600 hover:underline"
+                className="font-semibold text-primary underline-offset-2 transition-colors duration-200 hover:text-primary/90 hover:underline"
               >
                 Register
               </Link>
