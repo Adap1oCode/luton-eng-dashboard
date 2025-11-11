@@ -40,7 +40,10 @@ Run `npm run ci:verify`. The script auto-detects the active package manager (npm
 - `--fast` — skip build + health-check for quick iteration (pre-commit).  
 - `--no-build`, `--no-health-check` — independently skip heavy phases.  
 - `--changed-base=<ref>` — pass through to Vitest `--changed` filtering.  
+- `--no-changed-base` — disable automatic base detection and run the full Vitest suite.  
 - `--port=<number>` — override the health-check port (defaults to 3005).
+- `--max-parallel=<n>` — cap how many static-analysis steps run concurrently (defaults to CPU-aware value).  
+- `--report-json=<path>` — emit a structured summary (per phase + step timings) for telemetry dashboards.
 
 ### CWA Testing Requirements
 All tests must follow Clean Web Architecture principles:

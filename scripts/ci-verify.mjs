@@ -5,11 +5,12 @@
  * Cross-platform compatible (Windows, macOS, Linux) and automatically detects npm/pnpm/yarn.
  */
 
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { join } from 'path';
-import { existsSync, statSync, readdirSync } from 'fs';
+import { existsSync, statSync, readdirSync, writeFileSync } from 'fs';
 import { request } from 'http';
 import { performance } from 'perf_hooks';
+import { cpus } from 'os';
 
 // Port configuration (inline to avoid TypeScript compilation issues)
 const PORTS = {
@@ -104,9 +105,13 @@ function parseFlags(argv) {
     noHealthCheck: false,
     port: Number(process.env.CI_VERIFY_PORT) || PORTS.CI_VERIFICATION,
     changedBase: process.env.CI_VERIFY_CHANGED_BASE || null,
+    inferChangedBase: !process.env.CI_VERIFY_CHANGED_BASE,
+    reportJson: process.env.CI_VERIFY_REPORT_JSON || null,
+    maxParallel: process.env.CI_VERIFY_MAX_PARALLEL ? Number(process.env.CI_VERIFY_MAX_PARALLEL) : null,
   };
 
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
     if (arg === '--fast') {
       flags.fast = true;
       flags.noBuild = true;
@@ -119,16 +124,101 @@ function parseFlags(argv) {
       const value = arg.split('=').pop();
       if (value) {
         flags.changedBase = value;
+        flags.inferChangedBase = false;
       }
+    } else if (arg === '--changed-base') {
+      const value = argv[i + 1];
+      if (value && !value.startsWith('--')) {
+        flags.changedBase = value;
+        flags.inferChangedBase = false;
+        i += 1;
+      }
+    } else if (arg === '--no-changed-base') {
+      flags.changedBase = null;
+      flags.inferChangedBase = false;
     } else if (arg.startsWith('--port=')) {
       const value = Number(arg.split('=').pop());
       if (!Number.isNaN(value) && value > 0) {
         flags.port = value;
       }
+    } else if (arg === '--port') {
+      const value = Number(argv[i + 1]);
+      if (!Number.isNaN(value) && value > 0) {
+        flags.port = value;
+        i += 1;
+      }
+    } else if (arg.startsWith('--report-json=')) {
+      const value = arg.split('=').pop();
+      if (value) {
+        flags.reportJson = value;
+      }
+    } else if (arg === '--report-json') {
+      const value = argv[i + 1];
+      if (value && !value.startsWith('--')) {
+        flags.reportJson = value;
+        i += 1;
+      }
+    } else if (arg.startsWith('--max-parallel=')) {
+      const value = Number(arg.split('=').pop());
+      if (!Number.isNaN(value) && value > 0) {
+        flags.maxParallel = value;
+      }
+    } else if (arg === '--max-parallel') {
+      const value = Number(argv[i + 1]);
+      if (!Number.isNaN(value) && value > 0) {
+        flags.maxParallel = value;
+        i += 1;
+      }
+    }
+  }
+
+  if (!flags.maxParallel || Number.isNaN(flags.maxParallel)) {
+    const cpuCount = Math.max(1, cpus()?.length || 1);
+    flags.maxParallel = Math.min(Math.max(2, cpuCount), 4);
+  }
+
+  if (!flags.changedBase && flags.inferChangedBase) {
+    flags.changedBase = detectDefaultChangedBase();
+    if (!flags.changedBase) {
+      flags.inferChangedBase = false;
     }
   }
 
   return flags;
+}
+
+function detectDefaultChangedBase() {
+  try {
+    const repoCheck = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'pipe' });
+    if (repoCheck.status !== 0) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const envCandidates = [
+    process.env.CI_DEFAULT_BRANCH && `origin/${process.env.CI_DEFAULT_BRANCH}`,
+    process.env.GITHUB_BASE_REF && `origin/${process.env.GITHUB_BASE_REF}`,
+    process.env.BITBUCKET_PR_DESTINATION_BRANCH && `origin/${process.env.BITBUCKET_PR_DESTINATION_BRANCH}`,
+    process.env.MERGE_REQUEST_TARGET_BRANCH_NAME && `origin/${process.env.MERGE_REQUEST_TARGET_BRANCH_NAME}`,
+  ];
+
+  const staticCandidates = ['origin/main', 'origin/master', 'main', 'master'];
+  const candidates = [...new Set([...envCandidates.filter(Boolean), ...staticCandidates])];
+
+  for (const ref of candidates) {
+    try {
+      const result = spawnSync('git', ['rev-parse', '--verify', ref], { stdio: 'pipe' });
+      if (result.status === 0) {
+        return ref;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
 }
 
 function runCommand({ command, args = [], env = process.env, cwd = process.cwd(), stdio = 'inherit' }) {
@@ -392,20 +482,20 @@ async function runHealthCheck({ port, routes }) {
 }
 
 function createSteps(flags, state) {
-  return [
-    {
+  const stepMap = {
+    typecheck: {
       id: 'typecheck',
       label: 'TypeScript typecheck',
       enabled: true,
       run: () => runScript('typecheck'),
     },
-    {
+    lint: {
       id: 'lint',
       label: 'ESLint',
       enabled: true,
       run: () => runScript('lint'),
     },
-    {
+    unit: {
       id: 'unit',
       label: 'Vitest unit tests',
       enabled: true,
@@ -417,7 +507,7 @@ function createSteps(flags, state) {
         return runScript('test:unit', extraArgs);
       },
     },
-    {
+    build: {
       id: 'build',
       label: 'Next.js production build',
       enabled: !flags.noBuild,
@@ -426,7 +516,7 @@ function createSteps(flags, state) {
         state.buildCompleted = true;
       },
     },
-    {
+    verifyBuild: {
       id: 'verify-build',
       label: 'Verify build artifacts',
       enabled: !flags.noBuild,
@@ -437,54 +527,50 @@ function createSteps(flags, state) {
         verifyBuildOutput();
       },
     },
-    {
+    healthCheck: {
       id: 'health-check',
       label: 'Health-check critical routes',
       enabled: !flags.noBuild && !flags.noHealthCheck,
       run: () => runHealthCheck({ port: flags.port, routes: defaultRoutes }),
     },
+  };
+
+  return [
+    {
+      id: 'static-analysis',
+      label: 'Static analysis',
+      parallel: true,
+      steps: [stepMap.typecheck, stepMap.lint],
+    },
+    {
+      id: 'unit-tests',
+      label: 'Unit tests',
+      parallel: false,
+      steps: [stepMap.unit],
+    },
+    {
+      id: 'build',
+      label: 'Build & artifact verification',
+      parallel: false,
+      steps: [stepMap.build, stepMap.verifyBuild],
+    },
+    {
+      id: 'health',
+      label: 'HTTP health checks',
+      parallel: false,
+      steps: [stepMap.healthCheck],
+    },
   ];
-}
-
-async function runSteps(steps) {
-  let passed = 0;
-  const results = [];
-
-  for (const step of steps) {
-    if (!step.enabled) {
-      log(`${colors.yellow}⚠ Skipping ${step.label}${colors.reset}`);
-      results.push({ id: step.id, label: step.label, status: 'skipped', durationMs: 0 });
-      continue;
-    }
-
-    log(`\n${STEP_SEPARATOR}`);
-    log(`${colors.bright}${step.label}${colors.reset}`);
-    log(`${STEP_SEPARATOR}`);
-
-    const start = performance.now();
-    try {
-      await step.run();
-      const duration = performance.now() - start;
-      passed += 1;
-      log(`${colors.green}✓${colors.reset} ${step.label} completed in ${formatDuration(duration)}`);
-      results.push({ id: step.id, label: step.label, status: 'passed', durationMs: duration });
-    } catch (error) {
-      const duration = performance.now() - start;
-      log(`${colors.red}✗ ${step.label} failed after ${formatDuration(duration)}${colors.reset}`);
-      log(`${colors.red}Reason:${colors.reset} ${error.message}`);
-      results.push({ id: step.id, label: step.label, status: 'failed', durationMs: duration, error });
-      throw new Error(step.label);
-    }
-  }
-
-  return { passed, results };
 }
 
 async function main() {
   const flags = parseFlags(process.argv.slice(2));
   const state = { buildCompleted: false };
-  const steps = createSteps(flags, state);
-  const totalEnabled = steps.filter((step) => step.enabled).length;
+  const phases = createSteps(flags, state);
+  const stepCount = phases
+    .flatMap((phase) => phase.steps)
+    .filter((step) => step.enabled)
+    .length;
 
   log(`\n${colors.bright}${STEP_SEPARATOR}`);
   log('  CI VERIFICATION (Cursor Working Agreement)');
@@ -504,19 +590,66 @@ async function main() {
   log(`${colors.blue}Using port:${colors.reset} ${flags.port}`);
   if (flags.changedBase) {
     log(`${colors.blue}Changed base:${colors.reset} ${flags.changedBase}`);
+  } else if (!flags.inferChangedBase) {
+    log(`${colors.yellow}No changed base provided – running full Vitest suite.${colors.reset}`);
+  }
+  log(`${colors.blue}Max parallel:${colors.reset} ${flags.maxParallel}`);
+  if (flags.reportJson) {
+    log(`${colors.blue}Report file:${colors.reset} ${flags.reportJson}`);
   }
 
   const startTime = performance.now();
+  const results = [];
+  const summary = {
+    startedAt: new Date().toISOString(),
+    totalSteps: stepCount,
+    flags: {
+      fast: flags.fast,
+      noBuild: flags.noBuild,
+      noHealthCheck: flags.noHealthCheck,
+      port: flags.port,
+      changedBase: flags.changedBase,
+      maxParallel: flags.maxParallel,
+      reportJson: flags.reportJson,
+    },
+    phases: [],
+    results,
+    status: 'pending',
+  };
 
+  let failure = null;
   try {
-    const { passed } = await runSteps(steps);
+    await runPipeline(phases, flags, results, summary);
+    summary.status = 'passed';
     const totalDuration = performance.now() - startTime;
+    summary.durationMs = totalDuration;
     log(`\n${colors.green}${STEP_SEPARATOR}${colors.reset}`);
-    log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${passed}/${totalEnabled})`);
+    log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${results.length}/${stepCount})`);
     log(`  Duration: ${formatDuration(totalDuration)}`);
     log(`${colors.green}${STEP_SEPARATOR}${colors.reset}\n`);
+  } catch (error) {
+    failure = error;
+    summary.status = 'failed';
+    summary.durationMs = performance.now() - startTime;
+    const failedStepLabel =
+      error instanceof StepError ? error.step.label : 'CI pipeline';
+    log(`\n${colors.red}${STEP_SEPARATOR}${colors.reset}`);
+    log(`  ❌ CI VERIFICATION FAILED AT: ${failedStepLabel}`);
+    log(`${colors.red}${STEP_SEPARATOR}${colors.reset}\n`);
   } finally {
+    summary.durationMs = summary.durationMs ?? performance.now() - startTime;
+    if (flags.reportJson) {
+      try {
+        writeFileSync(flags.reportJson, JSON.stringify(summary, null, 2));
+        log(`${colors.blue}▶${colors.reset} Wrote report to ${flags.reportJson}`);
+      } catch (error) {
+        log(`${colors.red}✗ Failed to write report:${colors.reset} ${error.message}`);
+      }
+    }
     await stopAppServer();
+    if (failure) {
+      process.exit(1);
+    }
   }
 }
 
@@ -535,4 +668,148 @@ main().catch(async (err) => {
   await stopAppServer();
   process.exit(1);
 });
+
+class StepError extends Error {
+  constructor(step, originalError, durationMs, phase, result) {
+    super(`Step failed: ${step.label}`);
+    this.step = step;
+    this.originalError = originalError;
+    this.durationMs = durationMs;
+    this.phase = phase;
+    this.result = result;
+  }
+}
+
+async function runPipeline(phases, flags, results, summary) {
+  for (const phase of phases) {
+    const enabledSteps = phase.steps.filter((step) => step.enabled);
+    if (enabledSteps.length === 0) {
+      summary.phases.push({ id: phase.id, label: phase.label, status: 'skipped' });
+      continue;
+    }
+
+    const phaseSummary = { id: phase.id, label: phase.label, status: 'pending', steps: [] };
+    summary.phases.push(phaseSummary);
+
+    try {
+      if (phase.parallel) {
+        log(`\n${STEP_SEPARATOR}`);
+        log(`${colors.bright}${phase.label} (parallel x${Math.min(flags.maxParallel, enabledSteps.length)})${colors.reset}`);
+        log(`${STEP_SEPARATOR}`);
+        await runPhaseParallel(phase, enabledSteps, flags, results, phaseSummary);
+      } else {
+        await runPhaseSequential(phase, enabledSteps, flags, results, phaseSummary);
+      }
+      phaseSummary.status = 'passed';
+    } catch (error) {
+      phaseSummary.status = 'failed';
+      summary.status = 'failed';
+      throw error;
+    }
+  }
+}
+
+async function runPhaseSequential(phase, steps, flags, results, phaseSummary) {
+  for (const step of steps) {
+    try {
+      const result = await runStep(step, {
+        phase,
+        isParallel: false,
+      });
+      results.push(result);
+      phaseSummary.steps.push(result);
+    } catch (error) {
+      if (error instanceof StepError && error.result) {
+        results.push(error.result);
+        phaseSummary.steps.push(error.result);
+      }
+      throw error;
+    }
+  }
+}
+
+async function runPhaseParallel(phase, steps, flags, results, phaseSummary) {
+  const queue = [...steps];
+  const maxParallel = Math.min(flags.maxParallel, queue.length);
+  const workers = [];
+  let abortError = null;
+
+  for (let i = 0; i < maxParallel; i += 1) {
+    workers.push(
+      (async () => {
+        while (queue.length > 0 && !abortError) {
+          const step = queue.shift();
+          if (!step) break;
+          try {
+            const result = await runStep(step, {
+              phase,
+              isParallel: true,
+            });
+            results.push(result);
+            phaseSummary.steps.push(result);
+          } catch (error) {
+            if (error instanceof StepError && error.result) {
+              results.push(error.result);
+              phaseSummary.steps.push(error.result);
+            }
+            if (!abortError) {
+              abortError = error;
+            }
+            throw error;
+          }
+        }
+      })(),
+    );
+  }
+
+  await Promise.allSettled(workers);
+
+  if (abortError) {
+    throw abortError;
+  }
+}
+
+async function runStep(step, { phase, isParallel }) {
+  const stepLabel = phase ? `${phase.label} › ${step.label}` : step.label;
+  const start = performance.now();
+
+  if (!isParallel) {
+    log(`\n${STEP_SEPARATOR}`);
+    log(`${colors.bright}${stepLabel}${colors.reset}`);
+    log(`${STEP_SEPARATOR}`);
+  } else {
+    log(`${colors.blue}▶${colors.reset} ${step.label} (parallel)`);
+  }
+
+  try {
+    await step.run();
+    const duration = performance.now() - start;
+    log(`${colors.green}✓${colors.reset} ${step.label} completed in ${formatDuration(duration)}`);
+    return {
+      id: step.id,
+      label: step.label,
+      phaseId: phase?.id ?? null,
+      phaseLabel: phase?.label ?? null,
+      status: 'passed',
+      durationMs: duration,
+    };
+  } catch (error) {
+    const duration = performance.now() - start;
+    const failureResult = {
+      id: step.id,
+      label: step.label,
+      phaseId: phase?.id ?? null,
+      phaseLabel: phase?.label ?? null,
+      status: 'failed',
+      durationMs: duration,
+      errorMessage: error?.message ?? String(error),
+    };
+    const stepError = new StepError(step, error, duration, phase, failureResult);
+    log(`${colors.red}✗ ${step.label} failed after ${formatDuration(duration)}${colors.reset}`);
+    if (error?.message) {
+      log(`${colors.red}Reason:${colors.reset} ${error.message}`);
+    }
+    return Promise.reject(stepError);
+  }
+}
 
