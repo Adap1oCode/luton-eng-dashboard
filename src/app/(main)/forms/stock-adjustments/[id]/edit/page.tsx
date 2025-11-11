@@ -17,84 +17,88 @@ import EditPageClient from "../../components/edit-page-client";
 import SubmitButtonWithState from "../../components/submit-button-with-state";
 import { DEFAULT_REASON_CODE, STOCK_ADJUSTMENT_REASON_CODES } from "@/lib/config/stock-adjustment-reason-codes";
 
-type ReasonCodeType = "UNSPECIFIED" | "DAMAGE" | "LOST" | "FOUND" | "TRANSFER" | "COUNT_CORRECTION" | "ADJUSTMENT" | "OTHER";
+type ReasonCodeType =
+  | "UNSPECIFIED"
+  | "DAMAGE"
+  | "LOST"
+  | "FOUND"
+  | "TRANSFER"
+  | "COUNT_CORRECTION"
+  | "ADJUSTMENT"
+  | "OTHER";
 const ALLOWED_REASON_CODES = new Set<ReasonCodeType>(STOCK_ADJUSTMENT_REASON_CODES.map((code) => code.value as ReasonCodeType));
 
 import { stockAdjustmentCreateConfig } from "../../new/form.config";
 
+type RpcLocation = {
+  id: string | null;
+  entry_id: string | null;
+  location: string | null;
+  qty: number | null;
+  pos: number | null;
+};
+
 export default async function EditStockAdjustmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Use cfg.key as the resource path segment (you set this to "stock-adjustments")
   const resourceKey = stockAdjustmentCreateConfig.key;
   const isDev = process.env.NODE_ENV !== "production";
   const { createClient } = await import("@/lib/supabase-server");
   const sb = await createClient();
-  let anchorTallyCardNumber: string | undefined;
 
-  // For SCD2, we need to find the latest entry_id for this tally_card_number
-  // The view only shows the latest entry, so if the id in URL is not the latest,
-  // we need to find the latest one
   let entryIdToUse = id;
+  let anchorTallyCardNumber: string | undefined;
+  let warehouseIdFromLookup: string | undefined;
+  let preloadedLocations: Array<{ id: string; location: string; qty: number; pos: number | null }> = [];
+
   try {
-    // First, get the tally_card_number for this entry
-    const { data: entryData } = await sb
-      .from("tcm_user_tally_card_entries")
-      .select("tally_card_number")
-      .eq("id", id)
-      .maybeSingle();
-    
-    anchorTallyCardNumber = entryData?.tally_card_number ?? anchorTallyCardNumber;
+    const { data, error } = await sb.rpc("fn_stock_adjustment_load_edit", { p_id: id });
+    if (error) {
+      throw error;
+    }
+
+    const payload = Array.isArray(data) ? data?.[0] : data;
+    if (payload) {
+      entryIdToUse = typeof payload.entry_id === "string" && payload.entry_id.length > 0 ? payload.entry_id : entryIdToUse;
+      anchorTallyCardNumber =
+        typeof payload.tally_card_number === "string" && payload.tally_card_number.length > 0
+          ? payload.tally_card_number
+          : anchorTallyCardNumber;
+      warehouseIdFromLookup =
+        typeof payload.warehouse_id === "string" && payload.warehouse_id.length > 0 ? payload.warehouse_id : warehouseIdFromLookup;
+
+      if (Array.isArray(payload.locations)) {
+        preloadedLocations = (payload.locations as RpcLocation[])
+          .map((loc, idx) => ({
+            id: loc.id ?? `temp-${idx}`,
+            location: loc.location ?? "",
+            qty: typeof loc.qty === "number" ? loc.qty : Number(loc.qty) || 0,
+            pos:
+              typeof loc.pos === "number"
+                ? loc.pos
+                : loc.pos !== null && loc.pos !== undefined
+                  ? Number(loc.pos) || idx + 1
+                  : idx + 1,
+          }))
+          .filter((loc) => loc.location.trim().length > 0);
+      }
+    }
 
     if (isDev) {
-      console.log("[EditStockAdjustmentPage] Entry lookup:", {
+      console.log("[EditStockAdjustmentPage] RPC load result:", {
         url_id: id,
-        found_entry: !!entryData,
-        tally_card_number: entryData?.tally_card_number,
+        resolved_entry_id: entryIdToUse,
+        tally_card_number: anchorTallyCardNumber,
+        warehouse_id: warehouseIdFromLookup,
+        locations_count: preloadedLocations.length,
       });
     }
-    
-    if (entryData?.tally_card_number) {
-      // Find the latest entry_id for this tally_card_number
-      // Use updated_at DESC, then id DESC as tiebreaker (newer IDs are typically created later)
-      const { data: latestEntry } = await sb
-        .from("tcm_user_tally_card_entries")
-        .select("id, updated_at")
-        .eq("tally_card_number", entryData.tally_card_number)
-        .order("updated_at", { ascending: false })
-        .order("id", { ascending: false })  // Tiebreaker: if updated_at is same, use newest ID
-        .limit(1)
-        .maybeSingle();
-      
-      if (isDev) {
-        console.log("[EditStockAdjustmentPage] Latest entry lookup:", {
-          tally_card_number: entryData.tally_card_number,
-          latest_id: latestEntry?.id,
-          latest_updated_at: latestEntry?.updated_at,
-          url_id: id,
-          ids_match: latestEntry?.id === id,
-        });
-      }
-      
-      if (latestEntry?.id) {
-        entryIdToUse = latestEntry.id;
-        if (latestEntry.id !== id && isDev) {
-          console.log("[EditStockAdjustmentPage] Using latest entry ID instead of URL ID:", {
-            url_id: id,
-            latest_id: latestEntry.id,
-          });
-        }
-      }
-    }
   } catch (err) {
-    // If we can't find the latest, use the original id
     if (isDev) {
-      console.warn("[EditStockAdjustmentPage] Failed to find latest entry_id, using provided id:", err);
+      console.warn("[EditStockAdjustmentPage] fn_stock_adjustment_load_edit failed, falling back to provided id", err);
     }
-  }
-
-  if (isDev) {
-    console.log("[EditStockAdjustmentPage] Final entryIdToUse:", entryIdToUse);
+    entryIdToUse = id;
+    preloadedLocations = [];
   }
 
   let prep: any;
@@ -132,48 +136,24 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     }
   }
 
-  // Extract optionsKeys from form config and load options server-side
   const optionsKeys = extractOptionsKeys(stockAdjustmentCreateConfig);
-  
-  // Get warehouse_id from tally card to filter locations
-  let warehouseId: string | undefined;
-  try {
-    const tallyCardNumberRaw = prep.defaults?.tally_card_number ?? anchorTallyCardNumber;
-    const tallyCardNumberValue =
-      typeof tallyCardNumberRaw === "number"
-        ? String(tallyCardNumberRaw)
-        : typeof tallyCardNumberRaw === "string"
-          ? tallyCardNumberRaw
-          : undefined;
 
-    if (tallyCardNumberValue) {
-      const { data: tallyCard } = await sb
-        .from("tcm_tally_cards")
-        .select("warehouse_id")
-        .eq("tally_card_number", tallyCardNumberValue)
-        .maybeSingle();
-
-      if (tallyCard?.warehouse_id) {
-        warehouseId = String(tallyCard.warehouse_id);
-        if (isDev) {
-          console.log("[EditStockAdjustmentPage] Found warehouse_id for filtering locations:", warehouseId);
-        }
-      }
-    }
-  } catch (err) {
-    if (isDev) {
-      console.warn("[EditStockAdjustmentPage] Failed to fetch warehouse_id for location filtering:", err);
+  let warehouseId = warehouseIdFromLookup;
+  if (!warehouseId) {
+    const warehouseFromDefaults = prep.defaults?.warehouse_id;
+    if (typeof warehouseFromDefaults === "string" && warehouseFromDefaults.length > 0) {
+      warehouseId = warehouseFromDefaults;
     }
   }
-  
-  // Load options with warehouse filter for locations
-  const dynamicFilters = warehouseId 
-    ? { warehouseLocations: { warehouse_id: warehouseId } }
-    : undefined;
+
+  const dynamicFilters = warehouseId ? { warehouseLocations: { warehouse_id: warehouseId } } : undefined;
   const loadedOptions = await loadOptions(optionsKeys, undefined, dynamicFilters);
 
   // Ensure defaults include locations array if multi_location is true
   const defaults = prep.defaults ?? {};
+  if (!defaults.tally_card_number && anchorTallyCardNumber) {
+    defaults.tally_card_number = anchorTallyCardNumber;
+  }
   
   // Debug: Log what we got from the API
   if (isDev) {
@@ -188,83 +168,10 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
   }
   
   if (defaults.multi_location) {
-    try {
-      const tallyCardValue = defaults.tally_card_number ?? anchorTallyCardNumber;
-      const tallyCardNumber =
-        typeof tallyCardValue === "number"
-          ? String(tallyCardValue)
-          : typeof tallyCardValue === "string" && tallyCardValue.length > 0
-            ? tallyCardValue
-            : undefined;
-
-      let targetEntryIds: string[] = [entryIdToUse];
-
-      if (!tallyCardNumber) {
-        const { data: entryData } = await sb
-          .from("tcm_user_tally_card_entries")
-          .select("tally_card_number")
-          .eq("id", entryIdToUse)
-          .maybeSingle();
-
-        if (entryData?.tally_card_number) {
-          targetEntryIds = [entryIdToUse];
-          const { data: relatedEntries } = await sb
-            .from("tcm_user_tally_card_entries")
-            .select("id")
-            .eq("tally_card_number", entryData.tally_card_number)
-            .order("updated_at", { ascending: false })
-            .order("id", { ascending: false });
-
-          if (relatedEntries && relatedEntries.length > 0) {
-            targetEntryIds = Array.from(new Set([entryIdToUse, ...relatedEntries.map((entry) => entry.id)]));
-          }
-        }
-      } else {
-        const { data: relatedEntries } = await sb
-          .from("tcm_user_tally_card_entries")
-          .select("id")
-          .eq("tally_card_number", tallyCardNumber)
-          .order("updated_at", { ascending: false })
-          .order("id", { ascending: false });
-
-        if (relatedEntries && relatedEntries.length > 0) {
-          targetEntryIds = Array.from(new Set([entryIdToUse, ...relatedEntries.map((entry) => entry.id)]));
-        }
-      }
-
-      let locationsData: Array<{ id: string; entry_id: string; location: string; qty: number; pos: number | null }> =
-        [];
-      if (targetEntryIds.length > 0) {
-        const { data: fetchedLocations } = await sb
-          .from("tcm_user_tally_card_entry_locations")
-          .select("id, entry_id, location, qty, pos")
-          .in("entry_id", targetEntryIds)
-          .order("entry_id", { ascending: false })
-          .order("pos", { ascending: true });
-
-        if (fetchedLocations && fetchedLocations.length > 0) {
-          for (const candidateId of targetEntryIds) {
-            const candidateLocations = fetchedLocations.filter((loc) => loc.entry_id === candidateId);
-            if (candidateLocations.length > 0) {
-              locationsData = candidateLocations;
-              break;
-            }
-          }
-        }
-      }
-
-      defaults.locations =
-        locationsData?.map((loc: any, idx: number) => ({
-          id: loc.id || `temp-${idx}`,
-          location: loc.location,
-          qty: loc.qty,
-          pos: loc.pos ?? (idx + 1),
-        })) ?? [];
-    } catch (err) {
-      console.warn("Failed to load locations server-side:", err);
-      defaults.locations = [];
+    if (!Array.isArray(defaults.locations) || defaults.locations.length === 0) {
+      defaults.locations = preloadedLocations;
     }
-  } else if (!defaults.multi_location) {
+  } else {
     defaults.locations = [];
   }
   

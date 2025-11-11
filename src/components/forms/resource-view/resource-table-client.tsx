@@ -371,6 +371,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     initialData: { rows: initialRows, total: initialTotal },
     initialDataUpdatedAt: Date.now(), // Mark SSR data as fresh
     staleTime: 5 * 60 * 1000, // 5 minutes (matches ResourceListClient)
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: (failureCount, error) => {
@@ -1142,7 +1143,7 @@ export default function ResourceTableClient<TRow extends { id: string }>({
     // This ensures the URL is updated to reflect the new default
     const urlSize = search.get("pageSize");
     const urlSizeNum = urlSize ? Number(urlSize) : null;
-    const shouldUpdateSize = urlSizeNum === null || urlSizeNum === 10;
+    const shouldUpdateSize = urlSizeNum === 10;
     
     // Use server's default (50) if URL has old value or is missing, otherwise use current pagination
     const finalSize = shouldUpdateSize ? pageSize : nextSize;

@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export type InventoryInfoDialogProps = {
   open: boolean;
@@ -48,9 +49,7 @@ const numberFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
-const currencyFormatter = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
+const decimalFormatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -65,8 +64,8 @@ const gridColumnsClass: Record<number, string> = {
 export function InventoryInfoDialog({ open, onOpenChange, itemNumber }: InventoryInfoDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl rounded-xl border bg-card text-card-foreground shadow-lg p-0">
-        <div className="flex flex-col gap-6 p-6 sm:p-8">
+      <DialogContent className="w-full max-w-[90vw] sm:!max-w-3xl lg:!max-w-5xl max-h-[90vh] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-lg p-0">
+        <div className="flex max-h-[90vh] flex-col gap-6 overflow-y-auto p-6 sm:p-8">
           <DialogHeader className="flex flex-col gap-1.5 text-left">
             <DialogTitle className="text-2xl font-semibold tracking-tight">Inventory Information</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
@@ -247,39 +246,35 @@ function InventoryInfoDialogContent({
   );
 }
 
-const secondaryFieldConfigs: InventoryInfoFieldConfig[] = [
-  { key: "description", label: "Description", type: "text" },
-  { key: "category", label: "Category", type: "text" },
-  { key: "unit_of_measure", label: "Unit of Measure", type: "text" },
-  { key: "total_available", label: "Total Available", type: "metric" },
-  { key: "item_cost", label: "Item Cost", type: "currency" },
-  { key: "on_order", label: "On Order", type: "metric" },
-  { key: "committed", label: "Committed", type: "metric" },
+const fieldConfigs: Array<{
+  config: InventoryInfoFieldConfig;
+  variant?: "default" | "prominent";
+  className?: string;
+}> = [
+  {
+    config: { key: "item_number", label: "Item Number", type: "code" },
+  },
+  { config: { key: "description", label: "Description", type: "text" } },
+  { config: { key: "category", label: "Category", type: "text" } },
+  { config: { key: "unit_of_measure", label: "Unit of Measure", type: "text" } },
+  { config: { key: "total_available", label: "Total Available", type: "metric" } },
+  { config: { key: "item_cost", label: "Item Cost", type: "currency" } },
+  { config: { key: "on_order", label: "On Order", type: "metric" } },
+  { config: { key: "committed", label: "Committed", type: "metric" } },
 ];
 
 function FieldSections({ snapshot }: { snapshot: InventoryInfoSnapshot }) {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
+      {fieldConfigs.map(({ config, variant, className }) => (
         <StandardField
-          label="Item Number"
-          value={renderFieldValue(
-            { key: "item_number", label: "Item Number", type: "code" },
-            snapshot
-          )}
-          variant="prominent"
+          key={config.key}
+          label={config.label}
+          value={renderFieldValue(config, snapshot)}
+          variant={variant}
+          className={className}
         />
-      </div>
-
-      <div className="grid gap-4 @md:grid-cols-2 @xl:grid-cols-3">
-        {secondaryFieldConfigs.map((field) => (
-          <StandardField
-            key={field.key}
-            label={field.label}
-            value={renderFieldValue(field, snapshot)}
-          />
-        ))}
-      </div>
+      ))}
     </div>
   );
 }
@@ -288,14 +283,16 @@ function StandardField({
   label,
   value,
   variant = "default",
+  className,
 }: {
   label: string;
   value: React.ReactNode;
   variant?: "default" | "prominent";
+  className?: string;
 }) {
   if (variant === "prominent") {
     return (
-      <div className="rounded-xl border border-input bg-card text-card-foreground shadow-sm">
+      <div className={cn("w-full min-w-0 rounded-xl border border-input bg-card text-card-foreground shadow-sm", className)}>
         <div className="flex flex-col space-y-1.5 p-6">
           <span className="text-sm font-medium leading-none text-muted-foreground">
             {label}
@@ -307,11 +304,11 @@ function StandardField({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={cn("flex w-full min-w-0 flex-col gap-3", className)}>
       <label className="text-sm font-medium leading-none text-muted-foreground">
         {label}
       </label>
-      <div className="flex min-h-9 items-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm">
+      <div className="flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-transparent px-3 text-sm font-medium text-foreground shadow-sm overflow-hidden">
         {value}
       </div>
     </div>
@@ -351,7 +348,7 @@ function formatCurrency(value: unknown): string {
   if (value === null || value === undefined) return "—";
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "—";
-  return currencyFormatter.format(numeric);
+  return decimalFormatter.format(numeric);
 }
 
 function coerceNumber(value: unknown): number | null {

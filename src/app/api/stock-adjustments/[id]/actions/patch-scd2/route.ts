@@ -129,20 +129,20 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
     return json({ row: data }, 200);
   }
 
-  // Fetch child locations if multi_location is true
   if (enrichedRow?.multi_location) {
-    const { data: childLocations, error: locationsError } = await sb
-      .from("tcm_user_tally_card_entry_locations")
-      .select("location, qty, pos")
-      .eq("entry_id", data.id)
-      .order("pos", { ascending: true });
+    const { data: editPayload, error: editPayloadError } = await (sb as any).rpc(
+      "fn_stock_adjustment_load_edit",
+      { p_id: data.id },
+    );
 
-    if (!locationsError && childLocations) {
-      // Add child locations to the response
-      (enrichedRow as any).child_locations = childLocations;
-      console.log("[patch-scd2] Added child locations to response:", childLocations);
-    } else if (locationsError) {
-      console.error("[patch-scd2] Failed to fetch child locations:", locationsError);
+    if (!editPayloadError && editPayload && Array.isArray(editPayload)) {
+      const payloadRow = editPayload[0];
+      if (payloadRow?.locations && Array.isArray(payloadRow.locations)) {
+        (enrichedRow as any).child_locations = payloadRow.locations;
+        console.log("[patch-scd2] Added child locations from helper RPC");
+      }
+    } else if (editPayloadError) {
+      console.error("[patch-scd2] Failed to load child locations via helper RPC:", editPayloadError);
     }
   }
 

@@ -117,39 +117,48 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
               <>
                 {/* Use SearchableSelect for all select fields (except multiselect) */}
                 {field.kind === "select" ? (
-                  <SearchableSelect
-                    options={(options ?? []).map((o) => {
-                      // For location fields: SearchableSelect uses id for matching, but form stores value (location name)
-                      // Map options so id matches what we'll pass as value (use value as id for location fields)
-                      if (field.name === "location" && o.value) {
-                        return {
-                          ...o,
-                          id: o.value, // Use location name as id for SearchableSelect matching
-                        } as SearchableSelectOption;
+                  field.name === "location" && multiLocation ? (
+                    <Input
+                      value={typeof rhf.value === "string" ? rhf.value : ""}
+                      placeholder={field.placeholder ?? "Multiple locations selected"}
+                      readOnly
+                      className="bg-muted"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      options={(options ?? []).map((o) => {
+                        // For location fields: SearchableSelect uses id for matching, but form stores value (location name)
+                        // Map options so id matches what we'll pass as value (use value as id for location fields)
+                        if (field.name === "location" && o.value) {
+                          return {
+                            ...o,
+                            id: o.value, // Use location name as id for SearchableSelect matching
+                          } as SearchableSelectOption;
+                        }
+                        return o as SearchableSelectOption;
+                      })}
+                      value={rhf.value ?? null}
+                      onChange={(selectedId) => {
+                        // For location fields, selectedId is already the location name (value)
+                        // For other fields, selectedId is the id (UUID or item_number)
+                        rhf.onChange(selectedId);
+                      }}
+                      placeholder={field.placeholder ?? "Select..."}
+                      searchPlaceholder={
+                        field.name === "item_number"
+                          ? "Search item number or description..."
+                          : field.name === "warehouse_id"
+                          ? "Search warehouse code or name..."
+                          : field.name === "location"
+                          ? "Search location..."
+                          : "Search..."
                       }
-                      return o as SearchableSelectOption;
-                    })}
-                    value={rhf.value ?? null}
-                    onChange={(selectedId) => {
-                      // For location fields, selectedId is already the location name (value)
-                      // For other fields, selectedId is the id (UUID or item_number)
-                      rhf.onChange(selectedId);
-                    }}
-                    placeholder={field.placeholder ?? "Select..."}
-                    searchPlaceholder={
-                      field.name === "item_number"
-                        ? "Search item number or description..."
-                        : field.name === "warehouse_id"
-                        ? "Search warehouse code or name..."
-                        : field.name === "location"
-                        ? "Search location..."
-                        : "Search..."
-                    }
-                    twoColumn={field.name === "item_number" || field.name === "warehouse_id"}
-                    searchFields={field.name === "item_number" || field.name === "warehouse_id" ? "both" : "label"}
-                    disabled={field.readOnly || isDisabledByMultiLocation}
-                    className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
-                  />
+                      twoColumn={field.name === "item_number" || field.name === "warehouse_id"}
+                      searchFields={field.name === "item_number" || field.name === "warehouse_id" ? "both" : "label"}
+                      disabled={field.readOnly || isDisabledByMultiLocation}
+                      className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+                    />
+                  )
                 ) : (
                   <div className="space-y-2">
                     {(options ?? []).length === 0 && field.optionsKey ? (
