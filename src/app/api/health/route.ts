@@ -3,12 +3,16 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { createServerClient } from "@supabase/ssr";
+import { logger } from "@/lib/obs/logger";
 
 function clientIp(h: Headers) {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 }
 
 export async function GET() {
+  const log = logger.child({ evt: 'health_check' });
+  log.info({ msg: 'Health check endpoint called' });
+  
   const cookieStore = await cookies();
   const h = await headers();
 
@@ -48,15 +52,21 @@ export async function GET() {
     .from("app_health_checks")
     .select("*", { count: "exact", head: true });
 
-  return NextResponse.json(
-    {
-      ok: !countErr,
-      user: user ? { id: user.id, email: user.email } : null,
-      inserted: insertOk,
-      insertError: insertErr,
-      rowCount: count ?? 0,
-      message: user ? "Connected. Inserted a health row and counted table." : "Connected. Login to test insert.",
-    },
-    { status: 200 },
-  );
+  const response = {
+    ok: !countErr,
+    user: user ? { id: user.id, email: user.email } : null,
+    inserted: insertOk,
+    insertError: insertErr,
+    rowCount: count ?? 0,
+    message: user ? "Connected. Inserted a health row and counted table." : "Connected. Login to test insert.",
+  };
+  
+  log.info({ 
+    msg: 'Health check completed',
+    ok: !countErr,
+    hasUser: !!user,
+    rowCount: count ?? 0,
+  });
+  
+  return NextResponse.json(response, { status: 200 });
 }

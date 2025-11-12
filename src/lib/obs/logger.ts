@@ -16,8 +16,13 @@ function createBaseLogger(): Logger {
     formatters: {
       // make `level` a JSON field
       level: (label: string) => ({ level: label }),
-      // Add service name for better filtering
-      bindings: () => ({ service: "luton-eng-dashboard" }),
+      // Add service name and Vercel metadata for better filtering
+      bindings: () => ({
+        service: "luton-eng-dashboard",
+        // Vercel automatically adds these, but we include them for consistency
+        vercel_env: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "unknown",
+        vercel_region: process.env.VERCEL_REGION ?? "unknown",
+      }),
     },
     // Add error serialization for better stack traces
     serializers: {
