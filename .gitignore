@@ -22,6 +22,7 @@
 *.pem
 *.sh
 !scripts/*.sh
+.cache/
 
 # debug logs
 npm-debug.log*

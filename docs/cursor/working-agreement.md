@@ -26,7 +26,7 @@ This document defines the rules Cursor must follow on this project. “Done” m
 We use a **tiered verification system** to balance speed and thoroughness:
 
 ### Tier 1: Fast Commit Path (Pre-Commit Hook)
-**Command**: `pnpm ci:fast`  
+**Command**: `npm run ci:fast`  
 **Runtime**: ~25-75 seconds  
 **Blocks**: Pre-commit hook  
 **Includes**:
@@ -36,7 +36,7 @@ We use a **tiered verification system** to balance speed and thoroughness:
 **Rationale**: Catches syntax/type errors immediately without waiting for tests. Prevents broken code from being committed.
 
 ### Tier 2: Pre-Push Verification
-**Command**: `pnpm ci:verify`  
+**Command**: `npm run ci:verify`  
 **Runtime**: ~2-5 minutes  
 **Blocks**: Pre-push hook  
 **Includes**:
@@ -50,7 +50,7 @@ We use a **tiered verification system** to balance speed and thoroughness:
 **Rationale**: Ensures code compiles and basic tests pass before pushing. Build catches issues typecheck misses.
 
 ### Tier 3: PR Verification (GitHub Actions)
-**Command**: `pnpm ci:pr`  
+**Command**: `npm run ci:pr`  
 **Runtime**: ~5-10 minutes  
 **Blocks**: PR merge  
 **Includes**:
@@ -61,7 +61,7 @@ We use a **tiered verification system** to balance speed and thoroughness:
 **Rationale**: Full verification before code review. Smoke tests ensure critical paths work.
 
 ### Tier 4: Nightly Comprehensive (Scheduled)
-**Command**: `pnpm ci:nightly`  
+**Command**: `npm run ci:nightly`  
 **Runtime**: ~15-30 minutes  
 **Blocks**: Nothing (runs on schedule)  
 **Includes**:
@@ -76,14 +76,26 @@ We use a **tiered verification system** to balance speed and thoroughness:
 ### Complete "Done" Checklist
 A change is **not done** unless **all** are true:
 
-1) **Typecheck:** `pnpm typecheck` (tsc --noEmit) - ✅ Tier 1  
-2) **Lint:** `pnpm lint` - ✅ Tier 1  
-3) **Production build:** `pnpm build` (Next.js) - ✅ Tier 2  
-4) **Unit Tests:** `pnpm test:unit` (Vitest) passes - ✅ Tier 2  
+1) **Typecheck:** `npm run typecheck` (`tsc --noEmit --incremental`) - ✅ Tier 1  
+2) **Lint:** `npm run lint` (ESLint with on-disk cache) - ✅ Tier 1  
+3) **Production build:** `npm run build` (Next.js) - ✅ Tier 2  
+4) **Unit Tests:** `npm run test` (Vitest) passes - ✅ Tier 2  
 5) **E2E Smoke:** Playwright **@smoke** tests pass - ✅ Tier 3  
 6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`) - ✅ All tiers  
 7) **Vercel Preview:** Deployment is green - ✅ Manual check  
 8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale - ✅ Tier 3
+
+**One-command verifier (CI + local pre-push):**  
+Run `npm run ci:verify`. The script auto-detects the active package manager (npm/pnpm/yarn), executes typecheck, lint, Vitest unit suites, performs a production build, verifies build artifacts, and boots the built app for HTTP health checks. Playwright `@smoke` coverage runs in the nightly pipeline.
+
+**Verifier quality-of-life flags:**  
+- `--fast` — skip build + health-check for quick iteration (pre-commit).  
+- `--no-build`, `--no-health-check` — independently skip heavy phases.  
+- `--changed-base=<ref>` — pass through to Vitest `--changed` filtering.  
+- `--no-changed-base` — disable automatic base detection and run the full Vitest suite.  
+- `--port=<number>` — override the health-check port (defaults to 3005).  
+- `--max-parallel=<n>` — cap how many static-analysis steps run concurrently (defaults to CPU-aware value).  
+- `--report-json=<path>` — emit a structured summary (per phase + step timings) for telemetry dashboards.
 
 ### CWA Testing Requirements
 All tests must follow Clean Web Architecture principles:
@@ -114,15 +126,15 @@ All tests must follow Clean Web Architecture principles:
 - `ci:nightly` - Nightly comprehensive (Tier 4)
 
 **Pre-commit hook (Husky)**  
-- Block committing if `pnpm ci:fast` fails (typecheck + lint only).
+- Block committing if `npm run ci:fast` fails (typecheck + lint only).
 
 **Pre-push hook (Husky)**  
-- Block pushing if `pnpm ci:verify` fails (can bypass with `SKIP_VERIFY=1` for emergencies).
+- Block pushing if `npm run ci:verify` fails (can bypass with `SKIP_VERIFY=1` for emergencies).
 
 **CI (GitHub Actions)**  
-- Run `pnpm ci:pr` on PRs and pushes to `main`/`develop` (includes E2E smoke).  
-- Fail PR if code changed but `/docs/**` not updated (unless labeled "no-docs-needed").
-- Nightly workflow runs `pnpm ci:nightly` at 2 AM UTC daily (non-blocking).
+- Run `npm run ci:pr` on PRs and pushes to `main`/`develop` (includes E2E smoke).  
+- Fail PR if code changed but `/docs/**` not updated (unless labeled "no-docs-needed").  
+- Nightly workflow runs `npm run ci:nightly` at 2 AM UTC daily (non-blocking).
 
 **Vercel Checks required to merge**  
 - Require both: CI “verify” job + “Vercel — Preview Ready”.
@@ -139,7 +151,7 @@ All tests must follow Clean Web Architecture principles:
 ## Cursor MUST follow these at task end
 Cursor must include in its final message:  
 - Branch name it created  
-- Output of `pnpm ci:pr` (or clear failure logs) - PR verification includes all tiers  
+- Output of `npm run ci:pr` (or clear failure logs) - PR verification includes all tiers  
 - Vercel preview URL  
 - List of updated files (including any `/docs/**`)  
 - Explanation if docs are not needed (and apply "no-docs-needed" label)

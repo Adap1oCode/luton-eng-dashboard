@@ -10,9 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormItem } from "@/components/ui/form";
 import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
-import type { Option as FormOption } from "@/lib/forms/types";
 
-export type Option = FormOption;
+export type Option = {
+  id: string;
+  label: string;
+  /**
+   * Optional value distinct from the display label. Some call sites rely on `value`
+   * when mapping options into SearchableSelect, so expose it while keeping backwards compatibility.
+   */
+  value?: string | number | boolean | null;
+};
 
 export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
 
@@ -118,48 +125,39 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
               <>
                 {/* Use SearchableSelect for all select fields (except multiselect) */}
                 {field.kind === "select" ? (
-                  field.name === "location" && multiLocation ? (
-                    <Input
-                      value={typeof rhf.value === "string" ? rhf.value : ""}
-                      placeholder={field.placeholder ?? "Multiple locations selected"}
-                      readOnly
-                      className="bg-muted"
-                    />
-                  ) : (
-                    <SearchableSelect
-                      options={(options ?? []).map((o) => {
-                        // For location fields: SearchableSelect uses id for matching, but form stores value (location name)
-                        // Map options so id matches what we'll pass as value (use value as id for location fields)
-                        if (field.name === "location" && o.value) {
-                          return {
-                            ...o,
-                            id: o.value, // Use location name as id for SearchableSelect matching
-                          } as SearchableSelectOption;
-                        }
-                        return o as SearchableSelectOption;
-                      })}
-                      value={rhf.value ?? null}
-                      onChange={(selectedId) => {
-                        // For location fields, selectedId is already the location name (value)
-                        // For other fields, selectedId is the id (UUID or item_number)
-                        rhf.onChange(selectedId);
-                      }}
-                      placeholder={field.placeholder ?? "Select..."}
-                      searchPlaceholder={
-                        field.name === "item_number"
-                          ? "Search item number or description..."
-                          : field.name === "warehouse_id"
-                          ? "Search warehouse code or name..."
-                          : field.name === "location"
-                          ? "Search location..."
-                          : "Search..."
+                  <SearchableSelect
+                    options={(options ?? []).map((o) => {
+                      // For location fields: SearchableSelect uses id for matching, but form stores value (location name)
+                      // Map options so id matches what we'll pass as value (use value as id for location fields)
+                      if (field.name === "location" && o.value) {
+                        return {
+                          ...o,
+                          id: o.value, // Use location name as id for SearchableSelect matching
+                        } as SearchableSelectOption;
                       }
-                      twoColumn={field.name === "item_number" || field.name === "warehouse_id"}
-                      searchFields={field.name === "item_number" || field.name === "warehouse_id" ? "both" : "label"}
-                      disabled={field.readOnly || isDisabledByMultiLocation}
-                      className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
-                    />
-                  )
+                      return o as SearchableSelectOption;
+                    })}
+                    value={rhf.value ?? null}
+                    onChange={(selectedId) => {
+                      // For location fields, selectedId is already the location name (value)
+                      // For other fields, selectedId is the id (UUID or item_number)
+                      rhf.onChange(selectedId);
+                    }}
+                    placeholder={field.placeholder ?? "Select..."}
+                    searchPlaceholder={
+                      field.name === "item_number"
+                        ? "Search item number or description..."
+                        : field.name === "warehouse_id"
+                        ? "Search warehouse code or name..."
+                        : field.name === "location"
+                        ? "Search location..."
+                        : "Search..."
+                    }
+                    twoColumn={field.name === "item_number" || field.name === "warehouse_id"}
+                    searchFields={field.name === "item_number" || field.name === "warehouse_id" ? "both" : "label"}
+                    disabled={field.readOnly || isDisabledByMultiLocation}
+                    className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+                  />
                 ) : (
                   <div className="space-y-2">
                     {(options ?? []).length === 0 && field.optionsKey ? (

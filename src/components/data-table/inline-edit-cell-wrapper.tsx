@@ -5,10 +5,10 @@ import * as React from "react";
 import type { Row } from "@tanstack/react-table";
 
 import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
+import { getDomainId } from "@/components/data-table/view-defaults";
 
 interface InlineEditCellWrapperProps<TRow> {
   row: Row<TRow>;
-  rowId: string;
   columnId: string;
   editingCell: { rowId: string; columnId: string; value: any } | null;
   config: InlineEditConfig;
@@ -16,11 +16,11 @@ interface InlineEditCellWrapperProps<TRow> {
   onEditChange: (value: any) => void;
   onSave: () => void;
   onCancel: () => void;
+  idField?: string;
 }
 
-export const InlineEditCellWrapper = <TRow,>({
+export const InlineEditCellWrapper = <TRow extends Record<string, any>>({
   row,
-  rowId,
   columnId,
   editingCell,
   config,
@@ -28,8 +28,10 @@ export const InlineEditCellWrapper = <TRow,>({
   onEditChange,
   onSave,
   onCancel,
+  idField = "id",
 }: InlineEditCellWrapperProps<TRow>) => {
   const rawValue = row.getValue(columnId);
+  const rowId = getDomainId(row, idField);
   const isEditing = editingCell?.rowId === rowId && editingCell?.columnId === columnId;
 
   // Wrap in container that preserves column width - prevents flicker during edit transitions

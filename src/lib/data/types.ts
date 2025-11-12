@@ -32,8 +32,8 @@ export type ColumnType =
   | "integer"
   | "bigint"
   | "number"
-  | "double"
   | "numeric"
+  | "double"
   | "timestamp"
   | "date";
 
@@ -46,8 +46,8 @@ export type FieldSpec = {
     | "integer"
     | "bigint"
     | "number"
-    | "double"
     | "numeric"
+    | "double"
     | "timestamp"
     | "date";
   nullable?: boolean;
@@ -84,16 +84,14 @@ export type TypeFromColumn<T> = T extends "uuid"
   ? string
   : T extends "bool"
   ? boolean
-  : T extends "int" | "integer" | "double" | "numeric"
+  : T extends "int" | "integer"
   ? number
   : T extends "bigint"
   ? number
-  : T extends "number"
+  : T extends "number" | "numeric" | "double"
   ? number
-  : T extends "timestamp"
+  : T extends "timestamp" | "date"
   ? ISODateTime
-  : T extends "date"
-  ? string
   : unknown;
 
 export type WriteModelFromSchema<S extends ResourceSchemaSpec> = {

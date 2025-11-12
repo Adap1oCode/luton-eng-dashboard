@@ -48,7 +48,6 @@ import { toast } from "sonner";
 import { ColumnsMenu } from "@/components/data-table/columns-menu";
 import { exportCSV } from "@/components/data-table/csv-export";
 import { DataTable } from "@/components/data-table/data-table";
-import { useAccess } from "@/lib/access/useAccess";
 import { type FilterColumn, type ColumnFilterState } from "@/components/data-table/data-table-filters";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
@@ -60,7 +59,7 @@ import { stringPredicate } from "@/components/data-table/table-utils";
 import { useColumnResize } from "@/components/data-table/use-column-resize";
 import { useSavedViews } from "@/components/data-table/use-saved-views";
 import { useContainerResize } from "@/components/data-table/use-container-resize";
-import type { BaseViewConfig } from "@/components/data-table/view-defaults";
+import { getDomainId, type BaseViewConfig } from "@/components/data-table/view-defaults";
 import { useOptimistic } from "@/components/forms/shell/optimistic-context";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import { parseListParams, type SPRecord } from "@/lib/next/search-params";
@@ -69,39 +68,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-  SelectLabel,
-  SelectSeparator,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ViewsMenu } from "@/components/data-table/views-menu";
 
 type FilterMode = "contains" | "startsWith" | "endsWith" | "equals" | "notEquals";
 
-type ResourceTableClientProps<TRow extends Record<string, unknown>> = {
+type ResourceTableClientProps<TRow extends Record<string, any>> = {
   config: BaseViewConfig<TRow>;
   initialRows: TRow[];
   initialTotal: number;
@@ -121,7 +98,7 @@ type ResourceTableClientProps<TRow extends Record<string, unknown>> = {
 
 // move header and cell wrappers into shared data-table modules
 
-export default function ResourceTableClient<TRow extends Record<string, unknown>>({
+export default function ResourceTableClient<TRow extends Record<string, any>>({
   config,
   initialRows,
   initialTotal,
@@ -144,43 +121,41 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   const search = useSearchParams();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const resolvedIdField = React.useMemo(() => (config.idField as string | undefined) ?? "id", [config.idField]);
 
   // 🔑 NEW: Support configurable ID field from view config (e.g., "id" or "entry_id")
   // Moved ABOVE any state initializers that reference it (fixes TS2448/TS2454)
-  const idField = (config.idField ?? "id") as string;
-
-  const getRowIdValue = React.useCallback(
-    (row: TRow): string => {
-      const record = row as Record<string, unknown>;
-      const primary = record?.[idField];
-      if (primary != null) {
-        return String(primary);
-      }
-      const fallback = record?.["id"];
-      if (fallback != null) {
-        return String(fallback);
-      }
-      return "";
-    },
-    [idField],
-  );
+  const idField = (config as unknown as { idField?: string })?.idField ?? "id";
 
   // Connect row selection with selection store to enable bulk delete from toolbar
   const setSelectedIds = useSelectionStore((s) => s.setSelectedIds);
 
   // ✅ FIX: Extract stable config properties to prevent unnecessary memo recalculations
   // This ensures memos only update when the actual property values change, not when config object reference changes
-  const configApiEndpoint = React.useMemo(() => config.apiEndpoint, [config.apiEndpoint]);
+  const configApiEndpoint = React.useMemo(() => {
+    const configWithEndpoint = config as unknown as { apiEndpoint?: string };
+    return configWithEndpoint.apiEndpoint;
+  }, [(config as unknown as { apiEndpoint?: string })?.apiEndpoint]);
 
-  const configResourceKeyForDelete = React.useMemo(() => config.resourceKeyForDelete, [config.resourceKeyForDelete]);
+  const configResourceKeyForDelete = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.resourceKeyForDelete as string | undefined;
+  }, [(config as Record<string, unknown>)?.resourceKeyForDelete]);
 
-  const configQuickFilters = React.useMemo(() => config.quickFilters ?? [], [config.quickFilters]);
+  const configQuickFilters = React.useMemo(() => {
+    return config.quickFilters ?? [];
+  }, [config.quickFilters]);
 
-  const configColumns = React.useMemo(() => config.columns, [config.columns]);
+  const configColumns = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.columns;
+  }, [(config as Record<string, unknown>)?.columns]);
 
-  const configBuildColumns = React.useMemo(() => config.buildColumns, [config.buildColumns]);
+  const configBuildColumns = React.useMemo(() => {
+    return (config as Record<string, unknown>)?.buildColumns;
+  }, [(config as Record<string, unknown>)?.buildColumns]);
 
-  const configFormsRouteSegment = React.useMemo(() => config.formsRouteSegment ?? "table", [config.formsRouteSegment]);
+  const configFormsRouteSegment = React.useMemo(() => {
+    return (config as any)?.formsRouteSegment ?? "table";
+  }, [(config as any)?.formsRouteSegment]);
 
   // ⚙️ STEP 1: React Query infrastructure helpers (non-breaking, not used yet)
   // Extract API endpoint from config - check for apiEndpoint prop first, fallback to resourceKeyForDelete
@@ -197,22 +172,19 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   // Pattern: [endpoint, page, pageSize, serializedFilters]
   // Use apiEndpoint (view) instead of resourceKeyForDelete (table) to ensure we invalidate the correct queries
   // This is critical for SCD2 tables where the view filters duplicates but the table has them
-  const buildQueryKey = React.useCallback(
-    (currentPage: number, currentPageSize: number, currentFilters?: Record<string, string>): (string | number)[] => {
-      // Use apiEndpoint for queryKey to match what we actually fetch from (the view, not the table)
-      const endpoint = getApiEndpoint();
-      // Extract the resource name from the endpoint (e.g., "/api/v_tcm_user_tally_card_entries" -> "v_tcm_user_tally_card_entries")
-      const endpointKey = endpoint.replace(/^\/api\//, "");
-      const serializedFilters = currentFilters
-        ? Object.keys(currentFilters)
-            .sort()
-            .map((k) => `${encodeURIComponent(k)}:${encodeURIComponent(currentFilters[k])}`)
-            .join("|")
-        : "no-filters";
-      return [endpointKey, currentPage, currentPageSize, serializedFilters];
-    },
-    [getApiEndpoint],
-  );
+  const buildQueryKey = React.useCallback((currentPage: number, currentPageSize: number, currentFilters?: Record<string, string>): (string | number)[] => {
+    // Use apiEndpoint for queryKey to match what we actually fetch from (the view, not the table)
+    const endpoint = getApiEndpoint();
+    // Extract the resource name from the endpoint (e.g., "/api/v_tcm_user_tally_card_entries" -> "v_tcm_user_tally_card_entries")
+    const endpointKey = endpoint.replace(/^\/api\//, "");
+    const serializedFilters = currentFilters
+      ? Object.keys(currentFilters)
+          .sort()
+          .map((k) => `${encodeURIComponent(k)}:${encodeURIComponent(currentFilters[k])}`)
+          .join("|")
+      : "no-filters";
+    return [endpointKey, currentPage, currentPageSize, serializedFilters];
+  }, [getApiEndpoint]);
 
   // ⚙️ STEP 2: Parse filters from URL and set up React Query (parallel to existing flow)
   // Parse pagination and filters from URL search params
@@ -226,10 +198,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
   // Extract quickFilterMeta from config.quickFilters for parseListParams
   const quickFilterMeta = React.useMemo(() => {
-    const quickFilters = configQuickFilters as Array<{
-      id: string;
-      toQueryParam?: (value: string) => Record<string, any>;
-    }>;
+    const quickFilters = configQuickFilters as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
     return quickFilters.map((f) => ({ id: f.id, toQueryParam: f.toQueryParam }));
   }, [configQuickFilters]);
 
@@ -242,11 +211,10 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
   // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
   const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
-    if (Array.isArray(configColumns)) {
-      return configColumns as ColumnDef<TRow, unknown>[];
-    }
+    const injected = configColumns;
+    if (Array.isArray(injected)) return injected as ColumnDef<TRow, unknown>[];
     if (typeof configBuildColumns === "function") {
-      return configBuildColumns(true) as ColumnDef<TRow, unknown>[];
+      return (configBuildColumns as (arg: boolean) => ColumnDef<TRow, unknown>[])(true);
     }
     return [];
   }, [configColumns, configBuildColumns]);
@@ -296,7 +264,9 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     return visibility;
   }, [initialColumnVisibility, baseColumns, idField]);
 
-  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>(initialSorting ?? []);
+  const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>(
+    initialSorting ?? []
+  );
   const [rowSelection, setRowSelection] = React.useState({});
   // Expanded row state - controlled to persist across data updates
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
@@ -337,7 +307,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   }, [search]);
 
   const [filters, setFilters] = React.useState<Record<string, ColumnFilterState>>(initialFilters);
-
+  
   // Ref to track if we're updating filters from URL (to prevent feedback loops)
   const isUpdatingFromUrlRef = React.useRef(false);
   const columnFilters = React.useMemo(() => {
@@ -348,11 +318,8 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   // Must be declared after filters state is initialized
   const buildExtraQueryFromFilters = React.useCallback(() => {
     const extraQuery: Record<string, any> = { raw: "true" };
-    const quickFilters = (config.quickFilters ?? []) as Array<{
-      id: string;
-      toQueryParam?: (value: string) => Record<string, any>;
-    }>;
-
+    const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
+    
     // Add quick filters (status, etc.)
     quickFilters.forEach((filter) => {
       const value = currentFilters[filter.id];
@@ -360,7 +327,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         Object.assign(extraQuery, filter.toQueryParam(value));
       }
     });
-
+    
     // Add column filters (from "More Filters") - these must be sent to server for full dataset filtering
     Object.entries(filters).forEach(([columnId, filterState]) => {
       if (filterState?.value && filterState.value.trim() !== "") {
@@ -371,7 +338,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         extraQuery[`filters[${columnId}][mode]`] = mode;
       }
     });
-
+    
     return extraQuery;
   }, [currentFilters, config.quickFilters, filters]);
 
@@ -391,12 +358,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     return buildQueryKey(page, pageSize, combinedFilters);
   }, [buildQueryKey, page, pageSize, currentFilters, filters]);
 
-  const {
-    data: queryData,
-    isLoading: isQueryLoading,
-    isFetching: isQueryFetching,
-    error: queryError,
-  } = useQuery({
+  const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
     queryKey,
     queryFn: async () => {
       const extraQuery = buildExtraQueryFromFilters();
@@ -410,7 +372,6 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     initialData: { rows: initialRows, total: initialTotal },
     initialDataUpdatedAt: Date.now(), // Mark SSR data as fresh
     staleTime: 5 * 60 * 1000, // 5 minutes (matches ResourceListClient)
-    refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: (failureCount, error) => {
@@ -445,37 +406,17 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       return initialTotal;
     }
     // If queryData exists and has total, use it
-    if (typeof queryData.total === "number") {
+    if (typeof queryData.total === 'number') {
       return queryData.total;
     }
     // Fallback to initialTotal if queryData structure is unexpected
     return initialTotal;
   }, [queryData?.total, queryData, queryError, initialTotal]);
 
-  // 🔒 Get access guards for warehouse filtering (client-side safety net)
-  const { guards } = useAccess();
-
-  // 🎯 Filter out optimistically deleted rows and rows from unauthorized warehouses
+  // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
-    let rows = currentRows.filter((row) => {
-      const rowId = getRowIdValue(row as TRow);
-      return !rowId || !isOptimisticallyDeleted(rowId);
-    });
-
-    // Additional warehouse filtering (client-side safety net)
-    // Filter rows by warehouse_code or warehouse field if guards are available
-    if (guards) {
-      rows = rows.filter((row) => {
-        const warehouseCode = (row as any).warehouse_code || (row as any).warehouse;
-        // If row has no warehouse field, allow it (might be non-warehouse resource)
-        if (!warehouseCode) return true;
-        // Check if user has access to this warehouse
-        return guards.inWarehouse(warehouseCode);
-      });
-    }
-
-    return rows;
-  }, [currentRows, isOptimisticallyDeleted, getRowIdValue, guards]);
+    return currentRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
+  }, [currentRows, isOptimisticallyDeleted, idField]);
 
   // ✅ Controlled pagination (0-based index)
   const [pagination, setPagination] = React.useState({
@@ -493,7 +434,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
   // 🔗 Table element ref (needed by the resize hook and passed to DataTable)
   const tableRef = React.useRef<HTMLElement | null>(null);
-
+  
   // Store table reference in ref to avoid recreating event listeners when table object changes
   // Initialize with null since table is created later via useReactTable
   const tableRefForExport = React.useRef<any>(null);
@@ -507,7 +448,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         size: (c as any).size,
         minSize: (c as any).minSize ?? (c.meta as any)?.minPx,
         maxSize: (c as any).maxSize ?? (c.meta as any)?.maxPx,
-      })),
+      }))
     );
   }, []);
 
@@ -546,7 +487,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   // Only enable when needed (responsive scaling or when user resizes)
   // Start disabled to avoid ResizeObserver setup on initial render
   const [enableContainerResize, setEnableContainerResize] = React.useState(false);
-
+  
   // Enable resize observer when:
   // 1. Current view has baseline (needs responsive scaling)
   // 2. User starts resizing (onMouseDownResize will enable it)
@@ -555,26 +496,25 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       setEnableContainerResize(true);
     }
   }, [currentView?.baselineWidthPx]);
-
+  
   // Track container width for responsive scaling (only when enabled)
   const containerWidthPx = useContainerResize(tableRef, enableContainerResize);
 
   // Column widths state for resizing (initialize from config sizes, then user can override)
-  const {
-    widths: columnWidths,
-    setWidths,
-    isResizing,
-    onMouseDownResize: onMouseDownResizeOriginal,
-  } = useColumnResize(initialColumnWidths, tableRef, {
-    getColumnMeta: (columnId: string) => {
-      const col = baseColumns.find((c) => c.id === columnId);
-      if (!col) return null;
-      return {
-        minPx: (col.meta as any)?.minPx ?? (col as any).minSize,
-        maxPx: (col.meta as any)?.maxPx ?? (col as any).maxSize,
-      };
-    },
-  });
+  const { widths: columnWidths, setWidths, isResizing, onMouseDownResize: onMouseDownResizeOriginal } = useColumnResize(
+    initialColumnWidths,
+    tableRef,
+    {
+      getColumnMeta: (columnId: string) => {
+        const col = baseColumns.find((c) => c.id === columnId);
+        if (!col) return null;
+        return {
+          minPx: (col.meta as any)?.minPx ?? (col as any).minSize,
+          maxPx: (col.meta as any)?.maxPx ?? (col as any).maxSize,
+        };
+      },
+    }
+  );
 
   // ✅ FIX: Wrap resize handler to enable container resize observer on first use
   const onMouseDownResize = React.useCallback(
@@ -585,7 +525,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       }
       onMouseDownResizeOriginal(e, columnId);
     },
-    [enableContainerResize, onMouseDownResizeOriginal],
+    [enableContainerResize, onMouseDownResizeOriginal]
   );
 
   // Track currently dragged column id to render an overlay ghost
@@ -603,17 +543,17 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       },
       // Ignore pointer events that originate from resize handles
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor)
   );
 
   // Extract stable row IDs to avoid depending on entire initialRows array reference
   // Use idField from config to extract IDs, creating stable array only when IDs actually change
   const dataIds = React.useMemo<UniqueIdentifier[]>(() => {
     return initialRows.map((row, idx) => {
-      const rowId = getRowIdValue(row);
-      return rowId || `row_${idx}`;
+      const id = (row as any)[idField];
+      return id ? String(id) : ((row as any).id ? String((row as any).id) : `row_${idx}`);
     });
-  }, [initialRows, getRowIdValue]);
+  }, [initialRows, idField]);
 
   // Handle column reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -632,13 +572,13 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     if (isResizing) {
       return; // ignore DnD while resizing
     }
-
+    
     // Check if the drag started from a resize handle
     const target = event.active.data.current?.originalEvent?.target as HTMLElement | null;
     if (target?.closest('[data-resize-handle="true"]')) {
       return; // Ignore drags that originate from resize handles
     }
-
+    
     const id = String(event.active.id ?? "");
     // Only set overlay for column drags (ignore row drags)
     if (columnOrder.includes(id)) setActiveColumnId(id);
@@ -658,7 +598,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   const handleStatusSave = React.useCallback(async () => {
     if (!editingStatus) return;
     try {
-      const resourceKey = configResourceKeyForDelete ?? "tcm_tally_cards";
+      const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
       const res = await fetch(`/api/${resourceKey}/${editingStatus.rowId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -678,7 +618,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     } finally {
       setEditingStatus(null);
     }
-  }, [editingStatus, configResourceKeyForDelete, queryClient, getApiEndpoint]);
+  }, [editingStatus, config, queryClient, getApiEndpoint]);
 
   const handleStatusCancel = React.useCallback(() => setEditingStatus(null), []);
 
@@ -696,13 +636,13 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   const handleInlineEditSave = React.useCallback(async () => {
     if (!editingCell) return;
     try {
-      const resourceKey = configResourceKeyForDelete ?? "tcm_tally_cards";
-      const routeSegment = configFormsRouteSegment ?? "stock-adjustments";
-
+      const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+      const routeSegment = (config as Record<string, unknown>)?.formsRouteSegment ?? "stock-adjustments";
+      
       // Map column IDs to SCD2 API payload field names
       // Only qty, location, and note are supported by the SCD2 RPC
       const supportedColumns = ["qty", "location", "note"];
-
+      
       if (!supportedColumns.includes(editingCell.columnId)) {
         alert(`Column ${editingCell.columnId} is not supported for inline editing`);
         return;
@@ -710,7 +650,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
       // Get current row data to preserve values for fields we're NOT changing
       // This is critical: SCD2 RPC will SET null values, so we must include current values
-      const currentRow = filteredRows.find((row) => getRowIdValue(row) === editingCell.rowId);
+      const currentRow = filteredRows.find((row: any) => (row as any)[idField] === editingCell.rowId);
       if (!currentRow) {
         alert("Row not found");
         return;
@@ -719,12 +659,9 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       // Build payload for SCD2 endpoint: include current values for fields we're NOT changing
       // The API expects qty/location/note (route handler maps to p_qty/p_location/p_note for RPC)
       const payload: Record<string, any> = {
-        qty: editingCell.columnId === "qty" ? editingCell.value : ((currentRow as Record<string, any>).qty ?? null),
-        location:
-          editingCell.columnId === "location"
-            ? editingCell.value
-            : ((currentRow as Record<string, any>).location ?? null),
-        note: editingCell.columnId === "note" ? editingCell.value : ((currentRow as Record<string, any>).note ?? null),
+        qty: editingCell.columnId === "qty" ? editingCell.value : (currentRow as any).qty ?? null,
+        location: editingCell.columnId === "location" ? editingCell.value : (currentRow as any).location ?? null,
+        note: editingCell.columnId === "note" ? editingCell.value : (currentRow as any).note ?? null,
       };
 
       // Build optimistic update payload - only the field being edited
@@ -734,15 +671,17 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
       // Get specific query key for optimistic update and invalidation
       const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
-
+      
       // Optimistically update the cache before API call
       queryClient.setQueryData(specificQueryKey, (prev: any) => {
         if (!prev) return prev;
         return {
           ...prev,
-          rows: prev.rows.map((r: TRow) => {
-            const rowId = getRowIdValue(r);
-            return rowId === editingCell.rowId ? { ...r, ...optimisticPayload } : r;
+          rows: prev.rows.map((r: any) => {
+            const rowId = (r as any)[idField];
+            return rowId === editingCell.rowId
+              ? { ...r, ...optimisticPayload }
+              : r;
           }),
         };
       });
@@ -760,33 +699,22 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       } else {
         // Rollback optimistic update on API failure
         queryClient.invalidateQueries({ queryKey: specificQueryKey });
-
+        
         const errorData = await res.json().catch(() => ({}));
         alert(`Failed to update ${editingCell.columnId}: ${errorData.error?.message || res.statusText}`);
       }
     } catch (error) {
       console.error("Inline edit error:", error);
-
+      
       // Rollback optimistic update on error
       const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
       queryClient.invalidateQueries({ queryKey: specificQueryKey });
-
+      
       alert(`Error updating ${editingCell.columnId}`);
     } finally {
       setEditingCell(null);
     }
-  }, [
-    editingCell,
-    configResourceKeyForDelete,
-    configFormsRouteSegment,
-    filteredRows,
-    getRowIdValue,
-    queryClient,
-    buildQueryKey,
-    page,
-    pageSize,
-    currentFilters,
-  ]);
+  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint, buildQueryKey, page, pageSize, currentFilters]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -858,7 +786,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       const header = (col as { header?: string | React.ReactElement | null }).header;
       if (typeof header === "string" || React.isValidElement(header) || header == null) {
         // Extract string label: if header is string use it, otherwise fall back to column id
-        const label = typeof header === "string" ? header : ((col as { id?: string }).id ?? "");
+        const label = typeof header === "string" ? header : (col as { id?: string }).id ?? "";
         const canSort = (col as { enableSorting?: boolean }).enableSorting !== false;
         // Use memoized header decoration function
         c.header = createHeaderDecoration(label, col.id ?? "", canSort);
@@ -901,36 +829,31 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       if (inlineEditConfig) {
         // Use generic inline editing
         c.cell = (cellProps) => {
-          const rowOriginal = cellProps.row.original as TRow;
-          const columnId = c.id || (c as any).accessorKey;
-          const rowId = getRowIdValue(rowOriginal) || String(cellProps.row.id ?? "");
           const baseCell = (
-            <InlineEditCellWrapper
+              <InlineEditCellWrapper
               row={cellProps.row}
-              rowId={rowId}
-              columnId={columnId}
+              columnId={c.id || (c as any).accessorKey}
               editingCell={editingCell}
               config={inlineEditConfig}
               onEditStart={handleInlineEditStart}
               onEditChange={handleInlineEditChange}
               onSave={handleInlineEditSave}
               onCancel={handleInlineEditCancel}
+                idField={resolvedIdField}
             />
           );
 
           // Add MULTI badge if needed (only in display mode, not when editing)
-          if (showMultiBadge) {
-            const isEditing = editingCell?.rowId === rowId && editingCell?.columnId === columnId;
-            const multiLocation = (rowOriginal as Record<string, any>)?.multi_location;
-
+            if (showMultiBadge) {
+              const rowId = getDomainId(cellProps.row, resolvedIdField);
+              const isEditing = editingCell?.rowId === rowId && editingCell?.columnId === (c.id || (c as any).accessorKey);
+              const multiLocation = (cellProps.row.original as any)?.multi_location;
+            
             if (!isEditing && multiLocation) {
               return (
                 <div className="flex items-center gap-2">
                   {baseCell}
-                  <Badge
-                    variant="secondary"
-                    className="shrink-0 border-orange-200 bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700 dark:border-orange-800 dark:bg-orange-900/50 dark:text-orange-100"
-                  >
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-100 dark:border-orange-800 px-1.5 py-0.5 text-xs font-medium shrink-0">
                     MULTI
                   </Badge>
                 </div>
@@ -945,12 +868,12 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         c.cell = (cellProps) => (
           <StatusCellWrapper
             row={cellProps.row}
-            rowId={getRowIdValue(cellProps.row.original as TRow) || String(cellProps.row.id ?? "")}
             editingStatus={editingStatus}
             onEditStart={handleStatusEditStart}
             onEditChange={handleStatusEditChange}
             onSave={handleStatusSave}
             onCancel={handleStatusCancel}
+            idField={resolvedIdField}
           />
         );
       }
@@ -978,7 +901,6 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     handleInlineEditSave,
     handleInlineEditCancel,
     baseColumns,
-    getRowIdValue,
   ]);
 
   const table = useReactTable<TRow>({
@@ -1011,10 +933,10 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     onPaginationChange: setPagination,
     onExpandedChange: (updater) => {
       setExpanded((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
+        const next = typeof updater === 'function' ? updater(prev) : updater;
         // TanStack Table ExpandedState can be boolean or Record<string, boolean>
         // We normalize to Record<string, boolean>
-        if (typeof next === "boolean") {
+        if (typeof next === 'boolean') {
           return next ? {} : {};
         }
         return next || {};
@@ -1043,10 +965,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
   // Must be defined after table is created but before renderColumnWidthsPx
   const visibleColumnIds = React.useMemo(() => {
     return new Set(
-      table
-        .getAllLeafColumns()
-        .filter((c) => c.getIsVisible())
-        .map((c) => String(c.id)),
+      table.getAllLeafColumns().filter((c) => c.getIsVisible()).map((c) => String(c.id))
     );
   }, [table]);
 
@@ -1147,8 +1066,9 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
   // Listen for action from actions column via event delegation (includes nested Radix elements)
   React.useEffect(() => {
-    const resourceKey = configResourceKeyForDelete ?? "tcm_tally_cards";
-    const routeSegment = configFormsRouteSegment ?? String(resourceKey).replace(/_/g, "-");
+    const resourceKey = (config as Record<string, unknown>)?.resourceKeyForDelete ?? "tcm_tally_cards";
+    const routeSegment =
+      (config as Record<string, unknown>)?.formsRouteSegment ?? String(resourceKey).replace(/_/g, "-");
 
     async function handleDelete(rowId: string) {
       confirm({
@@ -1221,19 +1141,19 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     const nextSize = pagination.pageSize;
     const curPage = Number(search.get("page") ?? String(page));
     const curSize = Number(search.get("pageSize") ?? String(pageSize));
-
+    
     // If URL has old default (10) or is missing, use server's default (50)
     // This ensures the URL is updated to reflect the new default
     const urlSize = search.get("pageSize");
     const urlSizeNum = urlSize ? Number(urlSize) : null;
     const shouldUpdateSize = urlSizeNum === null || urlSizeNum === 10;
-
+    
     // Use server's default (50) if URL has old value or is missing, otherwise use current pagination
     const finalSize = shouldUpdateSize ? pageSize : nextSize;
-
+    
     // Only update if page changed, size changed, or we need to update from old default
     if (curPage === nextPage && curSize === finalSize && !shouldUpdateSize) return;
-
+    
     const sp = new URLSearchParams(search.toString());
     sp.set("page", String(nextPage));
     sp.set("pageSize", String(finalSize));
@@ -1273,7 +1193,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         }
       }
     });
-
+    
     // Filter out empty filters
     const filtered: Record<string, ColumnFilterState> = {};
     Object.entries(urlFilters).forEach(([columnId, filterState]) => {
@@ -1281,11 +1201,11 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         filtered[columnId] = filterState;
       }
     });
-
+    
     // Only update filters if URL filters differ from current filters (deep comparison)
     const urlFiltersKeys = Object.keys(filtered).sort();
     const currentFiltersKeys = Object.keys(filters).sort();
-
+    
     if (urlFiltersKeys.length !== currentFiltersKeys.length) {
       isUpdatingFromUrlRef.current = true;
       setFilters(filtered);
@@ -1295,22 +1215,20 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       }, 0);
       return;
     }
-
+    
     // Deep compare each filter
     let filtersChanged = false;
     for (const key of urlFiltersKeys) {
       const urlFilter = filtered[key];
       const currentFilter = filters[key];
-      if (
-        !currentFilter ||
-        urlFilter.value !== currentFilter.value ||
-        (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")
-      ) {
+      if (!currentFilter || 
+          urlFilter.value !== currentFilter.value || 
+          (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
         filtersChanged = true;
         break;
       }
     }
-
+    
     // Also check if any current filters are missing in URL
     if (!filtersChanged) {
       for (const key of currentFiltersKeys) {
@@ -1320,7 +1238,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         }
       }
     }
-
+    
     if (filtersChanged) {
       isUpdatingFromUrlRef.current = true;
       setFilters(filtered);
@@ -1339,7 +1257,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     }
 
     const sp = new URLSearchParams(search.toString());
-
+    
     // Remove all existing filter params first
     const keysToRemove: string[] = [];
     sp.forEach((_, key) => {
@@ -1348,7 +1266,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       }
     });
     keysToRemove.forEach((key) => sp.delete(key));
-
+    
     // Add current filters to URL
     let hasActiveFilters = false;
     Object.entries(filters).forEach(([columnId, filterState]) => {
@@ -1362,12 +1280,12 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         }
       }
     });
-
+    
     // Reset to page 1 when filters change (if there are active filters)
     if (hasActiveFilters) {
       sp.set("page", "1");
     }
-
+    
     // Only update URL if something changed
     const newUrl = `${pathname}?${sp.toString()}`;
     const currentUrl = `${pathname}?${search.toString()}`;
@@ -1420,13 +1338,14 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
           columnVisibility,
           columnWidthsPx: columnWidths, // Use px instead of pct
           baselineWidthPx: containerWidthPx ?? undefined,
-          sortConfig: table.getState().sorting?.[0]
-            ? {
-                column: table.getState().sorting[0].id,
-                direction: table.getState().sorting[0].desc ? "desc" : "asc",
-                type: "alphabetical",
-              }
-            : { column: null, direction: "none", type: "alphabetical" },
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
           filters,
         };
 
@@ -1453,7 +1372,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         toast.error(`Failed to save view: ${err?.message ?? ""}`);
       }
     },
-    [tableId, columnOrder, columnVisibility, columnWidths, table, filters, saveView],
+    [tableId, columnOrder, columnVisibility, columnWidths, table, filters, saveView]
   );
 
   const handleUpdateViewRemote = React.useCallback(
@@ -1464,13 +1383,14 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
           columnVisibility,
           columnWidthsPx: columnWidths, // Use px instead of pct
           baselineWidthPx: containerWidthPx ?? undefined,
-          sortConfig: table.getState().sorting?.[0]
-            ? {
-                column: table.getState().sorting[0].id,
-                direction: table.getState().sorting[0].desc ? "desc" : "asc",
-                type: "alphabetical",
-              }
-            : { column: null, direction: "none", type: "alphabetical" },
+          sortConfig:
+            table.getState().sorting?.[0]
+              ? {
+                  column: table.getState().sorting[0].id,
+                  direction: table.getState().sorting[0].desc ? "desc" : "asc",
+                  type: "alphabetical",
+                }
+              : { column: null, direction: "none", type: "alphabetical" },
           filters,
         };
 
@@ -1485,18 +1405,21 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         toast.error(`Failed to update view: ${err?.message ?? ""}`);
       }
     },
-    [columnOrder, columnVisibility, columnWidths, table, filters],
+    [columnOrder, columnVisibility, columnWidths, table, filters]
   );
 
-  const handleDeleteViewRemote = React.useCallback(async (viewId: string) => {
-    try {
-      const res = await fetch(`/api/saved-views/${viewId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete view");
-      toast("View deleted successfully!");
-    } catch (err: any) {
-      toast.error(`Failed to delete view: ${err?.message ?? ""}`);
-    }
-  }, []);
+  const handleDeleteViewRemote = React.useCallback(
+    async (viewId: string) => {
+      try {
+        const res = await fetch(`/api/saved-views/${viewId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete view");
+        toast("View deleted successfully!");
+      } catch (err: any) {
+        toast.error(`Failed to delete view: ${err?.message ?? ""}`);
+      }
+    },
+    []
+  );
 
   const handleSetDefaultRemote = React.useCallback(
     async (viewId: string) => {
@@ -1513,7 +1436,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         toast.error(`Failed to set default: ${err?.message ?? ""}`);
       }
     },
-    [setDefault],
+    [setDefault]
   );
 
   // ✅ Toolbar مربوط بحالة TanStack Table باستخدام ColumnsMenu و SortMenu
@@ -1532,11 +1455,8 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
   // Extract column metadata separately to reduce table dependency
   const leafColumnsMetadata = React.useMemo(() => {
-    return table
-      .getAllLeafColumns()
-      .filter(
-        (c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField,
-      )
+    return table.getAllLeafColumns()
+      .filter((c) => c.getCanHide() && c.id !== "actions" && c.id !== "__select" && c.id !== "select" && c.id !== idField)
       .map((c) => ({
         id: String(c.id),
         isVisible: c.getIsVisible(),
@@ -1672,11 +1592,11 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
               <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">Saved Views</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <ViewsMenu
-                views={views.map((v) => ({
-                  ...v,
-                  description: v.description ?? "",
+                views={views.map((v) => ({ 
+                  ...v, 
+                  description: v.description ?? "", 
                   isDefault: !!v.isDefault,
-                  createdAt: new Date(v.createdAt),
+                  createdAt: new Date(v.createdAt) 
                 }))}
                 currentViewId="default"
                 onApplyView={(v) => {
@@ -1743,9 +1663,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
               />
               {/* Optional: Auto-fit action */}
               <div className="border-t border-gray-200 p-2 dark:border-gray-700">
-                <Button variant="outline" size="sm" onClick={autoFitColumns}>
-                  Auto-fit columns
-                </Button>
+                <Button variant="outline" size="sm" onClick={autoFitColumns}>Auto-fit columns</Button>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1773,30 +1691,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         )}
       </div>
     );
-  }, [
-    currentSorting,
-    leafColumnsMetadata,
-    table,
-    isResizing,
-    setColumnOrder,
-    dragIdRef,
-    idField,
-    views,
-    currentView,
-    applyView,
-    handleDeleteViewRemote,
-    setWidths,
-    onClearSorting,
-    showViewsButton,
-    showColumnsButton,
-    showSortButton,
-    initialOrderRef,
-    initialColumnWidths,
-    containerWidthPx,
-    currentViewId,
-    updateView,
-    autoFitColumns,
-  ]);
+  }, [currentSorting, leafColumnsMetadata, table, isResizing, setColumnOrder, dragIdRef, idField, views, currentView, applyView, handleDeleteViewRemote, setWidths, onClearSorting, showViewsButton, showColumnsButton, showSortButton, initialOrderRef, initialColumnWidths, containerWidthPx, currentViewId, updateView, autoFitColumns]);
 
   // ✅ FIX: Lazy-load More Filters Section - only compute when showMoreFilters is true
   // Memoize active filter count separately to avoid recalculating when filters change
@@ -1896,7 +1791,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
 
     const handleFilterChange = (value: string) => {
       const sp = new URLSearchParams(search.toString());
-
+      
       // Handle "Clear all" option
       if (value === "__clear_all__") {
         // Remove all filter query params
@@ -1907,16 +1802,16 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         // Parse the value: format is "filterId:optionValue"
         const colonIndex = value.indexOf(":");
         if (colonIndex <= 0) return; // Invalid format
-
+        
         const filterId = value.substring(0, colonIndex);
         const optionValue = value.substring(colonIndex + 1);
-
+        
         // Find the filter config to check defaultValue
         const filterConfig = quickFilters.find((f) => f.id === filterId);
         if (!filterConfig) return; // Filter not found
-
+        
         const defaultValue = filterConfig.defaultValue ?? "ALL";
-
+        
         // Update only this filter (keep other filters active)
         // Remove "ALL" or empty values from URL (uses default from filter config)
         if (!optionValue || optionValue === "ALL" || optionValue === defaultValue) {
@@ -1925,10 +1820,10 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
           sp.set(filterId, optionValue);
         }
       }
-
+      
       // Reset to page 1 when filter changes
       sp.set("page", "1");
-
+      
       // Update URL and invalidate React Query cache for subtle refetch
       router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
       // Invalidate queries to trigger refetch with new filter params (no full page refresh)
@@ -1946,8 +1841,10 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         return option ? `${filter.label}: ${option.label}` : null;
       })
       .filter(Boolean);
-
-    const displayValue = activeFilters.length > 0 ? activeFilters.join(", ") : "All filters";
+    
+    const displayValue = activeFilters.length > 0 
+      ? activeFilters.join(", ")
+      : "All filters";
 
     // Find current selected value for the dropdown
     // Only set if there's exactly one active filter (for better UX)
@@ -1957,7 +1854,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
       const currentValue = quickFilterValues[filter.id] ?? filter.defaultValue;
       return currentValue && currentValue !== "ALL" && currentValue !== filter.defaultValue;
     }).length;
-
+    
     // Only show selected value if there's exactly one active filter
     // Otherwise show display value (which shows all active filters)
     if (activeFilterCount === 1) {
@@ -1977,9 +1874,14 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
         <Label htmlFor="quick-filters-combined" className="text-sm font-medium">
           Filters:
         </Label>
-        <Select value={currentSelectedValue} onValueChange={handleFilterChange}>
+        <Select
+          value={currentSelectedValue}
+          onValueChange={handleFilterChange}
+        >
           <SelectTrigger id="quick-filters-combined" className="h-9 w-[220px]">
-            <SelectValue placeholder="All filters">{displayValue}</SelectValue>
+            <SelectValue placeholder="All filters">
+              {displayValue}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {/* Clear all option */}
@@ -1989,7 +1891,7 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
             <SelectSeparator />
             {quickFilters.map((filter, filterIndex) => {
               if (filter.type !== "enum" || !filter.options) return null;
-
+              
               return (
                 <React.Fragment key={filter.id}>
                   {filterIndex > 0 && <SelectSeparator />}
@@ -2163,10 +2065,9 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
               <div className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                 <div>• {Object.values(columnVisibility).filter(Boolean).length} columns visible</div>
                 <div>
-                  •{" "}
-                  {table.getState().sorting?.[0]
-                    ? `Sorted by: ${table.getState().sorting[0].id} (${table.getState().sorting[0].desc ? "desc" : "asc"})`
-                    : "No sorting applied"}
+                  • {table.getState().sorting?.[0] 
+                      ? `Sorted by: ${table.getState().sorting[0].id} (${table.getState().sorting[0].desc ? "desc" : "asc"})`
+                      : "No sorting applied"}
                 </div>
                 <div>• Column order: {columnOrder.length} columns</div>
               </div>
