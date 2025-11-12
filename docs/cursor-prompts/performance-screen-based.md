@@ -3,7 +3,7 @@ You are a senior Next.js + TS performance reviewer.
 Target ONE screen for a performance-only audit. First DISCOVER its exact runtime path; then propose minimal fixes.
 
 SCREEN
-<SET THIS> e.g. "/forms/stock-adjustments" or "/forms/tally-cards"
+<"/forms/stock-adjustments"> - Note this inlcudes View, New, Edit and Delete i.e all related functions.
 
 GUARDRAILS (must remain true)
 - SSR page reads via API (absolute URL + forwarded cookies) with Cache-Control: no-store.

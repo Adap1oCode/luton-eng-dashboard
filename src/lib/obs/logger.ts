@@ -113,7 +113,7 @@ function createLokiTransport(): Writable | null {
         streams: [
           {
             stream: {
-              app: "tally-card-manager",
+              service: "luton-eng-dashboard",
               env: process.env.NODE_ENV ?? "dev",
             },
             values: lines.map((line) => [nowNs.toString(), line]),
@@ -122,10 +122,23 @@ function createLokiTransport(): Writable | null {
       });
 
       const req = https.request(optionsBase, (res) => {
+        // Log response status for debugging (only in dev)
+        if (process.env.NODE_ENV !== 'production') {
+          if (res.statusCode !== 204 && res.statusCode !== 200) {
+            console.warn(`[LOKI] Unexpected status code: ${res.statusCode}`);
+          } else {
+            console.log(`[LOKI] ✅ Logs sent successfully (${lines.length} lines)`);
+          }
+        }
         res.on("data", () => {});
         res.on("end", () => cb?.());
       });
-      req.on("error", (err) => cb?.(err));
+      req.on("error", (err) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[LOKI] ❌ Error sending logs:', err);
+        }
+        cb?.(err);
+      });
       req.write(payload);
       req.end();
     }
@@ -137,11 +150,16 @@ function createLokiTransport(): Writable | null {
           timer = setTimeout(() => {
             timer = null;
             flush();
-          }, 400); // tiny debounce
+          }, 1000); // Increased debounce to 1 second to ensure batching works
         }
         cb();
       },
       final(cb) {
+        // Force flush on final
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
         flush(cb);
       },
     });
@@ -158,6 +176,15 @@ const base = createBaseLogger();
 
 const logtail = createLogtailTransport();
 const loki = createLokiTransport();
+
+// Debug: Log if Loki is enabled (only in development)
+if (process.env.NODE_ENV !== 'production' && process.env.LOG_ENABLE_LOKI === 'true') {
+  if (loki) {
+    console.log('[LOGGER] ✅ Loki transport enabled and ready');
+  } else {
+    console.warn('[LOGGER] ⚠️ Loki transport disabled - check LOKI_URL, LOKI_USER, LOKI_PASS in .env.local');
+  }
+}
 
 // We emit once, and, if transports exist, also forward the raw JSON line to them.
 // Pino lets us hook `hooks.logMethod` to intercept the final line.
