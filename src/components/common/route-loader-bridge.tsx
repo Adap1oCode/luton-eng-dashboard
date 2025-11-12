@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { useLoaderNavigation } from "@/components/providers/app-loader-provider";
+import { logger } from "@/lib/obs/logger";
 
 interface RouteLoaderBridgeProps {
   minVisibleMs?: number;
@@ -24,6 +25,8 @@ export default function RouteLoaderBridge({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const settleTimerRef = React.useRef<number>();
+  const navStartTimeRef = React.useRef<number | null>(null);
+  const previousPathnameRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -43,6 +46,9 @@ export default function RouteLoaderBridge({
         return;
       }
 
+      // Track navigation start time
+      navStartTimeRef.current = performance.now();
+
       startNavigation({
         title: anchor.getAttribute("data-loader-title") ?? undefined,
         message: anchor.getAttribute("data-loader-message") ?? clickMessage,
@@ -57,6 +63,8 @@ export default function RouteLoaderBridge({
 
   React.useEffect(() => {
     const handlePopState = () => {
+      // Track navigation start time for browser back/forward
+      navStartTimeRef.current = performance.now();
       startNavigation({ message: clickMessage });
     };
     window.addEventListener("popstate", handlePopState);
@@ -68,6 +76,18 @@ export default function RouteLoaderBridge({
   React.useEffect(() => {
     window.clearTimeout(settleTimerRef.current);
     settleTimerRef.current = window.setTimeout(() => {
+      // Log navigation timing when navigation completes
+      if (navStartTimeRef.current !== null) {
+        const navDuration = performance.now() - navStartTimeRef.current;
+        const log = logger.child({ evt: 'navigation' });
+        log.info({
+          route: pathname,
+          duration_ms: Math.round(navDuration),
+          from_route: previousPathnameRef.current ?? undefined,
+        });
+        navStartTimeRef.current = null;
+      }
+      previousPathnameRef.current = pathname;
       endNavigation();
     }, Math.max(minVisibleMs, 0));
 

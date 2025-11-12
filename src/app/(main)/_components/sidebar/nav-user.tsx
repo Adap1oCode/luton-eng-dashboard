@@ -1,8 +1,10 @@
 // src/app/(main)/_components/sidebar/nav-user.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { SwitchUserDialog } from "./switch-user-dialog";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { supabaseBrowser } from "@/lib/supabase";
 import { getInitials } from "@/lib/utils";
 
 export function NavUser({
@@ -30,6 +33,36 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    start(async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+          toast.error("Logout failed", {
+            description: error.message,
+          });
+          return;
+        }
+
+        toast.success("Logged out", {
+          description: "You have been successfully logged out.",
+        });
+
+        // Redirect to login page
+        router.push("/auth/login");
+        router.refresh(); // Force a refresh to clear any cached data
+      } catch (err) {
+        toast.error("Logout failed", {
+          description: "An unexpected error occurred. Please try again.",
+        });
+      }
+    });
+  };
 
   return (
     <SidebarMenu>
@@ -100,9 +133,9 @@ export function NavUser({
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} disabled={pending}>
               <LogOut />
-              Log out
+              {pending ? "Logging out..." : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

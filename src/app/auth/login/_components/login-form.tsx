@@ -22,6 +22,7 @@ import {
   trackAuthError,
 } from "@/lib/analytics";
 import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
+import { logger } from "@/lib/obs/logger";
 import { supabaseBrowser } from "@/lib/supabase";
 
 import { sendMagicLink } from "../../actions"; // server action
@@ -65,6 +66,7 @@ function getErrorMessage(err: unknown): string {
 export function LoginFormV1() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, start] = useTransition();
+  const [forgotPasswordHref, setForgotPasswordHref] = useState("/auth/forgot-password");
   const searchParams = useSearchParams();
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -83,6 +85,16 @@ export function LoginFormV1() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [searchParams]);
+
+  // Set forgot password href on client side only to avoid hydration mismatch
+  useEffect(() => {
+    const next = getNextFromLocation();
+    if (next !== "/dashboard") {
+      setForgotPasswordHref(`/auth/forgot-password?next=${encodeURIComponent(next)}`);
+    } else {
+      setForgotPasswordHref("/auth/forgot-password");
+    }
+  }, []);
 
   const togglePasswordVisibility = () => setShowPassword((s) => !s);
 
@@ -270,7 +282,32 @@ export function LoginFormV1() {
             {/* Forgot Password Link */}
             <div className="flex justify-end">
               <Link
-                href={`/auth/forgot-password${getNextFromLocation() !== "/dashboard" ? `?next=${encodeURIComponent(getNextFromLocation())}` : ""}`}
+                href={forgotPasswordHref}
+                onClick={() => {
+                  const clickTime = performance.now();
+                  const log = logger.child({ evt: 'user_action' });
+                  log.info({
+                    action: 'forgot_password_click',
+                    route: '/auth/forgot-password',
+                    click_time: clickTime,
+                  });
+
+                  // Also track when the page becomes ready
+                  if (typeof window !== 'undefined') {
+                    window.addEventListener(
+                      'load',
+                      () => {
+                        const loadTime = performance.now();
+                        const duration = loadTime - clickTime;
+                        log.info({
+                          action: 'forgot_password_loaded',
+                          duration_ms: Math.round(duration),
+                        });
+                      },
+                      { once: true }
+                    );
+                  }
+                }}
                 className="text-sm font-medium text-primary underline-offset-2 transition-colors duration-200 hover:text-primary/90 hover:underline"
               >
                 Forgot password?

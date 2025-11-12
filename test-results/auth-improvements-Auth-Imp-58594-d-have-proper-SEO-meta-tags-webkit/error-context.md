@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - img [ref=e9]
+      - generic [ref=e11]:
+        - heading "Hello again" [level=1] [ref=e12]
+        - paragraph [ref=e13]: Login to continue
+    - generic [ref=e19]:
+      - generic [ref=e21]:
+        - heading "Login" [level=1] [ref=e23]
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Email Address
+            - textbox "Email Address" [ref=e27]:
+              - /placeholder: you@example.com
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30]: Password
+              - generic [ref=e31]: Leave empty for a magic link
+            - generic [ref=e32]:
+              - textbox "Password" [ref=e33]:
+                - /placeholder: ••••••••
+              - button "Show password" [ref=e34]:
+                - img
+          - link "Forgot password?" [ref=e36]:
+            - /url: /auth/forgot-password
+          - generic [ref=e37]:
+            - checkbox "Remember me for 7 days" [ref=e38]
+            - checkbox
+            - generic [ref=e39]:
+              - generic [ref=e40] [cursor=pointer]: Remember me for 7 days
+              - paragraph [ref=e41]: Don't use on a shared device.
+          - button "Login" [ref=e42]
+      - paragraph [ref=e44]:
+        - text: Don't have an account?
+        - link "Register" [ref=e45]:
+          - /url: /auth/register
+  - region "Notifications alt+T"
+```

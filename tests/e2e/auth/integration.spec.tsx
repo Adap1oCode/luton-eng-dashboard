@@ -2,8 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LoginFormV1 } from './login/_components/login-form';
-import { RegisterFormV1 } from './register/_components/register-form';
+import { LoginFormV1 } from '@/app/auth/login/_components/login-form';
+import { RegisterFormV1 } from '@/app/auth/register/_components/register-form';
 
 // Mock the server actions
 vi.mock('./actions', () => ({

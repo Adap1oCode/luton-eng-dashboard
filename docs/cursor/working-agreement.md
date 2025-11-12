@@ -51,14 +51,15 @@ We use a **tiered verification system** to balance speed and thoroughness:
 
 ### Tier 3: PR Verification (GitHub Actions)
 **Command**: `npm run ci:pr`  
-**Runtime**: ~5-10 minutes  
+**Runtime**: ~3-7 minutes  
 **Blocks**: PR merge  
 **Includes**:
 - ✅ All Tier 2 checks
-- ✅ E2E Smoke Tests (`playwright test --grep @smoke`) - **BLOCKS**
 - ✅ Docs check (if code changed) - **BLOCKS**
 
-**Rationale**: Full verification before code review. Smoke tests ensure critical paths work.
+**Note**: E2E tests are excluded from verification process and run separately in nightly builds.
+
+**Rationale**: Full verification before code review without blocking on E2E tests.
 
 ### Tier 4: Nightly Comprehensive (Scheduled)
 **Command**: `npm run ci:nightly`  
@@ -80,10 +81,11 @@ A change is **not done** unless **all** are true:
 2) **Lint:** `npm run lint` (ESLint with on-disk cache) - ✅ Tier 1  
 3) **Production build:** `npm run build` (Next.js) - ✅ Tier 2  
 4) **Unit Tests:** `npm run test` (Vitest) passes - ✅ Tier 2  
-5) **E2E Smoke:** Playwright **@smoke** tests pass - ✅ Tier 3  
-6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`) - ✅ All tiers  
-7) **Vercel Preview:** Deployment is green - ✅ Manual check  
-8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale - ✅ Tier 3
+5) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`) - ✅ All tiers  
+6) **Vercel Preview:** Deployment is green - ✅ Manual check  
+7) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale - ✅ Tier 3
+
+**Note**: E2E tests run separately in nightly builds and are not part of the verification process.
 
 **One-command verifier (CI + local pre-push):**  
 Run `npm run ci:verify`. The script auto-detects the active package manager (npm/pnpm/yarn), executes typecheck, lint, Vitest unit suites, performs a production build, verifies build artifacts, and boots the built app for HTTP health checks. Playwright `@smoke` coverage runs in the nightly pipeline.

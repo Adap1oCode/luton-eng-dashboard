@@ -88,9 +88,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Then run E2E smoke tests
+  // Then run additional PR checks (E2E tests removed per user request)
   const steps = [
-    { name: 'E2E Smoke Tests', command: 'npm', args: ['run', 'test:e2e:smoke'] },
     { name: 'Docs Check', command: null, check: checkDocsUpdated },
   ];
 

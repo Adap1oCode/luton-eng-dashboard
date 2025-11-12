@@ -11,6 +11,7 @@ import { applyOwnershipScopeToSupabase, applyWarehouseScopeToSupabase } from "@/
 import { getSessionContext } from "@/lib/auth/get-session-context";
 import type { DataProvider, Id, ListParams, ResourceConfig, RelationSpec } from "@/lib/data/types";
 import { AUTH_SCOPING_ENABLED } from "@/lib/env";
+import { logger } from "@/lib/obs/logger";
 
 type Mode = "server" | "browser";
 
@@ -296,7 +297,11 @@ export function createSupabaseProvider<T, TInput>(
         const scopeStart = performance.now();
         const ctx = await getSessionContext();
         const scopeCtxEnd = performance.now();
-        console.log(`[provider.get] getSessionContext: ${(scopeCtxEnd - scopeStart).toFixed(2)}ms`);
+        const log = logger.child({ evt: 'db_query', table: cfg.table, operation: 'get' });
+        log.debug({
+          phase: 'getSessionContext',
+          duration_ms: Math.round(scopeCtxEnd - scopeStart),
+        });
 
         // 🔒 Warehouse scoping (same enriched context passed)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
@@ -312,13 +317,22 @@ export function createSupabaseProvider<T, TInput>(
           permissions: ctx.permissions,
         });
         const scopeEnd = performance.now();
-        console.log(`[provider.get] Scoping application: ${(scopeEnd - scopeCtxEnd).toFixed(2)}ms`);
+        log.debug({
+          phase: 'scoping_application',
+          duration_ms: Math.round(scopeEnd - scopeCtxEnd),
+        });
       }
 
       const queryStart = performance.now();
       const { data, error } = await query.maybeSingle();
       const queryEnd = performance.now();
-      console.log(`[provider.get] Database query (${cfg.table}.${cfg.pk}=${id}): ${(queryEnd - queryStart).toFixed(2)}ms`);
+      const log = logger.child({ evt: 'db_query' });
+      log.info({
+        table: cfg.table,
+        operation: 'get',
+        record_id: id,
+        duration_ms: Math.round(queryEnd - queryStart),
+      });
       
       if (error) throw error;
       if (!data) return null;
@@ -327,10 +341,18 @@ export function createSupabaseProvider<T, TInput>(
       const base = cfg.toDomain(data);
       const [hydrated] = await hydrateRelations([base], cfg, sb);
       const transformEnd = performance.now();
-      console.log(`[provider.get] Domain transform + relations: ${(transformEnd - transformStart).toFixed(2)}ms`);
+      const transformLog = logger.child({ evt: 'db_query', table: cfg.table });
+      transformLog.debug({
+        phase: 'domain_transform',
+        duration_ms: Math.round(transformEnd - transformStart),
+      });
       
       const perfEnd = performance.now();
-      console.log(`[provider.get] Total time: ${(perfEnd - perfStart).toFixed(2)}ms`);
+      const totalLog = logger.child({ evt: 'db_query', table: cfg.table });
+      totalLog.debug({
+        phase: 'total',
+        duration_ms: Math.round(perfEnd - perfStart),
+      });
 
       return hydrated ?? null;
     },

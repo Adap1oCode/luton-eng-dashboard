@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - heading "Create an account" [level=1] [ref=e9]
+        - generic [ref=e10]:
+          - button "GitHub" [ref=e11]:
+            - img
+            - text: GitHub
+          - button "Google" [ref=e12]:
+            - img
+            - text: Google
+        - generic [ref=e17]: OR CONTINUE WITH
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: Email
+            - textbox "Email" [ref=e21]:
+              - /placeholder: m@example.com
+          - generic [ref=e22]:
+            - generic [ref=e23]: Password
+            - generic [ref=e24]:
+              - textbox "Password" [ref=e25]:
+                - /placeholder: ••••••••
+              - button "Show password" [ref=e26]:
+                - img
+          - generic [ref=e27]:
+            - generic [ref=e28]: Confirm Password
+            - generic [ref=e29]:
+              - textbox "Confirm Password" [ref=e30]:
+                - /placeholder: ••••••••
+              - button [ref=e31]:
+                - img
+          - button "Create account" [ref=e32]
+      - paragraph [ref=e34]:
+        - text: Already have an account?
+        - link "Login" [ref=e35] [cursor=pointer]:
+          - /url: /auth/login
+    - generic [ref=e38]:
+      - img [ref=e41]
+      - generic [ref=e43]:
+        - heading "Welcome!" [level=1] [ref=e44]
+        - paragraph [ref=e45]: You're in the right place.
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e55] [cursor=pointer]:
+    - img [ref=e56]
+  - alert [ref=e60]: Register – Luton Engineering
+```
