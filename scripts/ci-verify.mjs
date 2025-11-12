@@ -225,9 +225,13 @@ function runCommand({ command, args = [], env = process.env, cwd = process.cwd()
   return new Promise((resolve, reject) => {
     log(`\n${colors.blue}▶${colors.reset} Running: ${colors.bright}${command} ${args.join(' ')}${colors.reset}`);
 
+    const isWindows = process.platform === 'win32';
+    // On Windows, use shell: true for .cmd files to avoid spawn EINVAL errors
+    const useShell = isWindows && (command.endsWith('.cmd') || command.endsWith('.bat'));
+    
     const child = spawn(command, args, {
       stdio,
-      shell: false,
+      shell: useShell,
       cwd,
       env,
     });
@@ -316,6 +320,9 @@ async function ensureAppServer(port, { logStreaming = false } = {}) {
   appServerReadyPromise = new Promise((resolve, reject) => {
     log(`\n${colors.blue}▶${colors.reset} Starting Next.js server on port ${port}...`);
 
+    const isWindows = process.platform === 'win32';
+    const useShell = isWindows && (PKG.command.endsWith('.cmd') || PKG.command.endsWith('.bat'));
+    
     const child = spawn(
       PKG.command,
       PKG.exec('next', 'start', '--hostname', '127.0.0.1', '--port', String(port)),
@@ -323,7 +330,7 @@ async function ensureAppServer(port, { logStreaming = false } = {}) {
         cwd: process.cwd(),
         env: { ...process.env, NODE_ENV: 'production', PORT: String(port) },
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
+        shell: useShell,
       },
     );
 
