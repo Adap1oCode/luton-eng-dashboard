@@ -1,34 +1,32 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import PageShellWithLoading from '@/components/forms/shell/page-shell-with-loading';
-import { FullScreenLoader } from '@/components/ui/enhanced-loader';
-import { BackgroundLoader } from '@/components/ui/background-loader';
-
 import { vi } from 'vitest';
 
-// Mock the child components
+import PageShellWithLoading from '@/components/forms/shell/page-shell-with-loading';
+import { AppLoaderProvider } from '@/components/providers/app-loader-provider';
+import AppLoaderOverlay from '@/components/common/app-loader-overlay';
+
 vi.mock('@/components/forms/shell/page-shell', () => ({
   default: function MockPageShell({ children }: { children: React.ReactNode }) {
     return <div data-testid="page-shell">{children}</div>;
   },
 }));
 
-vi.mock('@/components/ui/enhanced-loader', () => ({
-  FullScreenLoader: ({ title, description, size }: any) => (
-    <div data-testid="fullscreen-loader" data-title={title} data-description={description} data-size={size}>
-      FullScreen Loader
-    </div>
-  ),
-}));
+const wrapWithLoader = (ui: React.ReactNode) => (
+  <AppLoaderProvider>
+    <>
+      {ui}
+      <AppLoaderOverlay />
+    </>
+  </AppLoaderProvider>
+);
 
-vi.mock('@/components/ui/background-loader', () => ({
-  BackgroundLoader: ({ message, position, size }: any) => (
-    <div data-testid="background-loader" data-message={message} data-position={position} data-size={size}>
-      Background Loader
-    </div>
-  ),
-}));
+const renderWithProviders = (ui: React.ReactNode) => render(wrapWithLoader(ui));
+
+beforeEach(() => {
+  sessionStorage.setItem("__app_loader_bootstrap__", "1");
+});
 
 describe('PageShellWithLoading', () => {
   const defaultProps = {
@@ -36,15 +34,17 @@ describe('PageShellWithLoading', () => {
     children: <div data-testid="page-content">Page Content</div>,
   };
 
-  it('renders PageShell with children', () => {
-    render(<PageShellWithLoading {...defaultProps} />);
-    
+  it('renders PageShell with children and no loaders by default', () => {
+    renderWithProviders(<PageShellWithLoading {...defaultProps} />);
+
     expect(screen.getByTestId('page-shell')).toBeInTheDocument();
     expect(screen.getByTestId('page-content')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-loader-blocking')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('app-loader-background')).not.toBeInTheDocument();
   });
 
-  it('shows initial loading when isLoading is true', () => {
-    render(
+  it('shows blocking loader when isLoading is true', async () => {
+    renderWithProviders(
       <PageShellWithLoading
         {...defaultProps}
         isLoading={true}
@@ -52,126 +52,83 @@ describe('PageShellWithLoading', () => {
         loadingDescription="Please wait..."
       />
     );
-    
-    const loader = screen.getByTestId('fullscreen-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-title', 'Loading Page');
-    expect(loader).toHaveAttribute('data-description', 'Please wait...');
-    expect(loader).toHaveAttribute('data-size', 'md');
+
+    const loader = await screen.findByTestId('app-loader-blocking');
+    expect(loader).toHaveTextContent('Loading Page');
+    expect(loader).toHaveTextContent('Please wait...');
   });
 
-  it('shows background loading when isRefetching is true', () => {
-    render(
+  it('shows background loader when isRefetching is true', async () => {
+    renderWithProviders(
       <PageShellWithLoading
         {...defaultProps}
         isRefetching={true}
         refetchMessage="Updating..."
-        refetchPosition="top-right"
       />
     );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-message', 'Updating...');
-    expect(loader).toHaveAttribute('data-position', 'top-right');
-    expect(loader).toHaveAttribute('data-size', 'md');
+
+    const loader = await screen.findByTestId('app-loader-background');
+    expect(loader).toHaveTextContent('Updating...');
   });
 
-  it('can show both loading states simultaneously', () => {
-    render(
+  it('updates loader when props change', async () => {
+    const { rerender } = renderWithProviders(
       <PageShellWithLoading
         {...defaultProps}
         isLoading={true}
-        isRefetching={true}
+        loadingTitle="Loading Page"
+        loadingDescription="Please wait..."
       />
     );
-    
-    expect(screen.getByTestId('fullscreen-loader')).toBeInTheDocument();
-    expect(screen.getByTestId('background-loader')).toBeInTheDocument();
+
+    await screen.findByTestId('app-loader-blocking');
+
+    rerender(
+      wrapWithLoader(
+        <PageShellWithLoading
+          {...defaultProps}
+          isLoading={true}
+          loadingTitle="Still loading"
+          loadingDescription="Almost done..."
+        />
+      )
+    );
+
+    await waitFor(() => {
+      const loader = screen.getByTestId('app-loader-blocking');
+      expect(loader).toHaveTextContent('Still loading');
+      expect(loader).toHaveTextContent('Almost done...');
+    });
   });
 
-  it('uses default loading messages when not provided', () => {
-    render(
+  it('hides loaders when flags are cleared', async () => {
+    const { rerender } = renderWithProviders(
       <PageShellWithLoading
         {...defaultProps}
         isLoading={true}
-        isRefetching={true}
+        loadingTitle="Loading Page"
       />
     );
-    
-    const fullscreenLoader = screen.getByTestId('fullscreen-loader');
-    expect(fullscreenLoader).toHaveAttribute('data-title', 'Loading...');
-    expect(fullscreenLoader).toHaveAttribute('data-description', 'Please wait...');
-    
-    const backgroundLoader = screen.getByTestId('background-loader');
-    expect(backgroundLoader).toHaveAttribute('data-message', 'Updating...');
-    expect(backgroundLoader).toHaveAttribute('data-position', 'top-right');
+
+    await screen.findByTestId('app-loader-blocking');
+
+    rerender(wrapWithLoader(<PageShellWithLoading {...defaultProps} isLoading={false} />));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('app-loader-blocking')).not.toBeInTheDocument();
+    });
   });
 
-  it('passes all PageShell props correctly', () => {
-    const propsWithActions = {
+  it('passes PageShell props correctly', () => {
+    const propsWithConfig = {
       ...defaultProps,
-      count: 100,
+      count: 42,
       toolbarConfig: { filters: [] },
-      toolbarActions: { primary: <button>Action</button> },
-      enableAdvancedFilters: true,
+      toolbarActions: { primary: <button>Do</button> },
     };
 
-    render(<PageShellWithLoading {...propsWithActions} />);
-    
-    // PageShell should receive all the props
+    renderWithProviders(<PageShellWithLoading {...propsWithConfig} />);
+
     expect(screen.getByTestId('page-shell')).toBeInTheDocument();
-  });
-
-  it('handles custom loading titles and descriptions', () => {
-    render(
-      <PageShellWithLoading
-        {...defaultProps}
-        isLoading={true}
-        loadingTitle="Custom Loading Title"
-        loadingDescription="Custom loading description"
-      />
-    );
-    
-    const loader = screen.getByTestId('fullscreen-loader');
-    expect(loader).toHaveAttribute('data-title', 'Custom Loading Title');
-    expect(loader).toHaveAttribute('data-description', 'Custom loading description');
-  });
-
-  it('handles custom refetch messages and positions', () => {
-    render(
-      <PageShellWithLoading
-        {...defaultProps}
-        isRefetching={true}
-        refetchMessage="Custom refetch message"
-        refetchPosition="bottom-left"
-      />
-    );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toHaveAttribute('data-message', 'Custom refetch message');
-    expect(loader).toHaveAttribute('data-position', 'bottom-left');
-  });
-
-  it('does not show loaders when loading states are false', () => {
-    render(
-      <PageShellWithLoading
-        {...defaultProps}
-        isLoading={false}
-        isRefetching={false}
-      />
-    );
-    
-    expect(screen.queryByTestId('fullscreen-loader')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('background-loader')).not.toBeInTheDocument();
-  });
-
-  it('renders without loading props', () => {
-    render(<PageShellWithLoading {...defaultProps} />);
-    
-    expect(screen.getByTestId('page-shell')).toBeInTheDocument();
-    expect(screen.getByTestId('page-content')).toBeInTheDocument();
-    expect(screen.queryByTestId('fullscreen-loader')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('background-loader')).not.toBeInTheDocument();
   });
 });

@@ -1,8 +1,7 @@
 "use client";
 
 import React from 'react';
-import { FullScreenLoader } from '@/components/ui/enhanced-loader';
-import { BackgroundLoader } from '@/components/ui/background-loader';
+import { useRouteLoader, useBackgroundLoader } from '@/components/providers/app-loader-provider';
 import PageShell, { PageShellProps } from './page-shell';
 
 // This component acts as a client-side wrapper for PageShell (a Server Component)
@@ -13,33 +12,62 @@ export default function PageShellWithLoading({
   loadingTitle = "Loading...",
   loadingDescription = "Please wait...",
   isRefetching = false,
-  refetchMessage = "Updating...",
-  refetchPosition = 'top-right',
+    refetchMessage = "Updating...",
+    refetchPosition: _refetchPosition = 'top-right',
   ...pageShellProps
 }: PageShellProps) {
+    const { show: showBlocking, hide: hideBlocking, patch: patchBlocking } = useRouteLoader();
+    const { show: showBackground, hide: hideBackground, patch: patchBackground } = useBackgroundLoader();
+
+    const loadingRef = React.useRef<string | null>(null);
+    const refetchRef = React.useRef<string | null>(null);
+
+    React.useEffect(() => {
+      if (isLoading) {
+        const payload = { title: loadingTitle, message: loadingDescription };
+        if (loadingRef.current) {
+          patchBlocking(loadingRef.current, payload);
+        } else {
+          loadingRef.current = showBlocking(payload);
+        }
+      } else if (loadingRef.current) {
+        hideBlocking(loadingRef.current);
+        loadingRef.current = null;
+      }
+    }, [isLoading, loadingTitle, loadingDescription, showBlocking, hideBlocking, patchBlocking]);
+
+    React.useEffect(() => {
+      if (isRefetching) {
+        const payload = { title: refetchMessage, message: undefined };
+        if (refetchRef.current) {
+          patchBackground(refetchRef.current, payload);
+        } else {
+          refetchRef.current = showBackground(payload);
+        }
+      } else if (refetchRef.current) {
+        hideBackground(refetchRef.current);
+        refetchRef.current = null;
+      }
+    }, [isRefetching, refetchMessage, showBackground, hideBackground, patchBackground]);
+
+    React.useEffect(() => {
+      return () => {
+        if (loadingRef.current) {
+          hideBlocking(loadingRef.current);
+          loadingRef.current = null;
+        }
+        if (refetchRef.current) {
+          hideBackground(refetchRef.current);
+          refetchRef.current = null;
+        }
+      };
+    }, [hideBlocking, hideBackground]);
+
   return (
     <>
       <PageShell {...pageShellProps}>
         {children}
       </PageShell>
-
-      {/* Full-screen loader for initial page load or blocking operations */}
-      {isLoading && (
-        <FullScreenLoader
-          title={loadingTitle}
-          description={loadingDescription}
-          size="md"
-        />
-      )}
-
-      {/* Background loader for non-blocking refetches or updates */}
-      {isRefetching && (
-        <BackgroundLoader
-          message={refetchMessage}
-          position={refetchPosition}
-          size="md"
-        />
-      )}
     </>
   );
 }

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { DynamicForm } from "@/components/forms/dynamic-form";
 import { useNotice } from "@/components/ui/notice";
-import { BackgroundLoader } from "@/components/ui/background-loader";
+import { useBackgroundLoader } from "@/components/providers/app-loader-provider";
 import { extractErrorMessage } from "@/lib/forms/extract-error";
 import type { FormConfig, ResolvedOptions } from "@/lib/forms/types";
 
@@ -37,11 +37,11 @@ export default function FormIsland({
   fieldLoadingMessage = "Loading options...",
   isAutoSaving = false,
   autoSaveMessage = "Saving draft...",
-  isValidating = false,
-  validationMessage = "Validating...",
+    isValidating = false,
+    validationMessage = "Validating...",
   // Callback to notify parent of submission state (for optimistic UI)
   onSubmittingChange,
-}: {
+  }: {
   config: EnhancedFormConfig;
   defaults: Record<string, any>;
   options: ResolvedOptions;
@@ -56,10 +56,73 @@ export default function FormIsland({
   validationMessage?: string;
   // Callback to notify parent of submission state
   onSubmittingChange?: (isSubmitting: boolean) => void;
-}) {
+  }) {
   const router = useRouter();
   const notice = useNotice();
   const [submitting, setSubmitting] = React.useState(false);
+    const { show: showBackground, hide: hideBackground, patch: patchBackground } = useBackgroundLoader();
+    const fieldLoaderRef = React.useRef<string | null>(null);
+    const autoSaveLoaderRef = React.useRef<string | null>(null);
+    const validationLoaderRef = React.useRef<string | null>(null);
+
+    React.useEffect(() => {
+      if (isFieldLoading) {
+        const payload = { title: fieldLoadingMessage };
+        if (fieldLoaderRef.current) {
+          patchBackground(fieldLoaderRef.current, payload);
+        } else {
+          fieldLoaderRef.current = showBackground(payload);
+        }
+      } else if (fieldLoaderRef.current) {
+        hideBackground(fieldLoaderRef.current);
+        fieldLoaderRef.current = null;
+      }
+    }, [isFieldLoading, fieldLoadingMessage, showBackground, hideBackground, patchBackground]);
+
+    React.useEffect(() => {
+      if (isAutoSaving) {
+        const payload = { title: autoSaveMessage };
+        if (autoSaveLoaderRef.current) {
+          patchBackground(autoSaveLoaderRef.current, payload);
+        } else {
+          autoSaveLoaderRef.current = showBackground(payload);
+        }
+      } else if (autoSaveLoaderRef.current) {
+        hideBackground(autoSaveLoaderRef.current);
+        autoSaveLoaderRef.current = null;
+      }
+    }, [isAutoSaving, autoSaveMessage, showBackground, hideBackground, patchBackground]);
+
+    React.useEffect(() => {
+      if (isValidating) {
+        const payload = { title: validationMessage };
+        if (validationLoaderRef.current) {
+          patchBackground(validationLoaderRef.current, payload);
+        } else {
+          validationLoaderRef.current = showBackground(payload);
+        }
+      } else if (validationLoaderRef.current) {
+        hideBackground(validationLoaderRef.current);
+        validationLoaderRef.current = null;
+      }
+    }, [isValidating, validationMessage, showBackground, hideBackground, patchBackground]);
+
+    React.useEffect(() => {
+      return () => {
+        if (fieldLoaderRef.current) {
+          hideBackground(fieldLoaderRef.current);
+          fieldLoaderRef.current = null;
+        }
+        if (autoSaveLoaderRef.current) {
+          hideBackground(autoSaveLoaderRef.current);
+          autoSaveLoaderRef.current = null;
+        }
+        if (validationLoaderRef.current) {
+          hideBackground(validationLoaderRef.current);
+          validationLoaderRef.current = null;
+        }
+      };
+    }, [hideBackground]);
 
   // Notify parent of submission state changes (for optimistic UI)
   React.useEffect(() => {
@@ -138,32 +201,6 @@ export default function FormIsland({
         }}
       />
 
-      {/* Field loading indicator */}
-      {isFieldLoading && (
-        <BackgroundLoader
-          message={fieldLoadingMessage}
-          position="top-right"
-          size="sm"
-        />
-      )}
-
-      {/* Auto-save indicator */}
-      {isAutoSaving && (
-        <BackgroundLoader
-          message={autoSaveMessage}
-          position="bottom-right"
-          size="sm"
-        />
-      )}
-
-      {/* Validation indicator */}
-      {isValidating && (
-        <BackgroundLoader
-          message={validationMessage}
-          position="top-center"
-          size="sm"
-        />
-      )}
     </>
   );
 }

@@ -7,6 +7,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppLoaderProvider } from "@/components/providers/app-loader-provider";
 import AppLoaderOverlay from "@/components/common/app-loader-overlay";
+import RouteLoaderBridge from "@/components/common/route-loader-bridge";
 import { APP_CONFIG } from "@/config/app-config";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AppLoaderProvider>
+              <RouteLoaderBridge />
             <ErrorBoundary>{children}</ErrorBoundary>
             <AppLoaderOverlay />
           </AppLoaderProvider>

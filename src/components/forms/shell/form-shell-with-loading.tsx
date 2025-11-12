@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FullScreenLoader } from "@/components/ui/enhanced-loader";
-import { BackgroundLoader } from "@/components/ui/background-loader";
+import { useRouteLoader, useBackgroundLoader } from "@/components/providers/app-loader-provider";
 import FormShell from "./form-shell";
 import type { FormShellProps } from "./form-shell";
 
@@ -45,9 +44,82 @@ export default function FormShellWithLoading({
   submissionDescription = "Please wait...",
   
   isBackgroundLoading = false,
-  backgroundLoadingMessage = "Processing...",
-  backgroundLoadingPosition = 'top-right',
-}: FormShellWithLoadingProps) {
+    backgroundLoadingMessage = "Processing...",
+    backgroundLoadingPosition: _backgroundLoadingPosition = "top-right",
+  }: FormShellWithLoadingProps) {
+  const { show: showBlocking, hide: hideBlocking, patch: patchBlocking } = useRouteLoader();
+  const { show: showBackground, hide: hideBackground, patch: patchBackground } = useBackgroundLoader();
+
+  const initialLoaderRef = React.useRef<string | null>(null);
+  const submittingLoaderRef = React.useRef<string | null>(null);
+  const backgroundLoaderRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (isInitialLoading) {
+      const payload = { title: initialLoadingTitle, message: initialLoadingDescription };
+      if (initialLoaderRef.current) {
+        patchBlocking(initialLoaderRef.current, payload);
+      } else {
+        initialLoaderRef.current = showBlocking(payload);
+      }
+    } else if (initialLoaderRef.current) {
+      hideBlocking(initialLoaderRef.current);
+      initialLoaderRef.current = null;
+    }
+  }, [
+    isInitialLoading,
+    initialLoadingTitle,
+    initialLoadingDescription,
+    showBlocking,
+    hideBlocking,
+    patchBlocking,
+  ]);
+
+  React.useEffect(() => {
+    if (isSubmitting) {
+      const payload = { title: submissionTitle, message: submissionDescription };
+      if (submittingLoaderRef.current) {
+        patchBlocking(submittingLoaderRef.current, payload);
+      } else {
+        submittingLoaderRef.current = showBlocking(payload);
+      }
+    } else if (submittingLoaderRef.current) {
+      hideBlocking(submittingLoaderRef.current);
+      submittingLoaderRef.current = null;
+    }
+  }, [isSubmitting, submissionTitle, submissionDescription, showBlocking, hideBlocking, patchBlocking]);
+
+  React.useEffect(() => {
+    if (isBackgroundLoading) {
+      const payload = { title: backgroundLoadingMessage, message: undefined };
+      if (backgroundLoaderRef.current) {
+        patchBackground(backgroundLoaderRef.current, payload);
+      } else {
+        backgroundLoaderRef.current = showBackground(payload);
+      }
+    } else if (backgroundLoaderRef.current) {
+      hideBackground(backgroundLoaderRef.current);
+      backgroundLoaderRef.current = null;
+    }
+  }, [isBackgroundLoading, backgroundLoadingMessage, showBackground, hideBackground, patchBackground]);
+
+  React.useEffect(() => {
+    return () => {
+      if (initialLoaderRef.current) {
+        hideBlocking(initialLoaderRef.current);
+        initialLoaderRef.current = null;
+      }
+      if (submittingLoaderRef.current) {
+        hideBlocking(submittingLoaderRef.current);
+        submittingLoaderRef.current = null;
+      }
+      if (backgroundLoaderRef.current) {
+        hideBackground(backgroundLoaderRef.current);
+        backgroundLoaderRef.current = null;
+      }
+    };
+  }, [hideBlocking, hideBackground]);
+
   return (
     <>
       <FormShell
@@ -62,33 +134,6 @@ export default function FormShellWithLoading({
       >
         {children}
       </FormShell>
-      
-      {/* Initial loading (edit forms) */}
-      {isInitialLoading && (
-        <FullScreenLoader
-          title={initialLoadingTitle}
-          description={initialLoadingDescription}
-          size="md"
-        />
-      )}
-      
-      {/* Submission loading */}
-      {isSubmitting && (
-        <FullScreenLoader
-          title={submissionTitle}
-          description={submissionDescription}
-          size="sm"
-        />
-      )}
-      
-      {/* Background loading (auto-save, validation, etc.) */}
-      {isBackgroundLoading && (
-        <BackgroundLoader
-          message={backgroundLoadingMessage}
-          position={backgroundLoadingPosition}
-          size="md"
-        />
-      )}
     </>
   );
 }
