@@ -1,6 +1,9 @@
-import { resolveLoaderMessage } from "@/components/providers/loader-messages";
-
-const copy = resolveLoaderMessage("auth:loading");
+// Inline message to avoid calling client function from server component
+const copy = {
+  title: "Authorizing…",
+  message: "Confirming your session…",
+  variant: "blocking" as const,
+};
 
 export default function AuthLoading() {
   return (
