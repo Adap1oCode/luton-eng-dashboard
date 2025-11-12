@@ -267,16 +267,13 @@ export type BaseViewConfig<TRow> = {
   features: TableFeatures;
   toolbar: ToolbarConfig;
   quickFilters: any[]; // intentionally flexible; views define their own
-  buildColumns?: (includeActions?: boolean) => ColumnDef<TRow, any>[];
+  buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
   /**
    * Optional pre-materialised columns for client usage. When provided, callers
    * can avoid invoking buildColumns during hydration.
    */
   columns?: ColumnDef<TRow, any>[];
-  /**
-   * Optional API endpoint that represents the canonical data source for the view.
-   * Enables client components to fetch/invalidate against read-only views.
-   */
+  /** View-level API endpoint used for client refetches */
   apiEndpoint?: string;
   /** Resource key for single-record DELETE calls (/api/[resource]/[id]) */
   resourceKeyForDelete?: string;

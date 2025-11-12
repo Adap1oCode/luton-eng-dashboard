@@ -43,6 +43,8 @@ export type SessionContext = {
   allowedWarehouseIds: string[]; // e.g. ["6a7b...-..."]
   allowedWarehouses: string[]; // alias of allowedWarehouseCodes
   warehouseScope: Array<{ warehouse_id: string; warehouse_code: string; warehouse_name: string }>;
+  // Computed: true if user can see all warehouses (ADMINISTRATOR or no warehouse bindings)
+  canSeeAllWarehouses: boolean;
   
   // Default homepage for user (from role or user override)
   defaultHomepage: string | null;
@@ -127,6 +129,9 @@ export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<
 
     const effectiveUser = ctx.effectiveUser!;
     const userId = (ctx as any).userId ?? effectiveUser.appUserId;
+    
+    // Compute canSeeAllWarehouses: true if ADMINISTRATOR or has no warehouse bindings
+    const canSeeAllWarehouses = effectiveUser.roleCode === "ADMINISTRATOR" || codes.length === 0;
 
     const normalized: SessionContext = {
       userId,
@@ -140,6 +145,7 @@ export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<
       allowedWarehouseIds: ids,
       allowedWarehouses: codes,
       warehouseScope,
+      canSeeAllWarehouses,
       defaultHomepage,
 
       meta: {

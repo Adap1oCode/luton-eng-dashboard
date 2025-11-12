@@ -5,8 +5,14 @@ import type { InventoryCurrentRow } from "./inventory-current.config";
  * Maps all fields from v_inventory_current view.
  */
 export function toRow(d: any): InventoryCurrentRow {
+  const itemNumber = d?.item_number != null ? Number(d.item_number) : null;
+  const insertId = d?.insert_id != null ? Number(d.insert_id) : null;
+  const contentHash = d?.content_hash ?? null;
+  const fallbackIdSource = `${d?.warehouse ?? "unknown"}|${d?.location ?? "unknown"}|${d?.description ?? "unknown"}`;
+  const rawId = itemNumber ?? insertId ?? contentHash ?? fallbackIdSource;
   return {
-    item_number: d?.item_number != null ? Number(d.item_number) : null,
+    id: typeof rawId === "number" ? `inventory-current-${rawId}` : String(rawId ?? "inventory-current-unknown"),
+    item_number: itemNumber,
     warehouse: d?.warehouse ?? null,
     location: d?.location ?? null,
     type: d?.type ?? null,

@@ -54,7 +54,12 @@ export default async function NewWarehouseLocationPage() {
         ),
       }}
     >
-      <FormIsland formId={formId} config={transportConfig} defaults={defaults} options={loadedOptions} />
+      <FormIsland
+        formId={formId}
+        config={transportConfig}
+        defaults={defaults}
+        options={loadedOptions}
+      />
     </FormShell>
   );
 }

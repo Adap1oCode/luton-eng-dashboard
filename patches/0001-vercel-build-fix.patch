@@ -1,0 +1,243 @@
+diff --git a/.gitignore b/.gitignore
+index 338944c..400e526 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -21,6 +21,7 @@
+ .DS_Store
+ *.pem
+ *.sh
++!scripts/*.sh
+ 
+ # debug logs
+ npm-debug.log*
+diff --git a/scripts/build-like-vercel.sh b/scripts/build-like-vercel.sh
+new file mode 100755
+index 0000000..22733a5
+--- /dev/null
++++ b/scripts/build-like-vercel.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++
++set -euo pipefail
++
++corepack enable || true
++
++if [ -f pnpm-lock.yaml ]; then
++  pnpm install --frozen-lockfile
++  pnpm run build
++elif [ -f package-lock.json ]; then
++  npm ci
++  npm run build
++elif [ -f yarn.lock ]; then
++  yarn install --frozen-lockfile
++  yarn build
++else
++  npm install
++  npm run build
++fi
+diff --git a/src/app/(main)/forms/inventory-current/inventory-current.config.tsx b/src/app/(main)/forms/inventory-current/inventory-current.config.tsx
+index 60e9655..d9473ce 100644
+--- a/src/app/(main)/forms/inventory-current/inventory-current.config.tsx
++++ b/src/app/(main)/forms/inventory-current/inventory-current.config.tsx
+@@ -28,6 +28,7 @@ export const RESOURCE_TITLE = "Inventory Current" as const;
+ // Types
+ // -----------------------------------------------------------------------------
+ export type InventoryCurrentRow = {
++  id: string; // Stable identifier for client table behaviors
+   item_number: number | null; // bigint, used as primary key
+   warehouse: string | null;
+   location: string | null;
+@@ -202,10 +203,10 @@ function buildColumns(): TColumnDef<InventoryCurrentRow>[] {
+ // -----------------------------------------------------------------------------
+ // View Config
+ // -----------------------------------------------------------------------------
+-export const inventoryCurrentViewConfig: BaseViewConfig<InventoryCurrentRow> = {
++export const inventoryCurrentViewConfig: BaseViewConfig<InventoryCurrentRow> & { apiEndpoint?: string } = {
+   resourceKeyForDelete: RESOURCE_KEY, // Not used for read-only, but required by type
+   formsRouteSegment: ROUTE_SEGMENT,
+-  idField: "item_number", // Use item_number as identifier
++  idField: "id",
+   apiEndpoint: API_ENDPOINT,
+   toolbar: {
+     left: [],
+diff --git a/src/app/(main)/forms/inventory-current/to-row.ts b/src/app/(main)/forms/inventory-current/to-row.ts
+index aff9a1d..c9482a0 100644
+--- a/src/app/(main)/forms/inventory-current/to-row.ts
++++ b/src/app/(main)/forms/inventory-current/to-row.ts
+@@ -5,8 +5,14 @@ import type { InventoryCurrentRow } from "./inventory-current.config";
+  * Maps all fields from v_inventory_current view.
+  */
+ export function toRow(d: any): InventoryCurrentRow {
++  const itemNumber = d?.item_number != null ? Number(d.item_number) : null;
++  const insertId = d?.insert_id != null ? Number(d.insert_id) : null;
++  const contentHash = d?.content_hash ?? null;
++  const fallbackIdSource = `${d?.warehouse ?? "unknown"}|${d?.location ?? "unknown"}|${d?.description ?? "unknown"}`;
++  const rawId = itemNumber ?? insertId ?? contentHash ?? fallbackIdSource;
+   return {
+-    item_number: d?.item_number != null ? Number(d.item_number) : null,
++    id: typeof rawId === "number" ? `inventory-current-${rawId}` : String(rawId ?? "inventory-current-unknown"),
++    item_number: itemNumber,
+     warehouse: d?.warehouse ?? null,
+     location: d?.location ?? null,
+     type: d?.type ?? null,
+diff --git a/src/app/(main)/forms/inventory-unique/inventory-unique.config.tsx b/src/app/(main)/forms/inventory-unique/inventory-unique.config.tsx
+index e84239d..53e21d5 100644
+--- a/src/app/(main)/forms/inventory-unique/inventory-unique.config.tsx
++++ b/src/app/(main)/forms/inventory-unique/inventory-unique.config.tsx
+@@ -28,6 +28,7 @@ export const RESOURCE_TITLE = "Inventory Unique" as const;
+ // Types
+ // -----------------------------------------------------------------------------
+ export type InventoryUniqueRow = {
++  id: string;
+   item_number: number; // bigint, used as primary key
+   warehouse: string | null;
+   location: string | null;
+@@ -149,10 +150,10 @@ function buildColumns(): TColumnDef<InventoryUniqueRow>[] {
+ // -----------------------------------------------------------------------------
+ // View Config
+ // -----------------------------------------------------------------------------
+-export const inventoryUniqueViewConfig: BaseViewConfig<InventoryUniqueRow> = {
++export const inventoryUniqueViewConfig: BaseViewConfig<InventoryUniqueRow> & { apiEndpoint?: string } = {
+   resourceKeyForDelete: RESOURCE_KEY, // Not used for read-only, but required by type
+   formsRouteSegment: ROUTE_SEGMENT,
+-  idField: "item_number", // Use item_number as identifier
++  idField: "id",
+   apiEndpoint: API_ENDPOINT,
+   toolbar: {
+     left: [],
+diff --git a/src/app/(main)/forms/inventory-unique/to-row.ts b/src/app/(main)/forms/inventory-unique/to-row.ts
+index 8e80c86..26242e1 100644
+--- a/src/app/(main)/forms/inventory-unique/to-row.ts
++++ b/src/app/(main)/forms/inventory-unique/to-row.ts
+@@ -5,8 +5,14 @@ import type { InventoryUniqueRow } from "./inventory-unique.config";
+  * Maps all fields from v_inventory_unique view.
+  */
+ export function toRow(d: any): InventoryUniqueRow {
++  const itemNumber = d?.item_number != null ? Number(d.item_number) : null;
++  const rawId =
++    itemNumber ??
++    d?.content_hash ??
++    `${d?.warehouse ?? "unknown"}|${d?.location ?? "unknown"}|${d?.description ?? "unknown"}`;
+   return {
+-    item_number: d?.item_number != null ? Number(d.item_number) : 0,
++    id: typeof rawId === "number" ? `inventory-unique-${rawId}` : String(rawId ?? "inventory-unique-unknown"),
++    item_number: itemNumber ?? 0,
+     warehouse: d?.warehouse ?? null,
+     location: d?.location ?? null,
+     description: d?.description ?? null,
+diff --git a/src/app/(main)/forms/warehouse-locations/new/page.tsx b/src/app/(main)/forms/warehouse-locations/new/page.tsx
+index f93be0f..23cc0c5 100644
+--- a/src/app/(main)/forms/warehouse-locations/new/page.tsx
++++ b/src/app/(main)/forms/warehouse-locations/new/page.tsx
+@@ -62,9 +62,6 @@ export default async function NewWarehouseLocationPage() {
+         config={transportConfig}
+         defaults={defaults}
+         options={loadedOptions}
+-        action={transportConfig.action}
+-        method={transportConfig.method as "POST" | "PATCH"}
+-        submitLabel={transportConfig.submitLabel}
+       />
+     </FormShell>
+   );
+diff --git a/src/app/(main)/forms/warehouses/new/page.tsx b/src/app/(main)/forms/warehouses/new/page.tsx
+index 2236829..cec86f7 100644
+--- a/src/app/(main)/forms/warehouses/new/page.tsx
++++ b/src/app/(main)/forms/warehouses/new/page.tsx
+@@ -56,9 +56,6 @@ export default async function NewWarehousePage() {
+         config={transportConfig}
+         defaults={defaults}
+         options={{}}
+-        action={transportConfig.action}
+-        method={transportConfig.method as "POST" | "PATCH"}
+-        submitLabel={transportConfig.submitLabel}
+       />
+     </FormShell>
+   );
+diff --git a/src/components/data-table/view-defaults.tsx b/src/components/data-table/view-defaults.tsx
+index bd1432c..c82915b 100644
+--- a/src/components/data-table/view-defaults.tsx
++++ b/src/components/data-table/view-defaults.tsx
+@@ -268,6 +268,8 @@ export type BaseViewConfig<TRow> = {
+   toolbar: ToolbarConfig;
+   quickFilters: any[]; // intentionally flexible; views define their own
+   buildColumns: (includeActions?: boolean) => ColumnDef<TRow, any>[];
++  /** View-level API endpoint used for client refetches */
++  apiEndpoint?: string;
+   /** Resource key for single-record DELETE calls (/api/[resource]/[id]) */
+   resourceKeyForDelete?: string;
+   /** Route segment for forms pages (e.g., 'tally-cards') */
+diff --git a/src/components/forms/dynamic-field.tsx b/src/components/forms/dynamic-field.tsx
+index fbb0fc8..84e9e4b 100644
+--- a/src/components/forms/dynamic-field.tsx
++++ b/src/components/forms/dynamic-field.tsx
+@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
+ import { FormItem } from "@/components/ui/form";
+ import { SearchableSelect, type SearchableSelectOption } from "./searchable-select";
+ 
+-export type Option = { id: string; label: string };
++export type Option = { id: string; label: string; value?: string };
+ 
+ export type FieldKind = "text" | "number" | "textarea" | "select" | "multiselect" | "date" | "checkbox";
+ 
+diff --git a/src/lib/data/resources/v_inventory_current.config.ts b/src/lib/data/resources/v_inventory_current.config.ts
+index aa56613..e75708f 100644
+--- a/src/lib/data/resources/v_inventory_current.config.ts
++++ b/src/lib/data/resources/v_inventory_current.config.ts
+@@ -138,27 +138,27 @@ const v_inventory_current: ResourceConfig<InventoryCurrent, InventoryCurrentInpu
+       unit_of_measure: { type: "text", nullable: true, readonly: true },
+       category: { type: "text", nullable: true, readonly: true },
+       stocking_unit: { type: "text", nullable: true, readonly: true },
+-      total_available: { type: "double", nullable: true, readonly: true },
+-      total_in_house: { type: "double", nullable: true, readonly: true },
+-      total_checked_out: { type: "double", nullable: true, readonly: true },
+-      on_order: { type: "double", nullable: true, readonly: true },
+-      committed: { type: "double", nullable: true, readonly: true },
++      total_available: { type: "number", nullable: true, readonly: true },
++      total_in_house: { type: "number", nullable: true, readonly: true },
++      total_checked_out: { type: "number", nullable: true, readonly: true },
++      on_order: { type: "number", nullable: true, readonly: true },
++      committed: { type: "number", nullable: true, readonly: true },
+       tax_code: { type: "text", nullable: true, readonly: true },
+-      item_cost: { type: "numeric", nullable: true, readonly: true },
++      item_cost: { type: "number", nullable: true, readonly: true },
+       cost_method: { type: "text", nullable: true, readonly: true },
+-      item_list_price: { type: "numeric", nullable: true, readonly: true },
+-      item_sale_price: { type: "numeric", nullable: true, readonly: true },
+-      height: { type: "numeric", nullable: true, readonly: true },
+-      width: { type: "numeric", nullable: true, readonly: true },
+-      depth: { type: "numeric", nullable: true, readonly: true },
+-      weight: { type: "numeric", nullable: true, readonly: true },
+-      max_volume: { type: "numeric", nullable: true, readonly: true },
++      item_list_price: { type: "number", nullable: true, readonly: true },
++      item_sale_price: { type: "number", nullable: true, readonly: true },
++      height: { type: "number", nullable: true, readonly: true },
++      width: { type: "number", nullable: true, readonly: true },
++      depth: { type: "number", nullable: true, readonly: true },
++      weight: { type: "number", nullable: true, readonly: true },
++      max_volume: { type: "number", nullable: true, readonly: true },
+       duplicate_item_check: { type: "bool", nullable: true, readonly: true },
+       inventory_readded: { type: "bool", nullable: true, readonly: true },
+       inventory_removed: { type: "bool", nullable: true, readonly: true },
+       is_deleted: { type: "bool", nullable: true, readonly: true },
+       uom_updated: { type: "bool", nullable: true, readonly: true },
+-      match_status: { type: "integer", nullable: true, readonly: true },
++      match_status: { type: "int", nullable: true, readonly: true },
+       description_norm: { type: "text", nullable: true, readonly: true },
+       category_new: { type: "text", nullable: true, readonly: true },
+       tally_card_number: { type: "text", nullable: true, readonly: true },
+@@ -173,12 +173,12 @@ const v_inventory_current: ResourceConfig<InventoryCurrent, InventoryCurrentInpu
+       tc_bdi: { type: "text", nullable: true, readonly: true },
+       last_sync_date: { type: "timestamp", nullable: true, readonly: true },
+       sync_enum: { type: "text", nullable: true, readonly: true },
+-      adj_type: { type: "integer", nullable: true, readonly: true },
++      adj_type: { type: "int", nullable: true, readonly: true },
+       adj_match_code: { type: "text", nullable: true, readonly: true },
+-      adj_qty: { type: "numeric", nullable: true, readonly: true },
++      adj_qty: { type: "number", nullable: true, readonly: true },
+       adj_date: { type: "timestamp", nullable: true, readonly: true },
+       content_hash: { type: "text", nullable: true, readonly: true },
+-      snapshot_date: { type: "date", nullable: true, readonly: true },
++      snapshot_date: { type: "timestamp", nullable: true, readonly: true },
+       insert_id: { type: "bigint", nullable: true, readonly: true },
+     },
+   },

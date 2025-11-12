@@ -25,7 +25,7 @@ export function NoWarehouseAccessBanner() {
   }
 
   return (
-    <Alert variant="warning" className="mb-4">
+    <Alert variant="default" className="mb-4 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
       <AlertCircle className="h-4 w-4" />
       <AlertDescription>
         You don't have access to any warehouses. Ask an admin to assign at least one warehouse to your role.

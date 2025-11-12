@@ -28,6 +28,7 @@ export const RESOURCE_TITLE = "Inventory Current" as const;
 // Types
 // -----------------------------------------------------------------------------
 export type InventoryCurrentRow = {
+  id: string; // Stable identifier for client table behaviors
   item_number: number | null; // bigint, used as primary key
   warehouse: string | null;
   location: string | null;
@@ -205,7 +206,7 @@ function buildColumns(): TColumnDef<InventoryCurrentRow>[] {
 export const inventoryCurrentViewConfig: BaseViewConfig<InventoryCurrentRow> & { apiEndpoint?: string } = {
   resourceKeyForDelete: RESOURCE_KEY, // Not used for read-only, but required by type
   formsRouteSegment: ROUTE_SEGMENT,
-  idField: "item_number", // Use item_number as identifier
+  idField: "id",
   apiEndpoint: API_ENDPOINT,
   toolbar: {
     left: [],
