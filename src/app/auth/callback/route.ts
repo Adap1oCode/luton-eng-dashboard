@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseServer } from "@/lib/supabase-server";
 
 function safeNext(raw: string | null): string | null {
   if (!raw) return null;
@@ -12,15 +13,34 @@ function safeNext(raw: string | null): string | null {
   }
 }
 
+/**
+ * Get user's default homepage from the materialized view
+ */
+async function getDefaultHomepage(appUserId: string): Promise<string | null> {
+  try {
+    const supabase = await supabaseServer();
+    const { data } = await supabase
+      .from("mv_effective_permissions")
+      .select("default_homepage")
+      .eq("user_id", appUserId)
+      .maybeSingle<{ default_homepage: string | null }>();
+    
+    return data?.default_homepage ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const nextParam = safeNext(url.searchParams.get("next")) || "/dashboard";
+  const requestedNext = safeNext(url.searchParams.get("next"));
 
   // If no code present, bounce back to login
   if (!code) {
+    const fallbackNext = requestedNext || "/dashboard";
     const to = new URL("/auth/login", url.origin);
-    to.searchParams.set("next", nextParam);
+    to.searchParams.set("next", fallbackNext);
     to.searchParams.set("error", "missing_code");
     return NextResponse.redirect(to);
   }
@@ -32,14 +52,39 @@ export async function GET(req: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    const fallbackNext = requestedNext || "/dashboard";
     const to = new URL("/auth/login", url.origin);
-    to.searchParams.set("next", nextParam);
+    to.searchParams.set("next", fallbackNext);
     to.searchParams.set("error", "magic_link_failed");
     return NextResponse.redirect(to);
   }
 
-  // Success — session cookies are set, go to the intended destination
-  return NextResponse.redirect(new URL(nextParam, url.origin));
+  // Success — session cookies are set
+  // Determine redirect destination: requested next > default homepage > /dashboard
+  let redirectPath = requestedNext;
+  
+  if (!redirectPath) {
+    // Get user's app user id to fetch default homepage
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .maybeSingle<{ id: string }>();
+      
+      if (userRow?.id) {
+        const defaultHomepage = await getDefaultHomepage(userRow.id);
+        redirectPath = defaultHomepage || "/dashboard";
+      } else {
+        redirectPath = "/dashboard";
+      }
+    } else {
+      redirectPath = "/dashboard";
+    }
+  }
+
+  return NextResponse.redirect(new URL(redirectPath, url.origin));
 }
 
 // Ensure no caching of the callback

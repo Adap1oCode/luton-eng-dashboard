@@ -123,8 +123,38 @@ if (!user && !isPublicExact) {
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/auth/login" || pathname === "/auth/register";
   if (user && (pathname === "/" || isAuthPage)) {
     const requestedNext = safeNext(searchParams.get("next"));
+    
+    // If no explicit next param, try to get user's default homepage
+    let redirectPath = requestedNext;
+    if (!redirectPath) {
+      try {
+        // Get user's app user id
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_id", user.id)
+          .maybeSingle<{ id: string }>();
+        
+        if (userRow?.id) {
+          // Fetch default homepage from materialized view
+          const { data: permRow } = await supabase
+            .from("mv_effective_permissions")
+            .select("default_homepage")
+            .eq("user_id", userRow.id)
+            .maybeSingle<{ default_homepage: string | null }>();
+          
+          redirectPath = permRow?.default_homepage || "/dashboard";
+        } else {
+          redirectPath = "/dashboard";
+        }
+      } catch {
+        // Fallback on error
+        redirectPath = "/dashboard";
+      }
+    }
+    
     const url = req.nextUrl.clone();
-    url.pathname = requestedNext || "/forms/stock-adjustments";
+    url.pathname = redirectPath;
     url.search = "";
     const redirectRes = NextResponse.redirect(url);
     return withDebugHeaders(redirectRes, {
@@ -132,7 +162,7 @@ if (!user && !isPublicExact) {
       userPresent: true,
       action: "redirect_dashboard",
       role,
-      requestedNext,
+      requestedNext: redirectPath,
     });
   }
 

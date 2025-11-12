@@ -187,10 +187,9 @@ export function createSupabaseProvider<T, TInput>(
 
         // 🔒 Warehouse scoping (now passes codes + ids; function picks correctly)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
-          canSeeAllWarehouses: ctx.canSeeAllWarehouses,
           allowedWarehouses: ctx.allowedWarehouses, // legacy alias (codes)
-          allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
-          allowedWarehouseIds: (ctx as any).allowedWarehouseIds, // enriched (UUIDs)
+          allowedWarehouseCodes: ctx.allowedWarehouseCodes, // enriched (codes)
+          allowedWarehouseIds: ctx.allowedWarehouseIds, // enriched (UUIDs)
         });
 
         // 🔒 Ownership scoping (uses deprecated alias `userId` for now)
@@ -301,10 +300,9 @@ export function createSupabaseProvider<T, TInput>(
 
         // 🔒 Warehouse scoping (same enriched context passed)
         query = applyWarehouseScopeToSupabase(query, cfg.warehouseScope, {
-          canSeeAllWarehouses: ctx.canSeeAllWarehouses,
           allowedWarehouses: ctx.allowedWarehouses, // legacy alias (codes)
-          allowedWarehouseCodes: (ctx as any).allowedWarehouseCodes, // enriched (codes)
-          allowedWarehouseIds: (ctx as any).allowedWarehouseIds, // enriched (UUIDs)
+          allowedWarehouseCodes: ctx.allowedWarehouseCodes, // enriched (codes)
+          allowedWarehouseIds: ctx.allowedWarehouseIds, // enriched (UUIDs)
         });
 
         // 🔒 Ownership scoping

@@ -41,7 +41,14 @@ const data = {
   ],
 };
 
-export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Sidebar> & { account?: Account }) {
+export function AppSidebar({ 
+  account, 
+  permissions: serverPermissions,
+  ...props 
+}: React.ComponentProps<typeof Sidebar> & { 
+  account?: Account;
+  permissions?: string[];
+}) {
   // Fallback to existing rootUser shape if no account provided
   const effectiveUser = {
     name: account?.name ?? rootUser.name,
@@ -50,9 +57,11 @@ export function AppSidebar({ account, ...props }: React.ComponentProps<typeof Si
     avatar: account?.avatar ?? rootUser.avatar,
   };
 
-  // Read current permissions once from context (fed by /api/me/permissions)
-  const { list = [] } = usePermissions?.() ?? { list: [] };
-  const filteredNav = filterNavGroups(sidebarItems, list); // mode default = open-by-default
+  // Use server-provided permissions if available (SSR), otherwise fall back to client-side fetch
+  // This ensures the sidebar loads immediately with server-rendered permissions
+  const { list: clientPermissions = [] } = serverPermissions ? { list: [] } : (usePermissions?.() ?? { list: [] });
+  const permissions = serverPermissions ?? clientPermissions;
+  const filteredNav = filterNavGroups(sidebarItems, permissions); // mode default = open-by-default
 
   return (
     <Sidebar

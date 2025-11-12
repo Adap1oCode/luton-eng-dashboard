@@ -37,13 +37,15 @@ export type SessionContext = {
   permissions: string[];
   permissionDetails: Array<{ key: string; description: string | null }>;
 
-  // Warehouse scope
-  canSeeAllWarehouses: boolean;
-
+  // Warehouse scope (explicit - no implicit "all")
   // Codes/IDs are both provided; `allowedWarehouses` kept as alias for codes
   allowedWarehouseCodes: string[]; // e.g. ["RTZ"]
   allowedWarehouseIds: string[]; // e.g. ["6a7b...-..."]
   allowedWarehouses: string[]; // alias of allowedWarehouseCodes
+  warehouseScope: Array<{ warehouse_id: string; warehouse_code: string; warehouse_name: string }>;
+  
+  // Default homepage for user (from role or user override)
+  defaultHomepage: string | null;
 
   // Impersonation metadata
   meta: {
@@ -120,6 +122,8 @@ export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<
 
     const codes = ctx.allowedWarehouseCodes ?? ctx.allowedWarehouses ?? [];
     const ids = ctx.allowedWarehouseIds ?? [];
+    const warehouseScope = (ctx as any).warehouseScope ?? [];
+    const defaultHomepage = (ctx as any).defaultHomepage ?? null;
 
     const effectiveUser = ctx.effectiveUser!;
     const userId = (ctx as any).userId ?? effectiveUser.appUserId;
@@ -130,12 +134,13 @@ export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<
       effectiveUser: ctx.effectiveUser!,
       permissions: ctx.permissions ?? ctx.effectiveUser?.permissions ?? [],
       permissionDetails: ctx.permissionDetails ?? [],
-      canSeeAllWarehouses: Boolean(ctx.canSeeAllWarehouses),
 
       // Keep both; ensure alias kept in sync
       allowedWarehouseCodes: codes,
       allowedWarehouseIds: ids,
       allowedWarehouses: codes,
+      warehouseScope,
+      defaultHomepage,
 
       meta: {
         impersonating: Boolean(ctx.meta?.impersonating),

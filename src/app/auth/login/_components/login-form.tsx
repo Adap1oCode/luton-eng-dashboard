@@ -118,7 +118,24 @@ export function LoginFormV1() {
           });
 
           toast.success("Logged in", { description: "Welcome back!" });
-          window.location.href = next; // redirect to ?next or /dashboard
+          
+          // If no explicit next param, fetch user's default homepage
+          let redirectPath = next;
+          if (next === "/dashboard") {
+            try {
+              const res = await fetch("/api/me/role");
+              if (res.ok) {
+                const data = await res.json();
+                if (data.defaultHomepage) {
+                  redirectPath = data.defaultHomepage;
+                }
+              }
+            } catch {
+              // Fallback to /dashboard on error
+            }
+          }
+          
+          window.location.href = redirectPath;
           return;
         } catch (error) {
           trackAuthError(error as Error, "password_login");

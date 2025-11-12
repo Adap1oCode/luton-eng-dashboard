@@ -178,12 +178,12 @@ export function NavMain({ items }: NavMainProps) {
   return (
     <>
       {/* عنوان شكلي أعلى القائمة زي الصورة */}
-      <SidebarGroup>
+      {/* <SidebarGroup>
         <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
-      </SidebarGroup>
+      </SidebarGroup> */}
 
       {/* بلوك Quick Create يرجع لاستايله القديم ومطابقة لون الأيقونة للنص */}
-      <SidebarGroup>
+      {/* <SidebarGroup>
         <SidebarGroupContent className="flex flex-col gap-2">
           <SidebarMenu>
             <SidebarMenuItem className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -205,7 +205,7 @@ export function NavMain({ items }: NavMainProps) {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
-      </SidebarGroup>
+      </SidebarGroup> */}
 
       {items.map((group) => (
         <SidebarGroup key={group.id}>

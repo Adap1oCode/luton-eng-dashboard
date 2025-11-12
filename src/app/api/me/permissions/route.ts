@@ -5,17 +5,8 @@ import { supabaseServer } from "@/lib/supabase-server";
 export const dynamic = "force-dynamic"; // avoid static caching
 export const revalidate = 0;
 
-type RolePermissionRow = {
-  permission_key: string | null;
-  permissions: { key: string | null } | null;
-};
-
-type RoleRow = {
-  role_permissions: RolePermissionRow[] | null;
-};
-
-type MePermissionsRow = {
-  roles: RoleRow | RoleRow[] | null;
+type EffectivePermissionsRow = {
+  permissions: string[];
 };
 
 export async function GET(_req: NextRequest) {
@@ -50,7 +41,7 @@ export async function GET(_req: NextRequest) {
   }
 
   if (!effectiveAppUserId) {
-    // Fallback to real user’s app row
+    // Fallback to real user's app row
     const { data: meRow, error: meErr } = await supabase
       .from("users")
       .select("id")
@@ -62,39 +53,20 @@ export async function GET(_req: NextRequest) {
     effectiveAppUserId = meRow.id;
   }
 
-  // Compute permissions for the effective user
-  const { data, error } = await supabase
-    .from("users")
-    .select(
-      `
-      roles:roles!fk_users_role_id (
-        role_permissions:role_permissions!role_permissions_role_id_fkey (
-          permission_key,
-          permissions:permissions!role_permissions_permission_key_fkey ( key )
-        )
-      )
-    `,
-    )
-    .eq("id", effectiveAppUserId)
-    .maybeSingle<MePermissionsRow>();
+  // Query the materialized view
+  const { data: viewRow, error: viewErr } = await supabase
+    .from("mv_effective_permissions")
+    .select("permissions")
+    .eq("user_id", effectiveAppUserId)
+    .maybeSingle<EffectivePermissionsRow>();
 
-  if (error) {
-    return NextResponse.json({ error: "profile_query_failed" }, { status: 500, headers: { "Cache-Control": "no-store" } });
+  if (viewErr) {
+    return NextResponse.json({ error: "permissions_query_failed", details: viewErr.message }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 
-  const permSet = new Set<string>();
-  const roles = data?.roles;
-  const roleList: RoleRow[] = Array.isArray(roles) ? roles : roles ? [roles] : [];
+  const permissions = viewRow?.permissions ?? [];
 
-  for (const role of roleList) {
-    const rps = role.role_permissions ?? [];
-    for (const rp of rps) {
-      const key = rp.permissions?.key ?? rp.permission_key ?? null;
-      if (key) permSet.add(key);
-    }
-  }
-
-  const res = NextResponse.json({ permissions: Array.from(permSet) });
+  const res = NextResponse.json({ permissions });
   res.headers.set("Cache-Control", "no-store");
   return res;
 }

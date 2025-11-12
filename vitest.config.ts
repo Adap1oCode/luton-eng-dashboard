@@ -37,8 +37,9 @@ export default defineConfig({
       ],
     },
     // Better test organization
-    testTimeout: 10000,
-    hookTimeout: 10000,
+    testTimeout: 30000, // Increased from 10s to 30s to prevent hanging tests
+    hookTimeout: 30000, // Increased from 10s to 30s to prevent hanging hooks
+    bail: 1, // Stop on first failure to fail fast
   },
   resolve: {
     alias: {

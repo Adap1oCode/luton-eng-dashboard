@@ -22,19 +22,68 @@ This document defines the rules Cursor must follow on this project. “Done” m
 ---
 
 ## Testing & Verification (what "Done" means)
+
+We use a **tiered verification system** to balance speed and thoroughness:
+
+### Tier 1: Fast Commit Path (Pre-Commit Hook)
+**Command**: `pnpm ci:fast`  
+**Runtime**: ~25-75 seconds  
+**Blocks**: Pre-commit hook  
+**Includes**:
+- ✅ TypeCheck (`tsc --noEmit`) - **BLOCKS**
+- ✅ Lint (`eslint .`) - **BLOCKS**
+
+**Rationale**: Catches syntax/type errors immediately without waiting for tests. Prevents broken code from being committed.
+
+### Tier 2: Pre-Push Verification
+**Command**: `pnpm ci:verify`  
+**Runtime**: ~2-5 minutes  
+**Blocks**: Pre-push hook  
+**Includes**:
+- ✅ TypeCheck - **BLOCKS**
+- ✅ Lint - **BLOCKS**
+- ✅ Build (`next build`) - **BLOCKS** (ensures app compiles)
+- ✅ Unit Tests - **BLOCKS** (can bypass with `--skip-tests` flag in emergencies)
+
+**Bypass**: Use `SKIP_VERIFY=1 git push` for emergencies (not recommended).
+
+**Rationale**: Ensures code compiles and basic tests pass before pushing. Build catches issues typecheck misses.
+
+### Tier 3: PR Verification (GitHub Actions)
+**Command**: `pnpm ci:pr`  
+**Runtime**: ~5-10 minutes  
+**Blocks**: PR merge  
+**Includes**:
+- ✅ All Tier 2 checks
+- ✅ E2E Smoke Tests (`playwright test --grep @smoke`) - **BLOCKS**
+- ✅ Docs check (if code changed) - **BLOCKS**
+
+**Rationale**: Full verification before code review. Smoke tests ensure critical paths work.
+
+### Tier 4: Nightly Comprehensive (Scheduled)
+**Command**: `pnpm ci:nightly`  
+**Runtime**: ~15-30 minutes  
+**Blocks**: Nothing (runs on schedule)  
+**Includes**:
+- ✅ All Tier 3 checks
+- ✅ Integration Tests (`test:nightly`)
+- ✅ Full E2E Suite (`test:e2e`)
+- ✅ Performance Tests
+- ✅ Auto-fix attempts (lint --fix, format, etc.)
+
+**Rationale**: Comprehensive testing without blocking development. Auto-fixes reduce technical debt.
+
+### Complete "Done" Checklist
 A change is **not done** unless **all** are true:
 
-1) **Typecheck:** `pnpm typecheck` (tsc --noEmit)  
-2) **Lint:** `pnpm lint`  
-3) **Production build:** `pnpm build` (Next.js)  
-4) **App boots + smoke E2E:** Start the built app and run Playwright **@smoke** tests against it  
-5) **Unit/Integration:** `pnpm test` (Vitest) passes  
-6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`)
-7) **Vercel Preview:** Deployment is green  
-8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale
-
-**One-command verifier (CI + local pre-push):**  
-`pnpm ci:verify` must succeed. It runs typecheck, lint, build, boots the app, runs unit + smoke e2e.
+1) **Typecheck:** `pnpm typecheck` (tsc --noEmit) - ✅ Tier 1  
+2) **Lint:** `pnpm lint` - ✅ Tier 1  
+3) **Production build:** `pnpm build` (Next.js) - ✅ Tier 2  
+4) **Unit Tests:** `pnpm test:unit` (Vitest) passes - ✅ Tier 2  
+5) **E2E Smoke:** Playwright **@smoke** tests pass - ✅ Tier 3  
+6) **CWA Testing Compliance:** Tests follow Clean Web Architecture principles (see `docs/testing/cwa-testing-strategy.md`) - ✅ All tiers  
+7) **Vercel Preview:** Deployment is green - ✅ Manual check  
+8) **Docs updated:** If files under `app/**` or `src/**` changed, update `docs/**` or explicitly mark **no-docs-needed** with a rationale - ✅ Tier 3
 
 ### CWA Testing Requirements
 All tests must follow Clean Web Architecture principles:
@@ -57,14 +106,23 @@ All tests must follow Clean Web Architecture principles:
 
 ## Required Files/Conventions (enforced)
 **Package scripts (package.json)**  
-- `typecheck`, `lint`, `build`, `start`, `test`, `test:e2e`, `test:e2e:smoke`, `ci:verify`
+- `typecheck`, `lint`, `build`, `start`, `test`, `test:e2e`, `test:e2e:smoke`
+- `ci:fast` - Fast commit verification (Tier 1)
+- `ci:verify` - Pre-push verification (Tier 2)
+- `ci:verify:skip-tests` - Emergency bypass for tests
+- `ci:pr` - PR verification (Tier 3)
+- `ci:nightly` - Nightly comprehensive (Tier 4)
+
+**Pre-commit hook (Husky)**  
+- Block committing if `pnpm ci:fast` fails (typecheck + lint only).
 
 **Pre-push hook (Husky)**  
-- Block pushing if `pnpm ci:verify` fails.
+- Block pushing if `pnpm ci:verify` fails (can bypass with `SKIP_VERIFY=1` for emergencies).
 
 **CI (GitHub Actions)**  
-- Run `pnpm ci:verify` on PRs and pushes to `main`/`develop`.  
-- Fail PR if code changed but `/docs/**` not updated (unless labeled “no-docs-needed”).
+- Run `pnpm ci:pr` on PRs and pushes to `main`/`develop` (includes E2E smoke).  
+- Fail PR if code changed but `/docs/**` not updated (unless labeled "no-docs-needed").
+- Nightly workflow runs `pnpm ci:nightly` at 2 AM UTC daily (non-blocking).
 
 **Vercel Checks required to merge**  
 - Require both: CI “verify” job + “Vercel — Preview Ready”.
@@ -81,7 +139,16 @@ All tests must follow Clean Web Architecture principles:
 ## Cursor MUST follow these at task end
 Cursor must include in its final message:  
 - Branch name it created  
-- Output of `pnpm ci:verify` (or clear failure logs)  
+- Output of `pnpm ci:pr` (or clear failure logs) - PR verification includes all tiers  
 - Vercel preview URL  
 - List of updated files (including any `/docs/**`)  
-- Explanation if docs are not needed (and apply “no-docs-needed” label)
+- Explanation if docs are not needed (and apply "no-docs-needed" label)
+
+### Verification Tier Summary
+
+| Tier | Command | When | Blocks | Runtime |
+|------|---------|------|--------|---------|
+| 1 | `ci:fast` | Pre-commit | Commit | ~25-75s |
+| 2 | `ci:verify` | Pre-push | Push | ~2-5min |
+| 3 | `ci:pr` | PR | Merge | ~5-10min |
+| 4 | `ci:nightly` | Scheduled | None | ~15-30min |

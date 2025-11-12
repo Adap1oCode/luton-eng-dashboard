@@ -9,13 +9,18 @@ import resources from "@/lib/data/resources";
 import { config, compareStockFilterMeta, RESOURCE_KEY } from "./compare-stock.config";
 import { toRow } from "./to-row";
 import { CompareStockTableClient } from "./compare-stock-table-client";
+import { protectRoute } from "@/lib/access/route-guards";
 
 export const metadata: Metadata = {
   title: config.title,
 };
 
 export default async function Page(props: { searchParams?: Promise<SPRecord> | SPRecord }) {
+  // Protect route - check view permission
   const sp = await resolveSearchParams(props.searchParams);
+  const warehouseParam = Array.isArray(sp.warehouse) ? sp.warehouse[0] : sp.warehouse;
+  await protectRoute("/forms/compare-stock", warehouseParam || undefined);
+  
   const { page, pageSize, filters } = parseListParams(sp, compareStockFilterMeta, { defaultPage: 1, defaultPageSize: 50, max: 500 });
 
   // Apply all quick filter transforms if present

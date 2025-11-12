@@ -17,17 +17,17 @@ function columnWantsIds(column: string) {
 /**
  * Apply warehouse scope:
  * - mode: "none" => no-op
- * - mode: "column" => in(column, allowed ...), unless global access
+ * - mode: "column" => in(column, allowed ...)
  *
  * NOTE:
  *  - If cfg.column ends with `_id`, we prefer allowedWarehouseIds (UUIDs).
  *  - Else we fall back to codes (allowedWarehouseCodes / allowedWarehouses).
+ *  - No implicit "all warehouses" - empty list means no access.
  */
 export function applyWarehouseScopeToSupabase(
   qb: FilterableQB,
   cfg: WarehouseScopeCfg | undefined,
   ctx: {
-    canSeeAllWarehouses: boolean;
     /** legacy alias (codes) */
     allowedWarehouses?: string[];
     /** enriched (preferred) */
@@ -36,10 +36,6 @@ export function applyWarehouseScopeToSupabase(
   }
 ): FilterableQB {
   if (!cfg || cfg.mode === "none") return qb;
-
-  // Global access unless requireBinding=true forces explicit bindings
-  const global = ctx.canSeeAllWarehouses && !(cfg as any).requireBinding;
-  if (global) return qb;
 
   if (cfg.mode === "column") {
     // Decide which list to use (ids for *_id, else codes)
@@ -53,7 +49,7 @@ export function applyWarehouseScopeToSupabase(
     const list = useIds ? ids : codes;
 
     if (!list || list.length === 0) {
-      // No bindings + not global => ensure empty result via impossible predicate
+      // No bindings => ensure empty result via impossible predicate
       return qb.in(cfg.column, ["__NO_ALLOWED_WAREHOUSES__"]);
     }
     return qb.in(cfg.column, list);

@@ -48,6 +48,7 @@ import { toast } from "sonner";
 import { ColumnsMenu } from "@/components/data-table/columns-menu";
 import { exportCSV } from "@/components/data-table/csv-export";
 import { DataTable } from "@/components/data-table/data-table";
+import { useAccess } from "@/lib/access/useAccess";
 import { type FilterColumn, type ColumnFilterState } from "@/components/data-table/data-table-filters";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { InlineEditCell, type InlineEditConfig } from "@/components/data-table/inline-edit-cell";
@@ -451,13 +452,30 @@ export default function ResourceTableClient<TRow extends Record<string, unknown>
     return initialTotal;
   }, [queryData?.total, queryData, queryError, initialTotal]);
 
-  // 🎯 Filter out optimistically deleted rows from current data
+  // 🔒 Get access guards for warehouse filtering (client-side safety net)
+  const { guards } = useAccess();
+
+  // 🎯 Filter out optimistically deleted rows and rows from unauthorized warehouses
   const filteredRows = React.useMemo(() => {
-    return currentRows.filter((row) => {
+    let rows = currentRows.filter((row) => {
       const rowId = getRowIdValue(row as TRow);
       return !rowId || !isOptimisticallyDeleted(rowId);
     });
-  }, [currentRows, isOptimisticallyDeleted, getRowIdValue]);
+
+    // Additional warehouse filtering (client-side safety net)
+    // Filter rows by warehouse_code or warehouse field if guards are available
+    if (guards) {
+      rows = rows.filter((row) => {
+        const warehouseCode = (row as any).warehouse_code || (row as any).warehouse;
+        // If row has no warehouse field, allow it (might be non-warehouse resource)
+        if (!warehouseCode) return true;
+        // Check if user has access to this warehouse
+        return guards.inWarehouse(warehouseCode);
+      });
+    }
+
+    return rows;
+  }, [currentRows, isOptimisticallyDeleted, getRowIdValue, guards]);
 
   // ✅ Controlled pagination (0-based index)
   const [pagination, setPagination] = React.useState({

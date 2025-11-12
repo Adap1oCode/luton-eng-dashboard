@@ -50,7 +50,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     email?: string | null;
     roleName?: string | null;
     avatarUrl?: string | null;
+    permissions?: string[];
   } = {};
+  let permissions: string[] = [];
+  
   try {
     // Add timeout to prevent hanging
     const controller = new AbortController();
@@ -65,12 +68,15 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     clearTimeout(timeoutId);
     
     if (sessionRes.ok) {
-      session = (await sessionRes.json()) as {
+      const sessionData = (await sessionRes.json()) as {
         fullName?: string | null;
         email?: string | null;
         roleName?: string | null;
         avatarUrl?: string | null;
+        permissions?: string[];
       };
+      session = sessionData;
+      permissions = sessionData.permissions ?? [];
     }
   } catch (error) {
     // Silently handle session fetch errors - user will see login form
@@ -103,6 +109,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             variant={sidebarVariant}
             collapsible={sidebarCollapsible}
             account={{ name: displayName, email, role, avatar: session.avatarUrl ?? "" }}
+            permissions={permissions}
           />
           <SidebarInset
             className={cn(

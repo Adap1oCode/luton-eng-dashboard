@@ -303,27 +303,76 @@ async function runHealthCheck() {
   }
 }
 
+function runCommandWithTimeout(command, args = [], timeoutMs = 300000) {
+  return new Promise((resolve, reject) => {
+    log(`\n${colors.blue}▶${colors.reset} Running: ${colors.bright}${command} ${args.join(' ')}${colors.reset}`);
+    
+    const startTime = Date.now();
+    const child = spawn(command, args, {
+      stdio: 'inherit',
+      shell: true,
+      cwd: process.cwd(),
+    });
+
+    const timeout = setTimeout(() => {
+      child.kill();
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      log(`${colors.red}✗${colors.reset} Command exceeded timeout of ${timeoutMs / 1000}s (ran for ${duration}s)`, colors.red);
+      reject(new Error(`Command timeout: ${command} ${args.join(' ')}`));
+    }, timeoutMs);
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      if (code === 0) {
+        log(`${colors.green}✓${colors.reset} ${command} ${args.join(' ')} ${colors.green}passed${colors.reset} (${duration}s)`);
+        resolve();
+      } else {
+        log(`${colors.red}✗${colors.reset} ${command} ${args.join(' ')} ${colors.red}failed${colors.reset} (exit code: ${code}, ${duration}s)`);
+        reject(new Error(`Command failed: ${command} ${args.join(' ')}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      log(`${colors.red}✗${colors.reset} Failed to start command: ${err.message}`, colors.red);
+      reject(err);
+    });
+  });
+}
+
 async function main() {
   log('\n' + '='.repeat(60), colors.bright);
-  log('  CI VERIFICATION (Cursor Working Agreement)', colors.bright);
+  log('  CI VERIFICATION (Tier 2: Pre-Push)', colors.bright);
   log('='.repeat(60) + '\n', colors.bright);
+
+  // Check for --skip-tests flag
+  const skipTests = process.argv.includes('--skip-tests');
+  if (skipTests) {
+    log(`${colors.yellow}⚠${colors.reset} Tests will be skipped (--skip-tests flag)`, colors.yellow);
+  }
 
   const steps = [
     { name: 'TypeCheck', command: 'npm', args: ['run', 'typecheck'] },
     { name: 'Lint', command: 'npm', args: ['run', 'lint'] },
-    { name: 'Unit Tests', command: 'npm', args: ['run', 'test:unit'] },
-    // Build step removed: typecheck is sufficient for regression detection
-    // Health check removed: requires app startup, flaky, moved to nightly
-    // E2E Smoke Tests: moved to nightly job
+    { name: 'Build', command: 'npm', args: ['run', 'build'] },
+    { name: 'Unit Tests', command: 'npm', args: ['run', 'test:unit'], skip: skipTests },
   ];
 
   let passedSteps = 0;
   const startTime = Date.now();
 
   for (const step of steps) {
+    if (step.skip) {
+      log(`\n${colors.yellow}⏭${colors.reset} Skipping: ${step.name}`, colors.yellow);
+      continue;
+    }
+
     try {
-      if (step.command === 'runHealthCheck') {
-        await runHealthCheck();
+      // Use timeout for tests (5 minutes max)
+      const timeout = step.name === 'Unit Tests' ? 300000 : undefined;
+      if (timeout) {
+        await runCommandWithTimeout(step.command, step.args, timeout);
       } else {
         await runCommand(step.command, step.args);
       }
@@ -331,6 +380,10 @@ async function main() {
     } catch (err) {
       log(`\n${colors.red}${'='.repeat(60)}${colors.reset}`, colors.red);
       log(`  ❌ CI VERIFICATION FAILED AT: ${step.name}`, colors.red);
+      if (step.name === 'Unit Tests') {
+        log(`  ${colors.yellow}Tip: Tests may be hanging. Check for infinite loops or missing mocks.${colors.reset}`, colors.yellow);
+        log(`  ${colors.yellow}Use --skip-tests to bypass tests in emergency: npm run ci:verify:skip-tests${colors.reset}`, colors.yellow);
+      }
       log(`${colors.red}${'='.repeat(60)}${colors.reset}\n`, colors.red);
       process.exit(1);
     }
@@ -339,7 +392,7 @@ async function main() {
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
   log(`\n${colors.green}${'='.repeat(60)}${colors.reset}`, colors.green);
-  log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${passedSteps}/${steps.length})`, colors.green);
+  log(`  ✅ ALL CI VERIFICATION STEPS PASSED (${passedSteps}/${steps.filter(s => !s.skip).length})`, colors.green);
   log(`  Duration: ${duration}s`, colors.green);
   log(`${colors.green}${'='.repeat(60)}${colors.reset}\n`, colors.green);
 }

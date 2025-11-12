@@ -6,11 +6,19 @@ import { cookies, headers } from "next/headers";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/** DB row types (adjust column names here if your schema differs) */
-type RoleRow = {
-  id: string;
-  role_name: string | null;
+/** Type for the materialized view row */
+type EffectivePermissionsRow = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  role_id: string | null;
   role_code: string | null;
+  role_name: string | null;
+  role_family: string | null;
+  permissions: string[]; // text[] from view
+  permission_details: Array<{ key: string; description: string | null }>; // jsonb array
+  warehouse_scope: Array<{ warehouse_code: string | null; warehouse_id: string | null; warehouse_name: string | null }>; // jsonb array
+  default_homepage: string | null; // default homepage path
 };
 
 type MeRow = {
@@ -19,16 +27,6 @@ type MeRow = {
   email: string | null;
   role_id: string | null;
   role_code: string | null;
-};
-
-type PermissionObj = { key: string | null; description: string | null } | null;
-type RolePermissionJoined =
-  | { permission_key: string | null; permissions: PermissionObj }
-  | { permission_key: string | null; permissions: PermissionObj[] };
-
-type WarehouseRuleRow = {
-  warehouse: string | null;    // code (e.g. "RTZ")
-  warehouse_id: string | null; // uuid
 };
 
 /** Context we build for a user */
@@ -51,129 +49,78 @@ type BuiltContext = {
   /** Enriched scoping (preferred) */
   allowedWarehouseCodes: string[];
   allowedWarehouseIds: string[];
-  canSeeAllWarehouses: boolean;
+  warehouseScope: Array<{ warehouse_id: string; warehouse_code: string; warehouse_name: string }>;
+  defaultHomepage: string | null;
 };
 
-/** Normalize polymorphic join result */
-function normalizePermission(p: PermissionObj | PermissionObj[] | undefined): PermissionObj {
-  if (!p) return null;
-  return Array.isArray(p) ? (p[0] ?? null) : p;
-}
-
-/** Build a “me” context from a users row */
+/** Build a "me" context from a users row using the materialized view */
 async function buildContextForUserRow(
   supabase: Awaited<ReturnType<typeof supabaseServer>>,
   me: MeRow,
   authUserIdFallback: string
 ): Promise<BuiltContext> {
-  const roleId = me.role_id;
+  // Query the materialized view directly - replaces all complex joins
+  const { data: viewRow, error: viewErr } = await supabase
+    .from("mv_effective_permissions")
+    .select("*")
+    .eq("user_id", me.id)
+    .maybeSingle<EffectivePermissionsRow>();
 
-  // 1) Role (by id if present)
-  let role: RoleRow | null = null;
-  if (roleId) {
-    const { data: roleRow, error: roleErr } = await supabase
-      .from("roles")
-      .select("id, role_name, role_code, role_family")
-      .eq("id", roleId)
-      .maybeSingle<RoleRow>();
-    if (roleErr) throw new Error(`role_query_failed: ${roleErr.message}`);
-    role = roleRow ?? null;
+  if (viewErr) {
+    throw new Error(`effective_permissions_query_failed: ${viewErr.message}`);
   }
 
-  // —— Derive final roleName / roleCode / roleFamily with safe fallbacks ——
-  // Prefer explicit role row, else fallback to user's stored role_code
-  let roleName: string | null = role?.role_name ?? null;
-  let roleCodeOut: string | null = role?.role_code ?? me.role_code ?? null;
-  let roleFamily: string | null = (role as any)?.role_family ?? null;
-
-  // If role_id is null but we have a role_code, resolve a display name by code.
-  if ((!roleName || !roleFamily) && roleCodeOut) {
-    const { data: byCode, error: byCodeErr } = await supabase
-      .from("roles")
-      .select("role_name, role_code, role_family")
-      .eq("role_code", roleCodeOut)
-      .maybeSingle<{ role_name: string | null; role_code: string | null; role_family: string | null }>();
-    if (!byCodeErr && byCode) {
-      roleName = byCode.role_name ?? roleName;
-      roleCodeOut = byCode.role_code ?? roleCodeOut;
-      roleFamily = byCode.role_family ?? roleFamily;
-    }
-  }
-  // ————————————————————————————————————————————————————————————————
-
-  // 2) Permissions (flatten)
-  const permSet = new Set<string>();
-  const permissionDetails: Array<{ key: string; description: string | null }> = [];
-  if (roleId) {
-    const { data: rpRows, error: rpErr } = await supabase
-      .from("role_permissions")
-      .select(`
-        permission_key,
-        permissions:permissions!role_permissions_permission_key_fkey ( key, description )
-      `)
-      .eq("role_id", roleId);
-
-    if (rpErr) throw new Error(`role_permissions_query_failed: ${rpErr.message}`);
-
-    for (const rp of (rpRows ?? []) as RolePermissionJoined[]) {
-      const perm = normalizePermission((rp as any).permissions);
-      const k = (perm?.key ?? (rp as any).permission_key ?? null) as string | null;
-      if (k) {
-        permSet.add(k);
-        permissionDetails.push({ key: k, description: perm?.description ?? null });
-      }
-    }
+  if (!viewRow) {
+    // Fallback: user has no role/permissions (view returns null)
+    return {
+      userId: authUserIdFallback,
+      appUserId: me.id,
+      fullName: me.full_name ?? null,
+      email: me.email ?? null,
+      roleName: null,
+      roleCode: me.role_code ?? null,
+      roleFamily: null,
+      permissions: [],
+      permissionDetails: [],
+      allowedWarehouses: [],
+      allowedWarehouseCodes: [],
+      allowedWarehouseIds: [],
+      warehouseScope: [],
+      defaultHomepage: null,
+    };
   }
 
-  // 3) Warehouse scope: collect BOTH codes and ids
-  let allowedWarehouseCodes: string[] = [];
-  let allowedWarehouseIds: string[] = [];
+  // Extract warehouse codes, IDs, and names from warehouse_scope
+  const warehouseScope = (viewRow.warehouse_scope ?? [])
+    .map((w) => ({
+      warehouse_id: w.warehouse_id ?? "",
+      warehouse_code: w.warehouse_code ?? "",
+      warehouse_name: w.warehouse_name ?? "",
+    }))
+    .filter((w): w is { warehouse_id: string; warehouse_code: string; warehouse_name: string } => 
+      !!w.warehouse_id && !!w.warehouse_code
+    );
 
-  if (roleId) {
-    const { data: wrRows, error: wrErr } = await supabase
-      .from("role_warehouse_rules")
-      .select("warehouse, warehouse_id")
-      .eq("role_id", roleId);
-    if (wrErr) throw new Error(`warehouse_rules_query_failed: ${wrErr.message}`);
+  const allowedWarehouseCodes = warehouseScope.map((w) => w.warehouse_code);
+  const allowedWarehouseIds = warehouseScope.map((w) => w.warehouse_id);
 
-    const rows = (wrRows ?? []) as WarehouseRuleRow[];
-
-    allowedWarehouseCodes = rows
-      .map((r) => r.warehouse)
-      .filter((w): w is string => !!w);
-
-    allowedWarehouseIds = rows
-      .map((r) => r.warehouse_id)
-      .filter((id): id is string => !!id);
-  }
-
-  // Policy: if explicit rules absent, deny-by-default (no global). If your policy is different,
-  // tweak this. Here we grant "global" only if a permission implies it.
-  const permList = Array.from(permSet);
-  const roleImpliesAll = false; // strict
-  const hasGlobalPerm =
-    permList.includes("entries:read:any") || permList.includes("admin:read:any");
-  const canSeeAllWarehouses = hasGlobalPerm || roleImpliesAll;
+  const permList = viewRow.permissions ?? [];
 
   return {
     userId: authUserIdFallback,
     appUserId: me.id,
-    fullName: me.full_name ?? null,
-    email: me.email ?? null,
-    roleName,
-    roleCode: roleCodeOut,
-    roleFamily,
-
+    fullName: viewRow.full_name ?? me.full_name ?? null,
+    email: viewRow.email ?? me.email ?? null,
+    roleName: viewRow.role_name ?? null,
+    roleCode: viewRow.role_code ?? me.role_code ?? null,
+    roleFamily: viewRow.role_family ?? null,
     permissions: permList,
-    permissionDetails,
-
-    // Back-compat (alias) – codes
+    permissionDetails: viewRow.permission_details ?? [],
     allowedWarehouses: allowedWarehouseCodes,
-
-    // Enriched (preferred)
     allowedWarehouseCodes,
     allowedWarehouseIds,
-    canSeeAllWarehouses,
+    warehouseScope,
+    defaultHomepage: viewRow.default_homepage ?? null,
   };
 }
 
@@ -297,11 +244,12 @@ export async function GET(req: NextRequest) {
     permissions: effectiveCtx.permissions,
     permissionDetails: effectiveCtx.permissionDetails,
     allowedWarehouses: effectiveCtx.allowedWarehouses,
-    canSeeAllWarehouses: effectiveCtx.canSeeAllWarehouses,
 
     // ENRICHED (preferred in new SessionContext)
     allowedWarehouseCodes: effectiveCtx.allowedWarehouseCodes,
     allowedWarehouseIds: effectiveCtx.allowedWarehouseIds,
+    warehouseScope: effectiveCtx.warehouseScope,
+    defaultHomepage: effectiveCtx.defaultHomepage,
 
     // Top-level users for new SessionContext
     realUser: {

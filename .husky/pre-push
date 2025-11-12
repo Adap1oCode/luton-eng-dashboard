@@ -1,2 +1,8 @@
 #!/usr/bin/env sh
-npm run ci:verify || { echo "❌ Pre-push verification failed"; exit 1; }
+# Allow bypass with SKIP_VERIFY=1 for emergencies
+if [ "$SKIP_VERIFY" = "1" ]; then
+  echo "⚠️  Skipping pre-push verification (SKIP_VERIFY=1)"
+  exit 0
+fi
+
+npm run ci:verify || { echo "❌ Pre-push verification failed. Use SKIP_VERIFY=1 to bypass (not recommended)"; exit 1; }

@@ -11,20 +11,28 @@ export async function POST(req: Request) {
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "missing_userId" }, { status: 400 });
 
-  // gate with admin:impersonate
+  // Get the real user's app user id
   const { data: me } = await supabase
     .from("users")
-    .select("id, role_id")
+    .select("id")
     .eq("auth_id", auth.id)
     .maybeSingle();
 
-  const { data: perms } = await supabase
-    .from("role_permissions")
-    .select("permission_key")
-    .eq("role_id", me?.role_id ?? "");
+  if (!me) {
+    return NextResponse.json({ error: "profile_not_found" }, { status: 404 });
+  }
 
-  const canImpersonate = (perms ?? []).some((p: { permission_key?: string }) => p.permission_key === "admin:impersonate");
-  if (!canImpersonate) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  // Check permissions from the materialized view
+  const { data: viewRow } = await supabase
+    .from("mv_effective_permissions")
+    .select("permissions")
+    .eq("user_id", me.id)
+    .maybeSingle<{ permissions: string[] }>();
+
+  const canImpersonate = (viewRow?.permissions ?? []).includes("admin:impersonate");
+  if (!canImpersonate) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE, userId, {

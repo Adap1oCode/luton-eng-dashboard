@@ -21,6 +21,7 @@ type ReasonCodeType = "UNSPECIFIED" | "DAMAGE" | "LOST" | "FOUND" | "TRANSFER" |
 const ALLOWED_REASON_CODES = new Set<ReasonCodeType>(STOCK_ADJUSTMENT_REASON_CODES.map((code) => code.value as ReasonCodeType));
 
 import { stockAdjustmentCreateConfig } from "../../new/form.config";
+import { protectEditRoute } from "@/lib/access/route-guards";
 
 export default async function EditStockAdjustmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -95,6 +96,10 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     }
     throw new Error(`Failed to load stock adjustment ${entryIdToUse}: ${String(err?.message ?? err)}`);
   }
+
+  // Protect edit route - check update permission and warehouse access
+  const recordWarehouseCode = prep.defaults?.warehouse_code || prep.defaults?.warehouse;
+  await protectEditRoute("/forms/stock-adjustments/[id]/edit", recordWarehouseCode);
 
   const formId = "stock-adjustment-form";
 

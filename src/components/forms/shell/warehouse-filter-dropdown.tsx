@@ -35,7 +35,7 @@ interface WarehouseFilterDropdownProps {
 interface SessionContext {
   allowedWarehouseCodes?: string[];
   allowedWarehouseIds?: string[];
-  canSeeAllWarehouses?: boolean;
+  warehouseScope?: Array<{ warehouse_id: string; warehouse_code: string; warehouse_name: string }>;
 }
 
 interface Warehouse {
@@ -65,10 +65,9 @@ export function WarehouseFilterDropdown({
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Fetch warehouse details
-  // If user can see all warehouses, fetch all. Otherwise, fetch only allowed ones.
+  // Fetch warehouse details - only show warehouses user has access to
   const { data: warehouses, isLoading: isLoadingWarehouses } = useQuery<Warehouse[]>({
-    queryKey: ["warehouses", sessionData?.allowedWarehouseCodes, sessionData?.canSeeAllWarehouses],
+    queryKey: ["warehouses", sessionData?.allowedWarehouseCodes],
     queryFn: async () => {
       // Fetch all warehouses
       const res = await fetch("/api/warehouses?pageSize=1000");
@@ -76,14 +75,7 @@ export function WarehouseFilterDropdown({
       const data = await res.json();
       const allWarehouses = data.rows || [];
       
-      // If user can see all warehouses, return all (active only)
-      if (sessionData?.canSeeAllWarehouses) {
-        return allWarehouses
-          .filter((w: Warehouse) => w.is_active !== false)
-          .sort((a: Warehouse, b: Warehouse) => (a.code || "").localeCompare(b.code || ""));
-      }
-      
-      // Otherwise, filter to only allowed warehouses
+      // Filter to only allowed warehouses (explicit access only)
       if (!sessionData?.allowedWarehouseCodes || sessionData.allowedWarehouseCodes.length === 0) {
         return [];
       }
@@ -130,9 +122,8 @@ export function WarehouseFilterDropdown({
     router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
   };
 
-  // Single warehouse - show readonly text (only if user has restricted access)
-  // If user can see all warehouses, always show dropdown even if only one is active
-  if (!sessionData?.canSeeAllWarehouses && warehouses.length === 1) {
+  // Single warehouse - show readonly text
+  if (warehouses.length === 1) {
     const warehouse = warehouses[0];
     const displayName = warehouse?.name || warehouse.code;
 
@@ -156,14 +147,19 @@ export function WarehouseFilterDropdown({
   }
 
   const warehouseOptions = warehouses || [];
-  const allWarehousesOption = { value: "ALL", label: "All Warehouses" };
-  const warehouseOptionsWithAll = [
-    allWarehousesOption,
-    ...warehouseOptions.map((w) => ({
-      value: useNameAsValue ? (w.name || w.code) : w.code,
-      label: w.name || w.code,
-    })),
-  ];
+  // Only show "All" option if user has access to multiple warehouses
+  const warehouseOptionsWithAll = warehouses.length > 1
+    ? [
+        { value: "ALL", label: "All Warehouses" },
+        ...warehouseOptions.map((w) => ({
+          value: useNameAsValue ? (w.name || w.code) : w.code,
+          label: w.name || w.code,
+        })),
+      ]
+    : warehouseOptions.map((w) => ({
+        value: useNameAsValue ? (w.name || w.code) : w.code,
+        label: w.name || w.code,
+      }));
 
   return (
     <div className="flex items-center gap-2">
