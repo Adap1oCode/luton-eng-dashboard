@@ -204,48 +204,48 @@ export function ResourceListClient<TRow = any>({
     }
   }, [isError, error, data, refetch, title, queryKeyBase]);
 
-    useEffect(() => {
-      const shouldShowInitial = isLoading && !data;
-      if (shouldShowInitial) {
-        const payload = { title: `Loading ${title}`, message: "Fetching your data..." };
-        if (initialLoaderRef.current) {
-          patchBlocking(initialLoaderRef.current, payload);
-        } else {
-          initialLoaderRef.current = showBlocking(payload);
-        }
-      } else if (initialLoaderRef.current) {
+  useEffect(() => {
+    const shouldShowInitial = isLoading && !data;
+    if (shouldShowInitial) {
+      const payload = { title: `Loading ${title}`, message: "Fetching your data..." };
+      if (initialLoaderRef.current) {
+        patchBlocking(initialLoaderRef.current, payload);
+      } else {
+        initialLoaderRef.current = showBlocking(payload, "data:initial");
+      }
+    } else if (initialLoaderRef.current) {
+      hideBlocking(initialLoaderRef.current);
+      initialLoaderRef.current = null;
+    }
+  }, [isLoading, data, title, showBlocking, hideBlocking, patchBlocking]);
+
+  useEffect(() => {
+    const shouldShowBackground = isFetching && !!data;
+    if (shouldShowBackground) {
+      const payload = { title: "Updating..." };
+      if (refetchLoaderRef.current) {
+        patchBackground(refetchLoaderRef.current, payload);
+      } else {
+        refetchLoaderRef.current = showBackground(payload, "data:refetch");
+      }
+    } else if (refetchLoaderRef.current) {
+      hideBackground(refetchLoaderRef.current);
+      refetchLoaderRef.current = null;
+    }
+  }, [isFetching, data, showBackground, hideBackground, patchBackground]);
+
+  useEffect(() => {
+    return () => {
+      if (initialLoaderRef.current) {
         hideBlocking(initialLoaderRef.current);
         initialLoaderRef.current = null;
       }
-    }, [isLoading, data, title, showBlocking, hideBlocking, patchBlocking]);
-
-    useEffect(() => {
-      const shouldShowBackground = isFetching && !!data;
-      if (shouldShowBackground) {
-        const payload = { title: "Updating..." };
-        if (refetchLoaderRef.current) {
-          patchBackground(refetchLoaderRef.current, payload);
-        } else {
-          refetchLoaderRef.current = showBackground(payload);
-        }
-      } else if (refetchLoaderRef.current) {
+      if (refetchLoaderRef.current) {
         hideBackground(refetchLoaderRef.current);
         refetchLoaderRef.current = null;
       }
-    }, [isFetching, data, showBackground, hideBackground, patchBackground]);
-
-    useEffect(() => {
-      return () => {
-        if (initialLoaderRef.current) {
-          hideBlocking(initialLoaderRef.current);
-          initialLoaderRef.current = null;
-        }
-        if (refetchLoaderRef.current) {
-          hideBackground(refetchLoaderRef.current);
-          refetchLoaderRef.current = null;
-        }
-      };
-    }, [hideBlocking, hideBackground]);
+    };
+  }, [hideBlocking, hideBackground]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {

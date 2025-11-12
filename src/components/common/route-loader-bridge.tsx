@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import { useRouteLoader } from "@/components/providers/app-loader-provider";
+import { useLoaderNavigation } from "@/components/providers/app-loader-provider";
 
 interface RouteLoaderBridgeProps {
   minVisibleMs?: number;
@@ -18,33 +18,12 @@ export default function RouteLoaderBridge({
   minVisibleMs = 300,
   clickMessage = "Loading next page...",
 }: RouteLoaderBridgeProps) {
-  const { show, hide, patch } = useRouteLoader();
+  const { startNavigation, endNavigation } = useLoaderNavigation({
+    message: clickMessage,
+  });
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const loaderIdRef = React.useRef<string | null>(null);
-  const startedAtRef = React.useRef<number>(0);
   const settleTimerRef = React.useRef<number>();
-
-  const ensureLoader = React.useCallback(
-    (title: string, message?: string) => {
-      startedAtRef.current = Date.now();
-      const payload = { title, message };
-      if (loaderIdRef.current) {
-        patch(loaderIdRef.current, payload);
-        return loaderIdRef.current;
-      }
-      const id = show(payload);
-      loaderIdRef.current = id;
-      return id;
-    },
-    [show, patch],
-  );
-
-  const clearLoader = React.useCallback(() => {
-    if (!loaderIdRef.current) return;
-    hide(loaderIdRef.current);
-    loaderIdRef.current = null;
-  }, [hide]);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -64,48 +43,45 @@ export default function RouteLoaderBridge({
         return;
       }
 
-      ensureLoader(anchor.getAttribute("data-loader-title") ?? "Navigating…", anchor.getAttribute("data-loader-message") ?? clickMessage);
+      startNavigation({
+        title: anchor.getAttribute("data-loader-title") ?? undefined,
+        message: anchor.getAttribute("data-loader-message") ?? clickMessage,
+      });
     };
 
     document.addEventListener("click", handleClick, true);
     return () => {
       document.removeEventListener("click", handleClick, true);
     };
-  }, [ensureLoader, clickMessage]);
+  }, [startNavigation, clickMessage]);
 
   React.useEffect(() => {
     const handlePopState = () => {
-      ensureLoader("Navigating…", clickMessage);
+      startNavigation({ message: clickMessage });
     };
     window.addEventListener("popstate", handlePopState);
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [ensureLoader, clickMessage]);
+  }, [startNavigation, clickMessage]);
 
   React.useEffect(() => {
-    if (!loaderIdRef.current) {
-      return;
-    }
-
-    const elapsed = Date.now() - startedAtRef.current;
-    const remaining = Math.max(0, minVisibleMs - elapsed);
     window.clearTimeout(settleTimerRef.current);
     settleTimerRef.current = window.setTimeout(() => {
-      clearLoader();
-    }, remaining);
+      endNavigation();
+    }, Math.max(minVisibleMs, 0));
 
     return () => {
       window.clearTimeout(settleTimerRef.current);
     };
-  }, [pathname, searchParams?.toString(), minVisibleMs, clearLoader]);
+  }, [pathname, searchParams?.toString(), minVisibleMs, endNavigation]);
 
   React.useEffect(() => {
     return () => {
       window.clearTimeout(settleTimerRef.current);
-      clearLoader();
+      endNavigation();
     };
-  }, [clearLoader]);
+  }, [endNavigation]);
 
   return null;
 }

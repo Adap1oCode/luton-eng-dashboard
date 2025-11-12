@@ -28,7 +28,7 @@ export default function PageShellWithLoading({
         if (loadingRef.current) {
           patchBlocking(loadingRef.current, payload);
         } else {
-          loadingRef.current = showBlocking(payload);
+          loadingRef.current = showBlocking(payload, "data:initial");
         }
       } else if (loadingRef.current) {
         hideBlocking(loadingRef.current);
@@ -42,7 +42,7 @@ export default function PageShellWithLoading({
         if (refetchRef.current) {
           patchBackground(refetchRef.current, payload);
         } else {
-          refetchRef.current = showBackground(payload);
+          refetchRef.current = showBackground(payload, "data:refetch");
         }
       } else if (refetchRef.current) {
         hideBackground(refetchRef.current);

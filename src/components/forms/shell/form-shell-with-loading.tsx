@@ -60,7 +60,7 @@ export default function FormShellWithLoading({
       if (initialLoaderRef.current) {
         patchBlocking(initialLoaderRef.current, payload);
       } else {
-        initialLoaderRef.current = showBlocking(payload);
+        initialLoaderRef.current = showBlocking(payload, "form:initial");
       }
     } else if (initialLoaderRef.current) {
       hideBlocking(initialLoaderRef.current);
@@ -81,7 +81,7 @@ export default function FormShellWithLoading({
       if (submittingLoaderRef.current) {
         patchBlocking(submittingLoaderRef.current, payload);
       } else {
-        submittingLoaderRef.current = showBlocking(payload);
+        submittingLoaderRef.current = showBlocking(payload, "form:submit");
       }
     } else if (submittingLoaderRef.current) {
       hideBlocking(submittingLoaderRef.current);
@@ -95,7 +95,7 @@ export default function FormShellWithLoading({
       if (backgroundLoaderRef.current) {
         patchBackground(backgroundLoaderRef.current, payload);
       } else {
-        backgroundLoaderRef.current = showBackground(payload);
+        backgroundLoaderRef.current = showBackground(payload, "form:background.autosave");
       }
     } else if (backgroundLoaderRef.current) {
       hideBackground(backgroundLoaderRef.current);

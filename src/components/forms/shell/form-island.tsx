@@ -71,7 +71,7 @@ export default function FormIsland({
         if (fieldLoaderRef.current) {
           patchBackground(fieldLoaderRef.current, payload);
         } else {
-          fieldLoaderRef.current = showBackground(payload);
+          fieldLoaderRef.current = showBackground(payload, "form:background.field");
         }
       } else if (fieldLoaderRef.current) {
         hideBackground(fieldLoaderRef.current);
@@ -85,7 +85,7 @@ export default function FormIsland({
         if (autoSaveLoaderRef.current) {
           patchBackground(autoSaveLoaderRef.current, payload);
         } else {
-          autoSaveLoaderRef.current = showBackground(payload);
+          autoSaveLoaderRef.current = showBackground(payload, "form:background.autosave");
         }
       } else if (autoSaveLoaderRef.current) {
         hideBackground(autoSaveLoaderRef.current);
@@ -99,7 +99,7 @@ export default function FormIsland({
         if (validationLoaderRef.current) {
           patchBackground(validationLoaderRef.current, payload);
         } else {
-          validationLoaderRef.current = showBackground(payload);
+          validationLoaderRef.current = showBackground(payload, "form:background.validate");
         }
       } else if (validationLoaderRef.current) {
         hideBackground(validationLoaderRef.current);

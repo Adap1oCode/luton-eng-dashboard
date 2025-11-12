@@ -1,20 +1,22 @@
-import React from 'react'
-import { Loader2 } from 'lucide-react'
+import { resolveLoaderMessage } from "@/components/providers/loader-messages";
+
+const copy = resolveLoaderMessage("auth:loading");
 
 export default function AuthLoading() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="text-center">
-        <div className="mb-4">
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-orange-500" />
+    <div className="bg-background/70 flex min-h-screen items-center justify-center backdrop-blur-sm">
+      <div className="animate-in fade-in flex flex-col items-center gap-4 rounded-lg bg-card/95 px-8 py-6 shadow-lg duration-200">
+        <div className="relative">
+          <div className="border-primary/30 size-12 rounded-full border-2" />
+          <div className="border-primary absolute inset-0 animate-spin rounded-full border-t-2" />
         </div>
-        <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">
-          Loading Authentication
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Please wait while we prepare your login experience...
-        </p>
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
+          {copy.message ? (
+            <p className="text-sm font-medium text-muted-foreground">{copy.message}</p>
+          ) : null}
+        </div>
       </div>
     </div>
-  )
+  );
 }

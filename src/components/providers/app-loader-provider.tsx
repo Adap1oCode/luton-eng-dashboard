@@ -2,17 +2,20 @@
 
 import * as React from "react";
 
-type LoaderVariant = "blocking" | "background";
+import {
+  resolveLoaderMessage,
+  type LoaderMessage,
+  type LoaderScenario,
+  type LoaderVariant,
+} from "@/components/providers/loader-messages";
 
-export interface LoaderPayload {
-  title?: string;
-  message?: string;
-  variant?: LoaderVariant;
-}
+type LoaderPayload = Partial<LoaderMessage>;
 
 interface LoaderQueueItem {
   id: string;
-  payload: LoaderPayload;
+  payload: LoaderMessage;
+  scenario?: LoaderScenario;
+  startedAt: number;
 }
 
 interface LoaderState {
@@ -22,19 +25,37 @@ interface LoaderState {
   variant: LoaderVariant;
 }
 
+export interface LoaderOptions {
+  payload?: LoaderPayload;
+  scenario?: LoaderScenario;
+}
+
 interface AppLoaderContextValue {
   state: LoaderState;
-  begin: (payload?: LoaderPayload) => string;
+  begin: (payload?: LoaderPayload, scenario?: LoaderScenario) => string;
   update: (id: string, payload: LoaderPayload) => void;
   end: (id: string) => void;
-  withLoader: <T>(task: () => Promise<T>, payload?: LoaderPayload) => Promise<T>;
+  withLoader: <T>(task: () => Promise<T>, options?: LoaderOptions) => Promise<T>;
   clearAll: () => void;
 }
 
-const DEFAULT_TITLE = "Loading...";
-const DEFAULT_MESSAGE = "Please wait...";
+export interface LoaderMetricsEvent {
+  id: string;
+  scenario?: LoaderScenario;
+  title: string;
+  message?: string;
+  variant: LoaderVariant;
+  startedAt: number;
+  endedAt: number;
+  durationMs: number;
+}
 
-const HIDDEN_STATE: LoaderState = {
+export type LoaderMetricsReporter = (event: LoaderMetricsEvent) => void;
+
+const DEFAULT_TITLE = "Loading…";
+const DEFAULT_MESSAGE = "Please wait…";
+
+const DEFAULT_STATE: LoaderState = {
   isVisible: false,
   title: DEFAULT_TITLE,
   message: DEFAULT_MESSAGE,
@@ -50,54 +71,84 @@ function generateId() {
   return Math.random().toString(36).slice(2);
 }
 
-function mergePayload(base: LoaderPayload, patch: LoaderPayload): LoaderPayload {
-  return {
+function mergePayload(base: LoaderMessage, patch: LoaderPayload, scenario?: LoaderScenario): LoaderMessage {
+  const merged: LoaderPayload = {
     ...base,
     ...patch,
   };
+
+  if (scenario) {
+    return resolveLoaderMessage(scenario, merged);
+  }
+
+  return {
+    title: merged.title ?? DEFAULT_TITLE,
+    message: merged.message ?? DEFAULT_MESSAGE,
+    variant: merged.variant ?? base.variant ?? "blocking",
+  };
+}
+
+function defaultMetricsReporter(event: LoaderMetricsEvent) {
+  if (process.env.NODE_ENV !== "production") {
+    console.debug(
+      `[loader] ${event.scenario ?? "custom"} completed in ${Math.round(event.durationMs)}ms`,
+      event,
+    );
+  }
 }
 
 export interface AppLoaderProviderProps {
   children: React.ReactNode;
-  /**
-   * Delay (ms) after window load before the initial app loader is dismissed.
-   * Mirrors the previous InitialLoadGate behaviour.
-   */
   bootLoaderDelayMs?: number;
-  /**
-   * Optional override message shown during the very first boot.
-   */
   bootMessage?: string;
+  onMetrics?: LoaderMetricsReporter;
 }
 
 export function AppLoaderProvider({
   children,
   bootLoaderDelayMs = 600,
   bootMessage = "Preparing your workspace...",
+  onMetrics,
 }: AppLoaderProviderProps) {
   const queueRef = React.useRef<LoaderQueueItem[]>([]);
   const bootTimerRef = React.useRef<number>();
-  const [state, setState] = React.useState<LoaderState>(HIDDEN_STATE);
+  const metricsReporterRef = React.useRef<LoaderMetricsReporter>(onMetrics ?? defaultMetricsReporter);
+  const [state, setState] = React.useState<LoaderState>(DEFAULT_STATE);
+
+  React.useEffect(() => {
+    metricsReporterRef.current = onMetrics ?? defaultMetricsReporter;
+  }, [onMetrics]);
 
   const refreshState = React.useCallback(() => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) {
-      setState(HIDDEN_STATE);
+      setState(DEFAULT_STATE);
       return;
     }
     const active = currentQueue[currentQueue.length - 1];
     setState({
       isVisible: true,
-      title: active.payload.title ?? DEFAULT_TITLE,
-      message: active.payload.message ?? DEFAULT_MESSAGE,
-      variant: active.payload.variant ?? "blocking",
+      title: active.payload.title,
+      message: active.payload.message,
+      variant: active.payload.variant,
     });
   }, []);
 
   const begin = React.useCallback(
-    (payload: LoaderPayload = {}) => {
+    (payload: LoaderPayload = {}, scenario?: LoaderScenario) => {
+      const resolved = scenario
+        ? resolveLoaderMessage(scenario, payload)
+        : {
+            title: payload.title ?? DEFAULT_TITLE,
+            message: payload.message ?? DEFAULT_MESSAGE,
+            variant: payload.variant ?? "blocking",
+          };
+
       const id = generateId();
-      queueRef.current = [...queueRef.current, { id, payload }];
+      queueRef.current = [
+        ...queueRef.current,
+        { id, payload: resolved, scenario, startedAt: Date.now() },
+      ];
       refreshState();
       return id;
     },
@@ -113,8 +164,8 @@ export function AppLoaderProvider({
         }
         changed = true;
         return {
-          id,
-          payload: mergePayload(item.payload, payload),
+          ...item,
+          payload: mergePayload(item.payload, payload, item.scenario),
         };
       });
       if (changed) {
@@ -126,12 +177,28 @@ export function AppLoaderProvider({
 
   const end = React.useCallback(
     (id: string) => {
-      const nextQueue = queueRef.current.filter((item) => item.id !== id);
-      if (nextQueue.length === queueRef.current.length) {
+      const currentQueue = queueRef.current;
+      const match = currentQueue.find((item) => item.id === id);
+      const nextQueue = currentQueue.filter((item) => item.id !== id);
+      if (nextQueue.length === currentQueue.length) {
         return;
       }
       queueRef.current = nextQueue;
       refreshState();
+
+      if (match) {
+        const endedAt = Date.now();
+        metricsReporterRef.current({
+          id,
+          scenario: match.scenario,
+          title: match.payload.title,
+          message: match.payload.message,
+          variant: match.payload.variant,
+          startedAt: match.startedAt,
+          endedAt,
+          durationMs: endedAt - match.startedAt,
+        });
+      }
     },
     [refreshState],
   );
@@ -145,8 +212,8 @@ export function AppLoaderProvider({
   }, [refreshState]);
 
   const withLoader = React.useCallback(
-    async <T,>(task: () => Promise<T>, payload?: LoaderPayload) => {
-      const id = begin(payload);
+    async <T,>(task: () => Promise<T>, options: LoaderOptions = {}) => {
+      const id = begin(options.payload, options.scenario);
       try {
         return await task();
       } finally {
@@ -165,11 +232,10 @@ export function AppLoaderProvider({
 
     const alreadyBooted = sessionStorage.getItem("__app_loader_bootstrap__");
     if (!alreadyBooted) {
-      bootLoaderId = begin({
-        title: DEFAULT_TITLE,
-        message: bootMessage || DEFAULT_MESSAGE,
-        variant: "blocking",
-      });
+      bootLoaderId = begin(
+        { message: bootMessage },
+        "app:boot",
+      );
     }
 
     const clearBootLoader = () => {
@@ -244,7 +310,8 @@ export function useRouteLoader() {
   const { begin, end, update, withLoader } = useAppLoader();
 
   const show = React.useCallback(
-    (payload?: LoaderPayload) => begin({ variant: "blocking", ...payload }),
+    (payload?: LoaderPayload, scenario: LoaderScenario = "navigation:start") =>
+      begin(payload, scenario),
     [begin],
   );
   const hide = React.useCallback((id: string) => end(id), [end]);
@@ -253,8 +320,8 @@ export function useRouteLoader() {
     [update],
   );
   const run = React.useCallback(
-    <T,>(task: () => Promise<T>, payload?: LoaderPayload) =>
-      withLoader(task, { variant: "blocking", ...payload }),
+    <T,>(task: () => Promise<T>, payload?: LoaderPayload, scenario: LoaderScenario = "navigation:start") =>
+      withLoader(task, { payload, scenario }),
     [withLoader],
   );
 
@@ -265,7 +332,8 @@ export function useBackgroundLoader() {
   const { begin, end, update, withLoader } = useAppLoader();
 
   const show = React.useCallback(
-    (payload?: LoaderPayload) => begin({ variant: "background", ...payload }),
+    (payload?: LoaderPayload, scenario: LoaderScenario = "data:refetch") =>
+      begin(payload, scenario),
     [begin],
   );
   const hide = React.useCallback((id: string) => end(id), [end]);
@@ -274,10 +342,45 @@ export function useBackgroundLoader() {
     [update],
   );
   const run = React.useCallback(
-    <T,>(task: () => Promise<T>, payload?: LoaderPayload) =>
-      withLoader(task, { variant: "background", ...payload }),
+    <T,>(task: () => Promise<T>, payload?: LoaderPayload, scenario: LoaderScenario = "data:refetch") =>
+      withLoader(task, { payload, scenario }),
     [withLoader],
   );
 
   return { show, hide, patch, run };
+}
+
+export function useLoaderNavigation(defaultPayload?: LoaderPayload) {
+  const { show, hide } = useRouteLoader();
+  const pendingIdRef = React.useRef<string | null>(null);
+
+  const startNavigation = React.useCallback(
+    (payload?: LoaderPayload, scenario: LoaderScenario = "navigation:start") => {
+      if (pendingIdRef.current) {
+        hide(pendingIdRef.current);
+      }
+      pendingIdRef.current = show({ ...defaultPayload, ...payload }, scenario);
+      return pendingIdRef.current;
+    },
+    [defaultPayload, hide, show],
+  );
+
+  const endNavigation = React.useCallback(() => {
+    if (pendingIdRef.current) {
+      hide(pendingIdRef.current);
+      pendingIdRef.current = null;
+    }
+  }, [hide]);
+
+  React.useEffect(
+    () => () => {
+      if (pendingIdRef.current) {
+        hide(pendingIdRef.current);
+        pendingIdRef.current = null;
+      }
+    },
+    [hide],
+  );
+
+  return { startNavigation, endNavigation };
 }
