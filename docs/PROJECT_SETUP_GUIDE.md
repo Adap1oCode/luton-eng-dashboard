@@ -64,8 +64,10 @@ NODE_ENV=development
 1. In your Supabase dashboard, go to **Authentication** → **URL Configuration**
 2. Add the following **Redirect URLs**:
    - `http://localhost:3001/auth/callback`
+   - `http://localhost:3001/auth/reset-password`
    - `http://localhost:3001/auth/v1/callback`
    - Your production URL (e.g., `https://yourdomain.com/auth/callback`)
+   - Your production reset password URL (e.g., `https://yourdomain.com/auth/reset-password`)
 
 ### 2.2 Configure Email Provider
 
@@ -77,6 +79,15 @@ NODE_ENV=development
 
 1. Under **Authentication** → **Email**, enable **"Enable email confirmations"**
 2. Set **Email redirect URL** to: `http://localhost:3001/auth/callback`
+
+### 2.4 Password Reset Configuration
+
+1. Password reset functionality is enabled by default when email provider is configured
+2. The default Supabase email template will be used for password reset emails
+3. Ensure `/auth/reset-password` is added to your Redirect URLs (see 2.1 above)
+4. Users can request password reset from the login page via "Forgot password?" link
+5. After clicking the reset link in their email, users will be redirected to `/auth/reset-password` to set a new password
+6. After successful password reset, users are redirected to login (not auto-logged in) for security
 
 ---
 

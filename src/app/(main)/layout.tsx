@@ -11,6 +11,8 @@ import { DataViewerButton } from "@/app/(main)/_components/sidebar/data-viewer-b
 import { LayoutControls } from "@/app/(main)/_components/sidebar/layout-controls";
 import { SearchDialog } from "@/app/(main)/_components/sidebar/search-dialog";
 import { ThemeSwitcher } from "@/app/(main)/_components/sidebar/theme-switcher";
+import { PageHeaderDisplay } from "@/app/(main)/_components/page-header-display";
+import { PageHeaderProvider } from "@/components/forms/shell/page-header-context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -104,29 +106,31 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     <QueryProvider>
       {/* Mount once so any client component can open the Notice dialog */}
       <NoticeProvider>
-        <SidebarProvider defaultOpen={defaultOpen}>
-          <AppSidebar
-            variant={sidebarVariant}
-            collapsible={sidebarCollapsible}
-            account={{ name: displayName, email, role, avatar: session.avatarUrl ?? "" }}
-            permissions={permissions}
-          />
-          <SidebarInset
-            className={cn(
-              contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
-              "min-w-0 flex-1",
-              "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
-            )}
-          >
-            <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-              <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
-                <div className="flex items-center gap-1 lg:gap-2">
-                  <SidebarTrigger className="-ml-1" />
-                  <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
-                  <div className="hidden sm:block">
-                    {showDateToolbar && <SearchDialog />}
+        <PageHeaderProvider>
+          <SidebarProvider defaultOpen={defaultOpen}>
+            <AppSidebar
+              variant={sidebarVariant}
+              collapsible={sidebarCollapsible}
+              account={{ name: displayName, email, role, avatar: session.avatarUrl ?? "" }}
+              permissions={permissions}
+            />
+            <SidebarInset
+              className={cn(
+                contentLayout === "centered" && "!mx-auto max-w-screen-2xl",
+                "min-w-0 flex-1",
+                "max-[113rem]:peer-data-[variant=inset]:!mr-2 min-[101rem]:peer-data-[variant=inset]:peer-data-[state=collapsed]:!mr-auto",
+              )}
+            >
+              <header className="flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+                <div className="flex w-full items-center justify-between px-2 sm:px-4 lg:px-6">
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 sm:mx-2" />
+                    <PageHeaderDisplay />
+                    <div className="hidden sm:block">
+                      {showDateToolbar && <SearchDialog />}
+                    </div>
                   </div>
-                </div>
 
                 <div className="flex items-center gap-1 sm:gap-2">
                   <div className="hidden items-center gap-2 md:flex">
@@ -170,6 +174,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             <div className="p-4 md:p-6">{children}</div>
           </SidebarInset>
         </SidebarProvider>
+        </PageHeaderProvider>
       </NoticeProvider>
     </QueryProvider>
   );

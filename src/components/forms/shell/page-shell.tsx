@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 import { AdvancedFilterBar } from "./advanced-filter-bar";
 import { OptimisticProvider } from "./optimistic-context";
-import OptimisticCountBadge from "./optimistic-count-badge";
+import { PageShellClientWrapper } from "./page-shell-client";
 import { RenderButtonCluster } from "./render-button-cluster";
 import Toolbar from "./toolbar/toolbar";
 import type { ToolbarButton, ToolbarConfig, ChipsConfig, ActionConfig } from "./toolbar/types";
@@ -188,26 +188,13 @@ export default function PageShell({
     effectiveShowSorting;
 
   return (
-    <OptimisticProvider>
+    <PageShellClientWrapper title={title} count={count}>
       <div className="min-h-screen rounded-2xl border bg-gray-50 dark:bg-gray-900">
         {/* Outer padding/spacing wrapper */}
         <div className="w-full space-y-6 p-4 sm:p-6">
-          {/* Header card (Roles parity) */}
-          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                <svg className="h-12 w-12 text-amber-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-                </svg>
-              </div>
-              <div className="flex items-center">
-                <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100">{title}</h1>
-                <OptimisticCountBadge count={count} />
-              </div>
-            </div>
-          </div>
+          {/* Header card removed - title and count now in layout header */}
 
-          {/* Actions + chips block (two rows) - only render if there's content */}
+            {/* Actions + chips block (two rows) - only render if there's content */}
           {hasActionsToShow && (
             <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
             {/* Row 1: primary buttons + chips */}
@@ -309,6 +296,6 @@ export default function PageShell({
           </div>
         </div>
       </div>
-    </OptimisticProvider>
+    </PageShellClientWrapper>
   );
 }

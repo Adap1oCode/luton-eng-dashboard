@@ -85,6 +85,8 @@ export async function middleware(req: NextRequest) {
     "/auth/login",
     "/auth/register",
     "/auth/callback",
+    "/auth/forgot-password",
+    "/auth/reset-password",
     "/auth/v1/login",  // legacy routes
     "/auth/v1/register",
     "/login",          // keep if you might still link to it anywhere
@@ -120,7 +122,7 @@ if (!user && !isPublicExact) {
   }
 
   // 2) Authenticated → keep them out of "/" and auth pages; honor safe `next`
-  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/auth/login" || pathname === "/auth/register";
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/auth/forgot-password" || pathname === "/auth/reset-password";
   if (user && (pathname === "/" || isAuthPage)) {
     const requestedNext = safeNext(searchParams.get("next"));
     

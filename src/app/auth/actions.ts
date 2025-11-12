@@ -50,3 +50,27 @@ export async function sendMagicLink(email: string, originFromClient: string, nex
 
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Request a password reset email.
+ * Uses server-derived origin for security, similar to sendMagicLink.
+ */
+export async function requestPasswordReset(email: string, originFromClient: string) {
+  // 1) Derive a trusted origin on the server
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+
+  // If you've set a canonical site URL, prefer that; else fall back to derived; else the client-provided origin.
+  const siteEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  const derivedOrigin = host ? `${proto}://${host}` : "";
+  const origin = siteEnv || derivedOrigin || originFromClient;
+
+  // 2) Send the password reset email
+  const supabase = await getServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/reset-password`,
+  });
+
+  if (error) throw new Error(error.message);
+}
