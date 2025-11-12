@@ -5,8 +5,9 @@ import { Analytics } from '@vercel/analytics/react';
 import { Inter } from "next/font/google";
 
 import "./globals.css";
-import InitialLoadGate from "@/components/common/initial-load-gate";
-import RouteTransitionOverlay from "@/components/common/route-transition-overlay";
+import { AppLoaderProvider } from "@/components/providers/app-loader-provider";
+import AppLoaderOverlay from "@/components/common/app-loader-overlay";
+import RouteLoaderBridge from "@/components/common/route-loader-bridge";
 import { APP_CONFIG } from "@/config/app-config";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,10 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <RouteTransitionOverlay />
-          <ErrorBoundary>
-            <InitialLoadGate>{children}</InitialLoadGate>
-          </ErrorBoundary>
+          <AppLoaderProvider>
+              <RouteLoaderBridge />
+            <ErrorBoundary>{children}</ErrorBoundary>
+            <AppLoaderOverlay />
+          </AppLoaderProvider>
         </ThemeProvider>
         <Toaster />
         <Analytics />

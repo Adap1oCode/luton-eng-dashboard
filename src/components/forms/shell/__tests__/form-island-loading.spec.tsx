@@ -1,11 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import FormIsland from '@/components/forms/shell/form-island';
-
 import { vi } from 'vitest';
 
-// Mock dependencies
+import FormIsland from '@/components/forms/shell/form-island';
+import { AppLoaderProvider } from '@/components/providers/app-loader-provider';
+import AppLoaderOverlay from '@/components/common/app-loader-overlay';
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock('@/components/ui/notice', () => ({
 }));
 
 vi.mock('@/components/forms/dynamic-form', () => ({
-  DynamicForm: function MockDynamicForm({ onSubmit, ...props }: any) {
+  DynamicForm: function MockDynamicForm({ onSubmit }: any) {
     return (
       <form data-testid="dynamic-form" onSubmit={(e) => { e.preventDefault(); onSubmit({}); }}>
         <div data-testid="form-content">Dynamic Form Content</div>
@@ -29,13 +30,20 @@ vi.mock('@/components/forms/dynamic-form', () => ({
   },
 }));
 
-vi.mock('@/components/ui/background-loader', () => ({
-  BackgroundLoader: ({ message, position, size }: any) => (
-    <div data-testid="background-loader" data-message={message} data-position={position} data-size={size}>
-      Background Loader
-    </div>
-  ),
-}));
+const wrapWithLoader = (ui: React.ReactNode) => (
+  <AppLoaderProvider>
+    <>
+      {ui}
+      <AppLoaderOverlay />
+    </>
+  </AppLoaderProvider>
+);
+
+const renderWithProviders = (ui: React.ReactNode) => render(wrapWithLoader(ui));
+
+beforeEach(() => {
+  sessionStorage.setItem("__app_loader_bootstrap__", "1");
+});
 
 describe('FormIsland Loading States', () => {
   const defaultProps = {
@@ -49,109 +57,94 @@ describe('FormIsland Loading States', () => {
     formId: 'test-form',
   };
 
-  it('renders DynamicForm without loading indicators by default', () => {
-    render(<FormIsland {...defaultProps} />);
-    
+  it('renders DynamicForm without loader by default', () => {
+    renderWithProviders(<FormIsland {...defaultProps} />);
+
     expect(screen.getByTestId('dynamic-form')).toBeInTheDocument();
-    expect(screen.queryByTestId('background-loader')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('app-loader-background')).not.toBeInTheDocument();
   });
 
-  it('shows field loading indicator when isFieldLoading is true', () => {
-    render(
+  it('shows field loading indicator when isFieldLoading is true', async () => {
+    renderWithProviders(
       <FormIsland
         {...defaultProps}
         isFieldLoading={true}
         fieldLoadingMessage="Loading options..."
       />
     );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-message', 'Loading options...');
-    expect(loader).toHaveAttribute('data-position', 'top-right');
-    expect(loader).toHaveAttribute('data-size', 'sm');
+
+    const loader = await screen.findByTestId('app-loader-background');
+    expect(loader).toHaveTextContent('Loading options...');
   });
 
-  it('shows auto-save indicator when isAutoSaving is true', () => {
-    render(
+  it('shows auto-save indicator when isAutoSaving is true', async () => {
+    renderWithProviders(
       <FormIsland
         {...defaultProps}
         isAutoSaving={true}
         autoSaveMessage="Saving draft..."
       />
     );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-message', 'Saving draft...');
-    expect(loader).toHaveAttribute('data-position', 'bottom-right');
-    expect(loader).toHaveAttribute('data-size', 'sm');
+
+    const loader = await screen.findByTestId('app-loader-background');
+    expect(loader).toHaveTextContent('Saving draft...');
   });
 
-  it('shows validation indicator when isValidating is true', () => {
-    render(
+  it('shows validation indicator when isValidating is true', async () => {
+    renderWithProviders(
       <FormIsland
         {...defaultProps}
         isValidating={true}
         validationMessage="Validating..."
       />
     );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-message', 'Validating...');
-    expect(loader).toHaveAttribute('data-position', 'top-center');
-    expect(loader).toHaveAttribute('data-size', 'sm');
+
+    const loader = await screen.findByTestId('app-loader-background');
+    expect(loader).toHaveTextContent('Validating...');
   });
 
-  it('can show multiple loading indicators simultaneously', () => {
-    render(
+  it('updates overlay content as different loaders trigger', async () => {
+    const { rerender } = renderWithProviders(
       <FormIsland
         {...defaultProps}
         isFieldLoading={true}
-        isAutoSaving={true}
-        isValidating={true}
+        fieldLoadingMessage="Loading options..."
       />
     );
-    
-    const loaders = screen.getAllByTestId('background-loader');
-    expect(loaders).toHaveLength(3);
-    
-    expect(loaders[0]).toHaveAttribute('data-position', 'top-right');
-    expect(loaders[1]).toHaveAttribute('data-position', 'bottom-right');
-    expect(loaders[2]).toHaveAttribute('data-position', 'top-center');
+
+    await screen.findByTestId('app-loader-background');
+
+    rerender(
+      wrapWithLoader(
+        <FormIsland
+          {...defaultProps}
+          isAutoSaving={true}
+          autoSaveMessage="Saving draft..."
+        />
+      )
+    );
+
+    await waitFor(() => {
+      const loader = screen.getByTestId('app-loader-background');
+      expect(loader).toHaveTextContent('Saving draft...');
+    });
   });
 
-  it('uses default loading messages when not provided', () => {
-    render(
+  it('hides overlay when loading finishes', async () => {
+    const { rerender } = renderWithProviders(
       <FormIsland
         {...defaultProps}
         isFieldLoading={true}
-        isAutoSaving={true}
-        isValidating={true}
+        fieldLoadingMessage="Loading options..."
       />
     );
-    
-    const loaders = screen.getAllByTestId('background-loader');
-    expect(loaders[0]).toHaveAttribute('data-message', 'Loading options...');
-    expect(loaders[1]).toHaveAttribute('data-message', 'Saving draft...');
-    expect(loaders[2]).toHaveAttribute('data-message', 'Validating...');
-  });
 
-  it('maintains form functionality while showing loading indicators', () => {
-    render(
-      <FormIsland
-        {...defaultProps}
-        isFieldLoading={true}
-        isAutoSaving={true}
-      />
-    );
-    
-    // Form should still be functional
-    expect(screen.getByTestId('dynamic-form')).toBeInTheDocument();
-    expect(screen.getByTestId('form-content')).toBeInTheDocument();
-    
-    // Loading indicators should be present
-    expect(screen.getAllByTestId('background-loader')).toHaveLength(2);
+    await screen.findByTestId('app-loader-background');
+
+    rerender(wrapWithLoader(<FormIsland {...defaultProps} isFieldLoading={false} />));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('app-loader-background')).not.toBeInTheDocument();
+    });
   });
 });

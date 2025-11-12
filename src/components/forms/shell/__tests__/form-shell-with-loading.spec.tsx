@@ -1,34 +1,32 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import FormShellWithLoading from '@/components/forms/shell/form-shell-with-loading';
-import { FullScreenLoader } from '@/components/ui/enhanced-loader';
-import { BackgroundLoader } from '@/components/ui/background-loader';
-
 import { vi } from 'vitest';
 
-// Mock the child components
+import FormShellWithLoading from '@/components/forms/shell/form-shell-with-loading';
+import { AppLoaderProvider } from '@/components/providers/app-loader-provider';
+import AppLoaderOverlay from '@/components/common/app-loader-overlay';
+
 vi.mock('@/components/forms/shell/form-shell', () => ({
   default: function MockFormShell({ children }: { children: React.ReactNode }) {
     return <div data-testid="form-shell">{children}</div>;
   },
 }));
 
-vi.mock('@/components/ui/enhanced-loader', () => ({
-  FullScreenLoader: ({ title, description, size }: any) => (
-    <div data-testid="fullscreen-loader" data-title={title} data-description={description} data-size={size}>
-      FullScreen Loader
-    </div>
-  ),
-}));
+const wrapWithLoader = (ui: React.ReactNode) => (
+  <AppLoaderProvider>
+    <>
+      {ui}
+      <AppLoaderOverlay />
+    </>
+  </AppLoaderProvider>
+);
 
-vi.mock('@/components/ui/background-loader', () => ({
-  BackgroundLoader: ({ message, position, size }: any) => (
-    <div data-testid="background-loader" data-message={message} data-position={position} data-size={size}>
-      Background Loader
-    </div>
-  ),
-}));
+const renderWithProviders = (ui: React.ReactNode) => render(wrapWithLoader(ui));
+
+beforeEach(() => {
+  sessionStorage.setItem("__app_loader_bootstrap__", "1");
+});
 
 describe('FormShellWithLoading', () => {
   const defaultProps = {
@@ -38,15 +36,17 @@ describe('FormShellWithLoading', () => {
     children: <div data-testid="form-content">Form Content</div>,
   };
 
-  it('renders FormShell with children', () => {
-    render(<FormShellWithLoading {...defaultProps} />);
-    
+  it('renders FormShell with children and no loaders by default', () => {
+    renderWithProviders(<FormShellWithLoading {...defaultProps} />);
+
     expect(screen.getByTestId('form-shell')).toBeInTheDocument();
     expect(screen.getByTestId('form-content')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-loader-blocking')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('app-loader-background')).not.toBeInTheDocument();
   });
 
-  it('shows initial loading when isInitialLoading is true', () => {
-    render(
+  it('shows initial loading when isInitialLoading is true', async () => {
+    renderWithProviders(
       <FormShellWithLoading
         {...defaultProps}
         isInitialLoading={true}
@@ -54,16 +54,14 @@ describe('FormShellWithLoading', () => {
         initialLoadingDescription="Please wait..."
       />
     );
-    
-    const loader = screen.getByTestId('fullscreen-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-title', 'Loading Form');
-    expect(loader).toHaveAttribute('data-description', 'Please wait...');
-    expect(loader).toHaveAttribute('data-size', 'md');
+
+    const loader = await screen.findByTestId('app-loader-blocking');
+    expect(loader).toHaveTextContent('Loading Form');
+    expect(loader).toHaveTextContent('Please wait...');
   });
 
-  it('shows submission loading when isSubmitting is true', () => {
-    render(
+  it('shows submission loading when isSubmitting is true', async () => {
+    renderWithProviders(
       <FormShellWithLoading
         {...defaultProps}
         isSubmitting={true}
@@ -71,63 +69,71 @@ describe('FormShellWithLoading', () => {
         submissionDescription="Please wait..."
       />
     );
-    
-    const loader = screen.getByTestId('fullscreen-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-title', 'Saving Changes');
-    expect(loader).toHaveAttribute('data-description', 'Please wait...');
-    expect(loader).toHaveAttribute('data-size', 'sm');
+
+    const loader = await screen.findByTestId('app-loader-blocking');
+    expect(loader).toHaveTextContent('Saving Changes');
+    expect(loader).toHaveTextContent('Please wait...');
   });
 
-  it('shows background loading when isBackgroundLoading is true', () => {
-    render(
+  it('shows background loading when isBackgroundLoading is true', async () => {
+    renderWithProviders(
       <FormShellWithLoading
         {...defaultProps}
         isBackgroundLoading={true}
         backgroundLoadingMessage="Processing..."
-        backgroundLoadingPosition="top-right"
       />
     );
-    
-    const loader = screen.getByTestId('background-loader');
-    expect(loader).toBeInTheDocument();
-    expect(loader).toHaveAttribute('data-message', 'Processing...');
-    expect(loader).toHaveAttribute('data-position', 'top-right');
-    expect(loader).toHaveAttribute('data-size', 'md');
+
+    const loader = await screen.findByTestId('app-loader-background');
+    expect(loader).toHaveTextContent('Processing...');
   });
 
-  it('can show multiple loaders simultaneously', () => {
-    render(
+  it('updates loader content when props change', async () => {
+    const { rerender } = renderWithProviders(
       <FormShellWithLoading
         {...defaultProps}
         isInitialLoading={true}
-        isSubmitting={true}
-        isBackgroundLoading={true}
+        initialLoadingTitle="Loading Form"
+        initialLoadingDescription="Please wait..."
       />
     );
-    
-    expect(screen.getAllByTestId('fullscreen-loader')).toHaveLength(2);
-    expect(screen.getByTestId('background-loader')).toBeInTheDocument();
+
+    await screen.findByTestId('app-loader-blocking');
+
+    rerender(
+      wrapWithLoader(
+        <FormShellWithLoading
+          {...defaultProps}
+          isInitialLoading={true}
+          initialLoadingTitle="Still loading"
+          initialLoadingDescription="Almost there..."
+        />
+      )
+    );
+
+    await waitFor(() => {
+      const loader = screen.getByTestId('app-loader-blocking');
+      expect(loader).toHaveTextContent('Still loading');
+      expect(loader).toHaveTextContent('Almost there...');
+    });
   });
 
-  it('uses default loading messages when not provided', () => {
-    render(
+  it('hides loaders when flags are cleared', async () => {
+    const { rerender } = renderWithProviders(
       <FormShellWithLoading
         {...defaultProps}
         isInitialLoading={true}
-        isSubmitting={true}
-        isBackgroundLoading={true}
+        initialLoadingTitle="Loading Form"
       />
     );
-    
-    const loaders = screen.getAllByTestId('fullscreen-loader');
-    expect(loaders[0]).toHaveAttribute('data-title', 'Loading Form');
-    expect(loaders[0]).toHaveAttribute('data-description', 'Please wait...');
-    expect(loaders[1]).toHaveAttribute('data-title', 'Saving Changes');
-    expect(loaders[1]).toHaveAttribute('data-description', 'Please wait...');
-    
-    const backgroundLoader = screen.getByTestId('background-loader');
-    expect(backgroundLoader).toHaveAttribute('data-message', 'Processing...');
+
+    await screen.findByTestId('app-loader-blocking');
+
+    rerender(wrapWithLoader(<FormShellWithLoading {...defaultProps} isInitialLoading={false} />));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('app-loader-blocking')).not.toBeInTheDocument();
+    });
   });
 
   it('passes all FormShell props correctly', () => {
@@ -141,9 +147,8 @@ describe('FormShellWithLoading', () => {
       contentMaxWidthClassName: 'max-w-4xl',
     };
 
-    render(<FormShellWithLoading {...propsWithActions} />);
-    
-    // FormShell should receive all the props
+    renderWithProviders(<FormShellWithLoading {...propsWithActions} />);
+
     expect(screen.getByTestId('form-shell')).toBeInTheDocument();
   });
 });

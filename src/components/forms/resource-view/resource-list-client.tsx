@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { parseListParams, type SPRecord } from "@/lib/next/search-params";
 import ResourceTableClient from "@/components/forms/resource-view/resource-table-client";
 import PageShell from "@/components/forms/shell/page-shell";
-import { FullScreenLoader } from "@/components/ui/enhanced-loader";
-import { BackgroundLoader } from "@/components/ui/background-loader";
+import { useRouteLoader, useBackgroundLoader } from "@/components/providers/app-loader-provider";
 import { fetchResourcePageClient } from "@/lib/api/client-fetch";
 import type { BaseViewConfig } from "@/components/data-table/view-defaults";
 import type { ToolbarConfig, ActionConfig, ChipsConfig } from "@/components/forms/shell/toolbar/types";
@@ -82,6 +81,8 @@ export function ResourceListClient<TRow = any>({
 }: ResourceListClientProps<TRow>) {
   const searchParams = useSearchParams();
   const router = useRouter();
+    const { show: showBlocking, hide: hideBlocking, patch: patchBlocking } = useRouteLoader();
+    const { show: showBackground, hide: hideBackground, patch: patchBackground } = useBackgroundLoader();
   
   // Convert client SearchParams to SPRecord for shared parser
   const searchParamsRecord = useMemo(() => Object.fromEntries(searchParams.entries()) as SPRecord, [searchParams]);
@@ -113,6 +114,8 @@ export function ResourceListClient<TRow = any>({
     return {};
   });
   const columnWidthsRef = useRef<Record<string, number>>({});
+    const initialLoaderRef = useRef<string | null>(null);
+    const refetchLoaderRef = useRef<string | null>(null);
   
   // Handle column width changes from ResourceTableClient
   const handleColumnWidthsChange = useCallback((widths: Record<string, number>) => {
@@ -150,7 +153,16 @@ export function ResourceListClient<TRow = any>({
   }, [currentFilters, buildExtraQuery, quickFilters]);
 
   // React Query for data fetching with comprehensive error handling
-  const { data, error, isLoading, isError, isFetching, refetch } = useQuery({
+  const {
+    data,
+    error,
+    isLoading,
+    isError,
+    isFetching,
+    isInitialLoading,
+    fetchStatus,
+    refetch,
+  } = useQuery({
     queryKey: [queryKeyBase, page, pageSize, serializedFilters || 'no-filters'],
     queryFn: async () => {
       const extraQuery = buildExtraQueryFromFilters();
@@ -200,6 +212,49 @@ export function ResourceListClient<TRow = any>({
       toast.dismiss();
     }
   }, [isError, error, data, refetch, title, queryKeyBase]);
+
+  useEffect(() => {
+    const shouldShowInitial = isInitialLoading && fetchStatus === "fetching" && !data;
+    if (shouldShowInitial) {
+      const payload = { title: `Loading ${title}`, message: "Fetching your data..." };
+      if (initialLoaderRef.current) {
+        patchBlocking(initialLoaderRef.current, payload);
+      } else {
+        initialLoaderRef.current = showBlocking(payload, "data:initial");
+      }
+    } else if (initialLoaderRef.current) {
+      hideBlocking(initialLoaderRef.current);
+      initialLoaderRef.current = null;
+    }
+  }, [isInitialLoading, fetchStatus, data, title, showBlocking, hideBlocking, patchBlocking]);
+
+  useEffect(() => {
+    const shouldShowBackground = isFetching && !!data;
+    if (shouldShowBackground) {
+      const payload = { title: "Updating..." };
+      if (refetchLoaderRef.current) {
+        patchBackground(refetchLoaderRef.current, payload);
+      } else {
+        refetchLoaderRef.current = showBackground(payload, "data:refetch");
+      }
+    } else if (refetchLoaderRef.current) {
+      hideBackground(refetchLoaderRef.current);
+      refetchLoaderRef.current = null;
+    }
+  }, [isFetching, data, showBackground, hideBackground, patchBackground]);
+
+  useEffect(() => {
+    return () => {
+      if (initialLoaderRef.current) {
+        hideBlocking(initialLoaderRef.current);
+        initialLoaderRef.current = null;
+      }
+      if (refetchLoaderRef.current) {
+        hideBackground(refetchLoaderRef.current);
+        refetchLoaderRef.current = null;
+      }
+    };
+  }, [hideBlocking, hideBackground]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
@@ -275,24 +330,6 @@ export function ResourceListClient<TRow = any>({
           showInlineExportButton={false}
         />
       </PageShell>
-      
-      {/* Enhanced loading indicator - only show for initial load, not for background refetches */}
-      {isLoading && !data && (
-        <FullScreenLoader
-          title={`Loading ${title}`}
-          description="Fetching your data..."
-          size="md"
-        />
-      )}
-      
-      {/* Background loading indicator for refetches */}
-      {isFetching && data && (
-        <BackgroundLoader
-          message="Updating..."
-          position="top-right"
-          size="md"
-        />
-      )}
     </>
   );
 }
