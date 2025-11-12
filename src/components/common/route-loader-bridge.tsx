@@ -4,7 +4,6 @@ import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { useLoaderNavigation } from "@/components/providers/app-loader-provider";
-import { logger } from "@/lib/obs/logger";
 
 interface RouteLoaderBridgeProps {
   minVisibleMs?: number;
@@ -77,13 +76,20 @@ export default function RouteLoaderBridge({
     window.clearTimeout(settleTimerRef.current);
     settleTimerRef.current = window.setTimeout(() => {
       // Log navigation timing when navigation completes
+      // Note: Client-side logging is sent via API endpoint to avoid bundling Node.js modules
       if (navStartTimeRef.current !== null) {
         const navDuration = performance.now() - navStartTimeRef.current;
-        const log = logger.child({ evt: 'navigation' });
-        log.info({
-          route: pathname,
-          duration_ms: Math.round(navDuration),
-          from_route: previousPathnameRef.current ?? undefined,
+        // Send to API endpoint for server-side logging
+        fetch('/api/logs/navigation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            route: pathname,
+            duration_ms: Math.round(navDuration),
+            from_route: previousPathnameRef.current ?? undefined,
+          }),
+        }).catch(() => {
+          // Silently fail - logging shouldn't break the app
         });
         navStartTimeRef.current = null;
       }

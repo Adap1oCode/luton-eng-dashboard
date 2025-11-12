@@ -22,7 +22,6 @@ import {
   trackAuthError,
 } from "@/lib/analytics";
 import { measureApiResponse, trackAuthPerformance, measurePageLoad } from "@/lib/performance";
-import { logger } from "@/lib/obs/logger";
 import { supabaseBrowser } from "@/lib/supabase";
 
 import { sendMagicLink } from "../../actions"; // server action
@@ -285,11 +284,17 @@ export function LoginFormV1() {
                 href={forgotPasswordHref}
                 onClick={() => {
                   const clickTime = performance.now();
-                  const log = logger.child({ evt: 'user_action' });
-                  log.info({
-                    action: 'forgot_password_click',
-                    route: '/auth/forgot-password',
-                    click_time: clickTime,
+                  // Send to API endpoint for server-side logging
+                  fetch('/api/logs/user-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      action: 'forgot_password_click',
+                      route: '/auth/forgot-password',
+                      click_time: clickTime,
+                    }),
+                  }).catch(() => {
+                    // Silently fail - logging shouldn't break the app
                   });
 
                   // Also track when the page becomes ready
@@ -299,9 +304,15 @@ export function LoginFormV1() {
                       () => {
                         const loadTime = performance.now();
                         const duration = loadTime - clickTime;
-                        log.info({
-                          action: 'forgot_password_loaded',
-                          duration_ms: Math.round(duration),
+                        fetch('/api/logs/user-action', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            action: 'forgot_password_loaded',
+                            duration_ms: Math.round(duration),
+                          }),
+                        }).catch(() => {
+                          // Silently fail
                         });
                       },
                       { once: true }
