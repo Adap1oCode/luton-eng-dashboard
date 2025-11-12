@@ -2,26 +2,23 @@ import Link from "next/link";
 
 import { Lock } from "lucide-react";
 
-export default function page() {
+import { EmptyStateCard } from "@/components/common/empty-state-card";
+import { Button } from "@/components/ui/button";
+
+export default function UnauthorizedPage() {
   return (
-    <div className="bg-background flex min-h-dvh flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-md text-center">
-        <Lock className="text-primary mx-auto size-12" />
-        <h1 className="text-foreground mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Unauthorized Access</h1>
-        <p className="text-muted-foreground mt-4">
-          You do not have permission to view the requested content. Please contact the site administrator if you believe
-          this is an error.
-        </p>
-        <div className="mt-6">
-          <Link
-            href="dashboard"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary inline-flex items-center rounded-md px-4 py-2 text-sm font-medium shadow-xs transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
-            prefetch={false}
-          >
-            Go to Homepage
-          </Link>
-        </div>
-      </div>
+    <div className="bg-background flex min-h-dvh items-center justify-center px-4 py-16">
+      <EmptyStateCard
+        className="w-full max-w-lg border-border"
+        title="Unauthorized access"
+        description="You do not have permission to view this resource. Contact your administrator if you believe this is a mistake."
+        icon={<Lock className="h-8 w-8" />}
+        actions={
+          <Button asChild size="sm">
+            <Link href="/dashboard">Back to dashboard</Link>
+          </Button>
+        }
+      />
     </div>
   );
 }

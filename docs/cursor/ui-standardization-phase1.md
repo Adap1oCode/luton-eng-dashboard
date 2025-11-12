@@ -48,10 +48,10 @@ Focus for Phase 2 quick wins: prioritize 🔴 first, then high-impact 🟡.
 
 | Route | File | Status | Notes |
 | --- | --- | --- | --- |
-| `/auth/v1/login` | `src/app/(main)/auth/v1/login/page.tsx` | 🔴 | Bespoke split-screen gradient, raw buttons/links; refactor to shared auth shell + shadcn tokens. |
-| `/auth/v1/register` | `src/app/(main)/auth/v1/register/page.tsx` | 🔴 | Mirrors login issues; duplicate markup needs shared hero pane. |
-| `/unauthorized` | `src/app/(main)/unauthorized/page.tsx` | 🟡 | Layout ok but uses raw `Link` styling; swap to `Card` + `Button`. |
-| `/dashboard` | `src/app/(main)/dashboard/page.tsx` | 🔴 | Placeholder response; replace with standardized empty state card. |
+| `/auth/v1/login` | `src/app/(main)/auth/v1/login/page.tsx` | ✅ | Uses shared `AuthShell` + `AuthHeroPane`; responsive layout and shadcn buttons. |
+| `/auth/v1/register` | `src/app/(main)/auth/v1/register/page.tsx` | ✅ | Mirrors login on shared shell with hero pane + semantic footer link. |
+| `/unauthorized` | `src/app/(main)/unauthorized/page.tsx` | ✅ | Rebuilt with `EmptyStateCard` + shadcn `Button`; ready for reuse elsewhere. |
+| `/dashboard` | `src/app/(main)/dashboard/page.tsx` | ✅ | Placeholder now uses `EmptyStateCard` with CTA to default dashboard. |
 | `/dashboard/default` | `src/app/(main)/dashboard/default/page.tsx` | 🟡 | Widget shell relies on shadcn but hardcodes brand colors; remap to semantic tokens. |
 | `/dashboard/requisitions` | `src/app/(main)/dashboard/requisitions/page.tsx` | 🟡 | Uses generic dashboard shell; needs token cleanup and removal of debug logging in widgets. |
 | `/dashboard/requisitions/new` | `src/app/(main)/dashboard/requisitions/new/page.tsx` | 🔴 | Large bespoke form/table with raw inputs and custom focus states; rebuild on shadcn forms/table primitives. |

@@ -2,59 +2,39 @@ import Link from "next/link";
 
 import { Command } from "lucide-react";
 
+import { AuthHeroPane } from "@/components/auth/auth-hero-pane";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { Button } from "@/components/ui/button";
+
 import { RegisterFormV1 } from "./_components/register-form";
 
 export default function RegisterV1() {
   return (
-    <div className="flex min-h-screen">
-      {/* Left Side - Form */}
-      <div className="flex w-full items-center justify-center bg-gray-50 p-8 lg:w-2/3">
-        <div className="w-full max-w-lg">
-          <RegisterFormV1 />
-
-          {/* Login Link */}
-          <div className="mt-8 text-center">
-            <p className="text-base text-gray-600">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-orange-500 underline-offset-2 transition-colors duration-200 hover:text-orange-600 hover:underline"
-              >
-                Login
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Welcome Section */}
-      <div className="hidden bg-gradient-to-br from-orange-500 to-orange-600 lg:flex lg:w-1/3">
-        <div className="flex w-full flex-col items-center justify-center p-12 text-center">
-          <div className="space-y-8">
-            {/* Logo/Icon */}
-            <div className="relative flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-                <Command className="h-10 w-10 text-white" />
-              </div>
-            </div>
-
-            {/* Welcome Text */}
-            <div className="space-y-4">
-              <h1 className="text-6xl font-light tracking-tight text-white">Welcome!</h1>
-              <p className="max-w-md text-xl leading-relaxed font-light text-white/90">
-                You&apos;re in the right place.
-              </p>
-            </div>
-
-            {/* Decorative Elements */}
-            <div className="mt-12 flex justify-center space-x-2">
-              <div className="h-2 w-2 rounded-full bg-white/40"></div>
-              <div className="h-2 w-2 rounded-full bg-white/60"></div>
-              <div className="h-2 w-2 rounded-full bg-white/80"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AuthShell
+      title="Create your account"
+      description="Join the workspace to collaborate on requisitions, approvals, and inventory controls."
+      heroPosition="right"
+      hero={
+        <AuthHeroPane
+          title="Built for modern operations"
+          description="From field entries to executive dashboards, keep teams aligned with trusted data."
+          icon={<Command className="h-12 w-12 text-primary-foreground" />}
+          highlights={[
+            { title: "Faster onboarding", description: "Pre-configured permissions get teams productive immediately." },
+            { title: "Secure by design", description: "Multi-tenant roles and audit logging keep access controlled." },
+          ]}
+        />
+      }
+      footer={
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Button asChild variant="link" className="px-0 font-semibold text-primary">
+            <Link href="/auth/v1/login">Sign in</Link>
+          </Button>
+        </p>
+      }
+    >
+      <RegisterFormV1 />
+    </AuthShell>
   );
 }
