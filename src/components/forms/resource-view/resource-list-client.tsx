@@ -153,7 +153,16 @@ export function ResourceListClient<TRow = any>({
   }, [currentFilters, buildExtraQuery, quickFilters]);
 
   // React Query for data fetching with comprehensive error handling
-  const { data, error, isLoading, isError, isFetching, refetch } = useQuery({
+  const {
+    data,
+    error,
+    isLoading,
+    isError,
+    isFetching,
+    isInitialLoading,
+    fetchStatus,
+    refetch,
+  } = useQuery({
     queryKey: [queryKeyBase, page, pageSize, serializedFilters || 'no-filters'],
     queryFn: async () => {
       const extraQuery = buildExtraQueryFromFilters();
@@ -205,7 +214,7 @@ export function ResourceListClient<TRow = any>({
   }, [isError, error, data, refetch, title, queryKeyBase]);
 
   useEffect(() => {
-    const shouldShowInitial = isLoading && !data;
+    const shouldShowInitial = isInitialLoading && fetchStatus === "fetching" && !data;
     if (shouldShowInitial) {
       const payload = { title: `Loading ${title}`, message: "Fetching your data..." };
       if (initialLoaderRef.current) {
@@ -217,7 +226,7 @@ export function ResourceListClient<TRow = any>({
       hideBlocking(initialLoaderRef.current);
       initialLoaderRef.current = null;
     }
-  }, [isLoading, data, title, showBlocking, hideBlocking, patchBlocking]);
+  }, [isInitialLoading, fetchStatus, data, title, showBlocking, hideBlocking, patchBlocking]);
 
   useEffect(() => {
     const shouldShowBackground = isFetching && !!data;
