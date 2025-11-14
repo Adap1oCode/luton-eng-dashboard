@@ -312,12 +312,26 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   const isUpdatingFromUrlRef = React.useRef(false);
   // Track last time user updated filters to prevent "FROM URL" effect from overwriting recent user input
   const lastUserFilterUpdateRef = React.useRef<number>(0);
+  
+  // Debounced filters for React Query - prevents refetching on every keystroke
+  // This keeps the input responsive while only querying after user stops typing
+  const [debouncedFilters, setDebouncedFilters] = React.useState<Record<string, ColumnFilterState>>(filters);
+  
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 400); // 400ms debounce for React Query (slightly less than URL debounce to ensure query happens first)
+    
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
+  
   const columnFilters = React.useMemo(() => {
     return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
   }, [filters]);
 
   // Build extraQuery from filters (similar to ResourceListClient pattern)
   // Must be declared after filters state is initialized
+  // Use debouncedFilters for React Query to prevent refetching on every keystroke
   const buildExtraQueryFromFilters = React.useCallback(() => {
     const extraQuery: Record<string, any> = { raw: "true" };
     const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
@@ -330,8 +344,9 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       }
     });
     
-    // Add column filters (from "More Filters") - these must be sent to server for full dataset filtering
-    Object.entries(filters).forEach(([columnId, filterState]) => {
+    // Add column filters (from "More Filters") - use debouncedFilters to prevent excessive refetches
+    // This ensures React Query only refetches after user stops typing
+    Object.entries(debouncedFilters).forEach(([columnId, filterState]) => {
       if (filterState?.value && filterState.value.trim() !== "") {
         // Use structured filter format: filters[columnId][value] and filters[columnId][mode]
         // Default mode is "contains" if not specified
@@ -342,23 +357,25 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     });
     
     return extraQuery;
-  }, [currentFilters, config.quickFilters, filters]);
+  }, [currentFilters, config.quickFilters, debouncedFilters]);
 
   // React Query hook (runs in parallel, but table still uses initialRows for now)
   const apiEndpoint = React.useMemo(() => getApiEndpoint(), [getApiEndpoint]);
   // Include column filters in queryKey so React Query refetches when they change
+  // Use debouncedFilters to prevent refetching on every keystroke (performance optimization)
   // Must be declared after filters state is initialized
   const queryKey = React.useMemo(() => {
     // Build a combined filter object for queryKey
     const combinedFilters: Record<string, string> = { ...currentFilters };
-    Object.entries(filters).forEach(([columnId, filterState]) => {
+    // Use debouncedFilters instead of filters to prevent excessive refetches while typing
+    Object.entries(debouncedFilters).forEach(([columnId, filterState]) => {
       if (filterState?.value) {
         // Include column filters in queryKey
         combinedFilters[`col_${columnId}`] = `${filterState.value}:${filterState.mode || "contains"}`;
       }
     });
     return buildQueryKey(page, pageSize, combinedFilters);
-  }, [buildQueryKey, page, pageSize, currentFilters, filters]);
+  }, [buildQueryKey, page, pageSize, currentFilters, debouncedFilters]);
 
   const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
     queryKey,
