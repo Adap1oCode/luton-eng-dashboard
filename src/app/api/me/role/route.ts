@@ -134,10 +134,22 @@ export async function GET(req: NextRequest) {
       error: authErr,
     } = await supabase.auth.getUser();
     if (authErr) {
-      return NextResponse.json({ error: authErr.message }, { status: 500, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ error: authErr.message }, { 
+        status: 500, 
+        headers: { 
+          "Cache-Control": "no-store",
+          "Content-Type": "application/json"
+        } 
+      });
     }
     if (!realAuthUser) {
-      return NextResponse.json({ error: "unauthenticated" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ error: "unauthenticated" }, { 
+        status: 401, 
+        headers: { 
+          "Cache-Control": "no-store",
+          "Content-Type": "application/json"
+        } 
+      });
     }
 
     // Read impersonation from query, header, or cookie (Next 15: cookies()/headers() are async)
@@ -158,13 +170,25 @@ export async function GET(req: NextRequest) {
     if (realMeErr) {
       return NextResponse.json(
         { error: "profile_query_failed", details: realMeErr.message },
-        { status: 500, headers: { "Cache-Control": "no-store" } }
+        { 
+          status: 500, 
+          headers: { 
+            "Cache-Control": "no-store",
+            "Content-Type": "application/json"
+          } 
+        }
       );
     }
     if (!realMe) {
       return NextResponse.json(
         { error: "no_profile_row_for_auth_user" },
-        { status: 404, headers: { "Cache-Control": "no-store" } }
+        { 
+          status: 404, 
+          headers: { 
+            "Cache-Control": "no-store",
+            "Content-Type": "application/json"
+          } 
+        }
       );
     }
 
@@ -175,7 +199,13 @@ export async function GET(req: NextRequest) {
     } catch (e: any) {
       return NextResponse.json(
         { error: e?.message ?? "context_build_failed" },
-        { status: 500, headers: { "Cache-Control": "no-store" } }
+        { 
+          status: 500, 
+          headers: { 
+            "Cache-Control": "no-store",
+            "Content-Type": "application/json"
+          } 
+        }
       );
     }
 
@@ -297,9 +327,12 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    return NextResponse.json(responseBody, {
-      headers: { "Cache-Control": "no-store" },
-    });
+  return NextResponse.json(responseBody, {
+    headers: { 
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json"
+    },
+  });
   } catch (error: any) {
     // Ensure we always return JSON, never HTML error pages
     console.error("[API /api/me/role] Unhandled error:", error);
