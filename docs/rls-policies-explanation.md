@@ -177,3 +177,4 @@ But this would:
 
 **The open RLS policies are intentional and correct.** They match the architecture pattern where access control is enforced in application code, not database policies. This is a valid and common pattern for applications with complex permission systems.
 
+

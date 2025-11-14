@@ -29,7 +29,8 @@ export const RESOURCE_TITLE = "Permissions" as const;
 // Types
 // -----------------------------------------------------------------------------
 export type PermissionRow = {
-  key: string; // PK, used for routing
+  id: string; // PK (same as key), used for routing
+  key: string; // Alias for id, kept for compatibility
   description: string | null;
 };
 
