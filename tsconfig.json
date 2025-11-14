@@ -51,7 +51,6 @@
     "src/stories/**/*",
     "src/app/api/impersonate/route.ts",
     "src/app/api/me/permissions/route.ts",
-    "src/app/api/me/role/route.ts",
     "src/app/api/tally_cards/export/route.ts",
     "src/app/api/tally_cards/route.ts"
   ]
