@@ -310,12 +310,28 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   
   // Ref to track if we're updating filters from URL (to prevent feedback loops)
   const isUpdatingFromUrlRef = React.useRef(false);
+  // Track last time user updated filters to prevent "FROM URL" effect from overwriting recent user input
+  const lastUserFilterUpdateRef = React.useRef<number>(0);
+  
+  // Debounced filters for React Query - prevents refetching on every keystroke
+  // This keeps the input responsive while only querying after user stops typing
+  const [debouncedFilters, setDebouncedFilters] = React.useState<Record<string, ColumnFilterState>>(filters);
+  
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 400); // 400ms debounce for React Query (slightly less than URL debounce to ensure query happens first)
+    
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
+  
   const columnFilters = React.useMemo(() => {
     return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
   }, [filters]);
 
   // Build extraQuery from filters (similar to ResourceListClient pattern)
   // Must be declared after filters state is initialized
+  // Use debouncedFilters for React Query to prevent refetching on every keystroke
   const buildExtraQueryFromFilters = React.useCallback(() => {
     const extraQuery: Record<string, any> = { raw: "true" };
     const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
@@ -328,8 +344,9 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       }
     });
     
-    // Add column filters (from "More Filters") - these must be sent to server for full dataset filtering
-    Object.entries(filters).forEach(([columnId, filterState]) => {
+    // Add column filters (from "More Filters") - use debouncedFilters to prevent excessive refetches
+    // This ensures React Query only refetches after user stops typing
+    Object.entries(debouncedFilters).forEach(([columnId, filterState]) => {
       if (filterState?.value && filterState.value.trim() !== "") {
         // Use structured filter format: filters[columnId][value] and filters[columnId][mode]
         // Default mode is "contains" if not specified
@@ -340,23 +357,25 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     });
     
     return extraQuery;
-  }, [currentFilters, config.quickFilters, filters]);
+  }, [currentFilters, config.quickFilters, debouncedFilters]);
 
   // React Query hook (runs in parallel, but table still uses initialRows for now)
   const apiEndpoint = React.useMemo(() => getApiEndpoint(), [getApiEndpoint]);
   // Include column filters in queryKey so React Query refetches when they change
+  // Use debouncedFilters to prevent refetching on every keystroke (performance optimization)
   // Must be declared after filters state is initialized
   const queryKey = React.useMemo(() => {
     // Build a combined filter object for queryKey
     const combinedFilters: Record<string, string> = { ...currentFilters };
-    Object.entries(filters).forEach(([columnId, filterState]) => {
+    // Use debouncedFilters instead of filters to prevent excessive refetches while typing
+    Object.entries(debouncedFilters).forEach(([columnId, filterState]) => {
       if (filterState?.value) {
         // Include column filters in queryKey
         combinedFilters[`col_${columnId}`] = `${filterState.value}:${filterState.mode || "contains"}`;
       }
     });
     return buildQueryKey(page, pageSize, combinedFilters);
-  }, [buildQueryKey, page, pageSize, currentFilters, filters]);
+  }, [buildQueryKey, page, pageSize, currentFilters, debouncedFilters]);
 
   const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
     queryKey,
@@ -1188,9 +1207,18 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
   // 🔄 Sync filters FROM URL when search params change (handles back/forward navigation)
   // This runs when URL changes externally (e.g., browser back/forward)
+  // NOTE: filters is NOT in dependency array - this effect should only run when URL changes externally,
+  // not when filters state changes. Including filters would create a feedback loop with the "TO URL" effect.
   React.useEffect(() => {
     // Skip if we're currently updating from URL (prevent feedback loop)
     if (isUpdatingFromUrlRef.current) {
+      return;
+    }
+
+    // Skip if user just updated filters (within last 500ms) to prevent overwriting user input
+    // This prevents the effect from running immediately after user types, which could clear the input
+    const timeSinceLastUserUpdate = Date.now() - lastUserFilterUpdateRef.current;
+    if (timeSinceLastUserUpdate < 500) {
       return;
     }
 
@@ -1220,98 +1248,124 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       }
     });
     
-    // Only update filters if URL filters differ from current filters (deep comparison)
-    const urlFiltersKeys = Object.keys(filtered).sort();
-    const currentFiltersKeys = Object.keys(filters).sort();
-    
-    if (urlFiltersKeys.length !== currentFiltersKeys.length) {
-      isUpdatingFromUrlRef.current = true;
-      setFilters(filtered);
-      // Reset flag after state update
-      setTimeout(() => {
-        isUpdatingFromUrlRef.current = false;
-      }, 0);
-      return;
-    }
-    
-    // Deep compare each filter
-    let filtersChanged = false;
-    for (const key of urlFiltersKeys) {
-      const urlFilter = filtered[key];
-      const currentFilter = filters[key];
-      if (!currentFilter || 
-          urlFilter.value !== currentFilter.value || 
-          (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
-        filtersChanged = true;
-        break;
+    // Use a functional update to compare with current filters state
+    setFilters((currentFilters) => {
+      // Only update filters if URL filters differ from current filters (deep comparison)
+      const urlFiltersKeys = Object.keys(filtered).sort();
+      const currentFiltersKeys = Object.keys(currentFilters).sort();
+      
+      if (urlFiltersKeys.length !== currentFiltersKeys.length) {
+        isUpdatingFromUrlRef.current = true;
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 0);
+        return filtered;
       }
-    }
-    
-    // Also check if any current filters are missing in URL
-    if (!filtersChanged) {
-      for (const key of currentFiltersKeys) {
-        if (!filtered[key]) {
+      
+      // Deep compare each filter
+      let filtersChanged = false;
+      for (const key of urlFiltersKeys) {
+        const urlFilter = filtered[key];
+        const currentFilter = currentFilters[key];
+        if (!currentFilter || 
+            urlFilter.value !== currentFilter.value || 
+            (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
           filtersChanged = true;
           break;
         }
       }
-    }
-    
-    if (filtersChanged) {
-      isUpdatingFromUrlRef.current = true;
-      setFilters(filtered);
-      // Reset flag after state update
-      setTimeout(() => {
-        isUpdatingFromUrlRef.current = false;
-      }, 0);
-    }
-  }, [search, filters]); // Include filters for comparison, but use ref to prevent loops
+      
+      // Also check if any current filters are missing in URL
+      if (!filtersChanged) {
+        for (const key of currentFiltersKeys) {
+          if (!filtered[key]) {
+            filtersChanged = true;
+            break;
+          }
+        }
+      }
+      
+      if (filtersChanged) {
+        isUpdatingFromUrlRef.current = true;
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 0);
+        return filtered;
+      }
+      
+      // No changes, return current state to avoid unnecessary re-render
+      return currentFilters;
+    });
+  }, [search]); // Only depend on search (URL), NOT filters - prevents feedback loop
 
   // 🔄 Sync filters TO URL whenever filters state changes (user input)
+  // Debounced to prevent rapid URL updates while typing (which can cause input to lose focus)
   React.useEffect(() => {
-    // Skip if we're updating from URL (prevent feedback loop)
+    // Skip if we're currently updating from URL (prevent feedback loop)
     if (isUpdatingFromUrlRef.current) {
       return;
     }
 
-    const sp = new URLSearchParams(search.toString());
-    
-    // Remove all existing filter params first
-    const keysToRemove: string[] = [];
-    sp.forEach((_, key) => {
-      if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
-        keysToRemove.push(key);
+    // Debounce URL updates to prevent input issues while typing
+    // This gives the user time to type without triggering URL updates on every keystroke
+    const timeoutId = setTimeout(() => {
+      // Double-check flag after debounce (might have changed during wait)
+      if (isUpdatingFromUrlRef.current) {
+        return;
       }
-    });
-    keysToRemove.forEach((key) => sp.delete(key));
-    
-    // Add current filters to URL
-    let hasActiveFilters = false;
-    Object.entries(filters).forEach(([columnId, filterState]) => {
-      if (filterState?.value && filterState.value.trim() !== "") {
-        hasActiveFilters = true;
-        sp.set(`filters[${columnId}][value]`, filterState.value);
-        // Only add mode if it's not the default "contains"
-        const mode = filterState.mode || "contains";
-        if (mode !== "contains") {
-          sp.set(`filters[${columnId}][mode]`, mode);
+
+      const sp = new URLSearchParams(search.toString());
+      
+      // Remove all existing filter params first
+      const keysToRemove: string[] = [];
+      sp.forEach((_, key) => {
+        if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
+          keysToRemove.push(key);
         }
+      });
+      keysToRemove.forEach((key) => sp.delete(key));
+      
+      // Add current filters to URL
+      let hasActiveFilters = false;
+      Object.entries(filters).forEach(([columnId, filterState]) => {
+        if (filterState?.value && filterState.value.trim() !== "") {
+          hasActiveFilters = true;
+          sp.set(`filters[${columnId}][value]`, filterState.value);
+          // Only add mode if it's not the default "contains"
+          const mode = filterState.mode || "contains";
+          if (mode !== "contains") {
+            sp.set(`filters[${columnId}][mode]`, mode);
+          }
+        }
+      });
+      
+      // Reset to page 1 when filters change (if there are active filters)
+      if (hasActiveFilters) {
+        sp.set("page", "1");
       }
-    });
-    
-    // Reset to page 1 when filters change (if there are active filters)
-    if (hasActiveFilters) {
-      sp.set("page", "1");
-    }
-    
-    // Only update URL if something changed
-    const newUrl = `${pathname}?${sp.toString()}`;
-    const currentUrl = `${pathname}?${search.toString()}`;
-    if (newUrl !== currentUrl) {
-      router.replace(newUrl, { scroll: false });
-      // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
-      // No need to explicitly invalidate - the queryKey change triggers refetch automatically
-    }
+      
+      // Only update URL if something changed
+      const newUrl = `${pathname}?${sp.toString()}`;
+      const currentUrl = `${pathname}?${search.toString()}`;
+      if (newUrl !== currentUrl) {
+        // Set flag BEFORE router.replace to prevent "FROM URL" effect from running
+        // This is critical - the flag must be set before the URL changes
+        isUpdatingFromUrlRef.current = true;
+        router.replace(newUrl, { scroll: false });
+        // Reset flag after URL update completes (longer delay to ensure router processes it)
+        // This prevents the "FROM URL" effect from running and potentially resetting filters
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 200);
+        // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
+        // No need to explicitly invalidate - the queryKey change triggers refetch automatically
+      } else {
+        // No URL change needed, but ensure flag is clear
+        isUpdatingFromUrlRef.current = false;
+      }
+    }, 300); // 300ms debounce - balance between responsiveness and avoiding excessive updates
+
+    return () => clearTimeout(timeoutId);
   }, [filters, pathname, router, search]);
 
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
@@ -1725,6 +1779,26 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     }
   }, [onClearFilters]);
 
+  // Memoize filter onChange handler to prevent FilterCell re-renders
+  // This is critical for performance - without memoization, all FilterCells re-render on every keystroke
+  const handleFilterChange = React.useCallback((id: string, next: ColumnFilterState) => {
+    // Track that user is updating filters (prevents "FROM URL" effect from interfering)
+    lastUserFilterUpdateRef.current = Date.now();
+    
+    setFilters((prev) => {
+      // Ensure default mode is "contains" if not specified
+      const filterState: ColumnFilterState = {
+        value: next.value || "",
+        mode: next.mode || "contains",
+      };
+      const newFilters = { ...prev, [id]: filterState };
+
+      if (onFiltersChange) onFiltersChange(newFilters);
+
+      return newFilters; // keep functional setState contract
+    });
+  }, [onFiltersChange]);
+
   // Extract filter columns to match EXACTLY the header row structure
   // Use getHeaderGroups() to get the same columns in the same order as the header row
   const filterColumns: FilterColumn[] = React.useMemo(() => {
@@ -2018,20 +2092,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
             show: showMoreFilters,
             filters,
-            onChange: (id, next) => {
-              setFilters((prev) => {
-                // Ensure default mode is "contains" if not specified
-                const filterState: ColumnFilterState = {
-                  value: next.value || "",
-                  mode: next.mode || "contains",
-                };
-                const newFilters = { ...prev, [id]: filterState };
-
-                if (onFiltersChange) onFiltersChange(newFilters);
-
-                return newFilters; // keep functional setState contract
-              });
-            },
+            onChange: handleFilterChange,
           }}
         />
         {footer}
