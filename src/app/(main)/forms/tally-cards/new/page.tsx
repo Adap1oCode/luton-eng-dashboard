@@ -44,7 +44,7 @@ export default async function NewTallyCardPage() {
           </button>
         ),
         primary: (
-          <PermissionGate any={["resource:tcm_tally_cards:create"]}>
+          <PermissionGate any={["screen:tally-cards:create"]}>
             <button
               form={formId}
               type="submit"

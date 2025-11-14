@@ -1268,50 +1268,56 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   }, [search, filters]); // Include filters for comparison, but use ref to prevent loops
 
   // 🔄 Sync filters TO URL whenever filters state changes (user input)
+  // Debounced to prevent excessive URL updates and React Query refetches while typing
   React.useEffect(() => {
     // Skip if we're updating from URL (prevent feedback loop)
     if (isUpdatingFromUrlRef.current) {
       return;
     }
 
-    const sp = new URLSearchParams(search.toString());
-    
-    // Remove all existing filter params first
-    const keysToRemove: string[] = [];
-    sp.forEach((_, key) => {
-      if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
-        keysToRemove.push(key);
-      }
-    });
-    keysToRemove.forEach((key) => sp.delete(key));
-    
-    // Add current filters to URL
-    let hasActiveFilters = false;
-    Object.entries(filters).forEach(([columnId, filterState]) => {
-      if (filterState?.value && filterState.value.trim() !== "") {
-        hasActiveFilters = true;
-        sp.set(`filters[${columnId}][value]`, filterState.value);
-        // Only add mode if it's not the default "contains"
-        const mode = filterState.mode || "contains";
-        if (mode !== "contains") {
-          sp.set(`filters[${columnId}][mode]`, mode);
+    // Debounce URL update to allow user to finish typing
+    const timeoutId = setTimeout(() => {
+      const sp = new URLSearchParams(search.toString());
+      
+      // Remove all existing filter params first
+      const keysToRemove: string[] = [];
+      sp.forEach((_, key) => {
+        if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
+          keysToRemove.push(key);
         }
+      });
+      keysToRemove.forEach((key) => sp.delete(key));
+      
+      // Add current filters to URL
+      let hasActiveFilters = false;
+      Object.entries(filters).forEach(([columnId, filterState]) => {
+        if (filterState?.value && filterState.value.trim() !== "") {
+          hasActiveFilters = true;
+          sp.set(`filters[${columnId}][value]`, filterState.value);
+          // Only add mode if it's not the default "contains"
+          const mode = filterState.mode || "contains";
+          if (mode !== "contains") {
+            sp.set(`filters[${columnId}][mode]`, mode);
+          }
+        }
+      });
+      
+      // Reset to page 1 when filters change (if there are active filters)
+      if (hasActiveFilters) {
+        sp.set("page", "1");
       }
-    });
-    
-    // Reset to page 1 when filters change (if there are active filters)
-    if (hasActiveFilters) {
-      sp.set("page", "1");
-    }
-    
-    // Only update URL if something changed
-    const newUrl = `${pathname}?${sp.toString()}`;
-    const currentUrl = `${pathname}?${search.toString()}`;
-    if (newUrl !== currentUrl) {
-      router.replace(newUrl, { scroll: false });
-      // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
-      // No need to explicitly invalidate - the queryKey change triggers refetch automatically
-    }
+      
+      // Only update URL if something changed
+      const newUrl = `${pathname}?${sp.toString()}`;
+      const currentUrl = `${pathname}?${search.toString()}`;
+      if (newUrl !== currentUrl) {
+        router.replace(newUrl, { scroll: false });
+        // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
+        // No need to explicitly invalidate - the queryKey change triggers refetch automatically
+      }
+    }, 500); // 500ms debounce - wait for user to stop typing
+
+    return () => clearTimeout(timeoutId);
   }, [filters, pathname, router, search]);
 
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue

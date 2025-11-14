@@ -62,6 +62,10 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
   const currentValues = prep.defaults?.item_number ? { item_number: prep.defaults.item_number } : undefined;
   const loadedOptions = await loadOptions(optionsKeys, currentValues);
 
+  const primaryButtonPermissions = {
+    any: ["screen:tally-cards:update"]
+  };
+
   return (
     <ResourceFormSSRPage
       title="Edit Tally Card"
@@ -72,9 +76,7 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
       options={loadedOptions}
       cancelHref={`/forms/${resourceKey}`}
       primaryLabel="Update"
-      primaryButtonPermissions={{
-        any: ["screen:tally-cards:update"]
-      }}
+      primaryButtonPermissions={primaryButtonPermissions}
     >
       <EditWithTabs
         resourceKey={resourceKey}

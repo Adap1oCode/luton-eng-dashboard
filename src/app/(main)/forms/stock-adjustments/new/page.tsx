@@ -78,7 +78,7 @@ export default async function NewStockAdjustmentPage() {
           </button>
         ),
         primary: (
-          <PermissionGate any={["resource:tcm_user_tally_card_entries:create"]}>
+          <PermissionGate any={["screen:stock-adjustments:create"]}>
             <button
               form={formId}
               type="submit"

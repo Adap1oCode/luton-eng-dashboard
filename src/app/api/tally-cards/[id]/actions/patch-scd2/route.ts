@@ -25,6 +25,11 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
     return json({ error: { message: "Invalid JSON body" } }, 400);
   }
 
+  // Filter out fields that shouldn't be sent to tally-cards updates
+  // - locations: Only used for stock-adjustments (tcm_user_tally_card_entries), not tally-cards
+  // - warehouse: Removed column, only use warehouse_id
+  const { locations, warehouse, ...filteredPayload } = payload;
+
   const sb = await createSupabaseServerClient();
 
   // Extract only the fields we need for tally cards
@@ -37,11 +42,11 @@ export async function POST(req: Request, ctx: AwaitableParams<{ id: string }>) {
   
   const { data, error } = await (sb as any).rpc(rpcFunctionName, {
     p_id: id,
-    p_tally_card_number: payload?.tally_card_number ?? null,
-    p_warehouse_id: payload?.warehouse_id ?? null,
-    p_item_number: payload?.item_number !== null && payload?.item_number !== undefined ? Number(payload.item_number) : null,
-    p_note: payload?.note ?? null,
-    p_is_active: payload?.is_active ?? null,
+    p_tally_card_number: filteredPayload?.tally_card_number ?? null,
+    p_warehouse_id: filteredPayload?.warehouse_id ?? null,
+    p_item_number: filteredPayload?.item_number !== null && filteredPayload?.item_number !== undefined ? Number(filteredPayload.item_number) : null,
+    p_note: filteredPayload?.note ?? null,
+    p_is_active: filteredPayload?.is_active ?? null,
   });
 
   if (error) {
