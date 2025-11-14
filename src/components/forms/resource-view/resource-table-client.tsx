@@ -400,9 +400,10 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   }, [queryData?.rows, queryData, queryError, initialRows]);
 
   // Track if component has mounted to avoid hydration mismatches
-  const [isMounted, setIsMounted] = React.useState(false);
+  // Use ref instead of state to avoid triggering re-renders
+  const isMountedRef = React.useRef(false);
   React.useEffect(() => {
-    setIsMounted(true);
+    isMountedRef.current = true;
   }, []);
 
   // Get current total from React Query, fallback to initialTotal during loading
@@ -411,7 +412,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     // During SSR and initial hydration, always use initialTotal
     // This ensures server and client render the same value
     // Also use initialTotal if query is still fetching (to avoid showing stale data during refetch)
-    if (!isMounted || isQueryFetching) {
+    if (!isMountedRef.current || isQueryFetching) {
       return initialTotal;
     }
     
@@ -419,13 +420,16 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     if (queryError || !queryData) {
       return initialTotal;
     }
-    // If queryData exists and has total, use it (only after mount and fetch complete)
-    if (typeof queryData.total === 'number') {
+    
+    // Only use queryData.total if it's actually different from initialTotal
+    // This prevents hydration mismatches when React Query returns the same data
+    if (typeof queryData.total === 'number' && queryData.total !== initialTotal) {
       return queryData.total;
     }
-    // Fallback to initialTotal if queryData structure is unexpected
+    
+    // Always prefer initialTotal if values match (ensures hydration consistency)
     return initialTotal;
-  }, [queryData?.total, queryData, queryError, initialTotal, isMounted, isQueryFetching]);
+  }, [queryData?.total, queryData, queryError, initialTotal, isQueryFetching]);
 
   // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
