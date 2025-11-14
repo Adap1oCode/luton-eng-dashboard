@@ -1188,6 +1188,8 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
   // 🔄 Sync filters FROM URL when search params change (handles back/forward navigation)
   // This runs when URL changes externally (e.g., browser back/forward)
+  // NOTE: filters is NOT in dependency array - this effect should only run when URL changes externally,
+  // not when filters state changes. Including filters would create a feedback loop with the "TO URL" effect.
   React.useEffect(() => {
     // Skip if we're currently updating from URL (prevent feedback loop)
     if (isUpdatingFromUrlRef.current) {
@@ -1220,98 +1222,119 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       }
     });
     
-    // Only update filters if URL filters differ from current filters (deep comparison)
-    const urlFiltersKeys = Object.keys(filtered).sort();
-    const currentFiltersKeys = Object.keys(filters).sort();
-    
-    if (urlFiltersKeys.length !== currentFiltersKeys.length) {
-      isUpdatingFromUrlRef.current = true;
-      setFilters(filtered);
-      // Reset flag after state update
-      setTimeout(() => {
-        isUpdatingFromUrlRef.current = false;
-      }, 0);
-      return;
-    }
-    
-    // Deep compare each filter
-    let filtersChanged = false;
-    for (const key of urlFiltersKeys) {
-      const urlFilter = filtered[key];
-      const currentFilter = filters[key];
-      if (!currentFilter || 
-          urlFilter.value !== currentFilter.value || 
-          (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
-        filtersChanged = true;
-        break;
+    // Use a functional update to compare with current filters state
+    setFilters((currentFilters) => {
+      // Only update filters if URL filters differ from current filters (deep comparison)
+      const urlFiltersKeys = Object.keys(filtered).sort();
+      const currentFiltersKeys = Object.keys(currentFilters).sort();
+      
+      if (urlFiltersKeys.length !== currentFiltersKeys.length) {
+        isUpdatingFromUrlRef.current = true;
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 0);
+        return filtered;
       }
-    }
-    
-    // Also check if any current filters are missing in URL
-    if (!filtersChanged) {
-      for (const key of currentFiltersKeys) {
-        if (!filtered[key]) {
+      
+      // Deep compare each filter
+      let filtersChanged = false;
+      for (const key of urlFiltersKeys) {
+        const urlFilter = filtered[key];
+        const currentFilter = currentFilters[key];
+        if (!currentFilter || 
+            urlFilter.value !== currentFilter.value || 
+            (urlFilter.mode || "contains") !== (currentFilter.mode || "contains")) {
           filtersChanged = true;
           break;
         }
       }
-    }
-    
-    if (filtersChanged) {
-      isUpdatingFromUrlRef.current = true;
-      setFilters(filtered);
-      // Reset flag after state update
-      setTimeout(() => {
-        isUpdatingFromUrlRef.current = false;
-      }, 0);
-    }
-  }, [search, filters]); // Include filters for comparison, but use ref to prevent loops
+      
+      // Also check if any current filters are missing in URL
+      if (!filtersChanged) {
+        for (const key of currentFiltersKeys) {
+          if (!filtered[key]) {
+            filtersChanged = true;
+            break;
+          }
+        }
+      }
+      
+      if (filtersChanged) {
+        isUpdatingFromUrlRef.current = true;
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 0);
+        return filtered;
+      }
+      
+      // No changes, return current state to avoid unnecessary re-render
+      return currentFilters;
+    });
+  }, [search]); // Only depend on search (URL), NOT filters - prevents feedback loop
 
   // 🔄 Sync filters TO URL whenever filters state changes (user input)
+  // Debounced to prevent rapid URL updates while typing (which can cause input to lose focus)
   React.useEffect(() => {
-    // Skip if we're updating from URL (prevent feedback loop)
+    // Skip if we're currently updating from URL (prevent feedback loop)
     if (isUpdatingFromUrlRef.current) {
       return;
     }
 
-    const sp = new URLSearchParams(search.toString());
-    
-    // Remove all existing filter params first
-    const keysToRemove: string[] = [];
-    sp.forEach((_, key) => {
-      if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
-        keysToRemove.push(key);
+    // Debounce URL updates to prevent input issues while typing
+    // This gives the user time to type without triggering URL updates on every keystroke
+    const timeoutId = setTimeout(() => {
+      // Double-check flag after debounce (might have changed during wait)
+      if (isUpdatingFromUrlRef.current) {
+        return;
       }
-    });
-    keysToRemove.forEach((key) => sp.delete(key));
-    
-    // Add current filters to URL
-    let hasActiveFilters = false;
-    Object.entries(filters).forEach(([columnId, filterState]) => {
-      if (filterState?.value && filterState.value.trim() !== "") {
-        hasActiveFilters = true;
-        sp.set(`filters[${columnId}][value]`, filterState.value);
-        // Only add mode if it's not the default "contains"
-        const mode = filterState.mode || "contains";
-        if (mode !== "contains") {
-          sp.set(`filters[${columnId}][mode]`, mode);
+
+      const sp = new URLSearchParams(search.toString());
+      
+      // Remove all existing filter params first
+      const keysToRemove: string[] = [];
+      sp.forEach((_, key) => {
+        if (key.match(/^filters\[.+\]\[(value|mode)\]$/)) {
+          keysToRemove.push(key);
         }
+      });
+      keysToRemove.forEach((key) => sp.delete(key));
+      
+      // Add current filters to URL
+      let hasActiveFilters = false;
+      Object.entries(filters).forEach(([columnId, filterState]) => {
+        if (filterState?.value && filterState.value.trim() !== "") {
+          hasActiveFilters = true;
+          sp.set(`filters[${columnId}][value]`, filterState.value);
+          // Only add mode if it's not the default "contains"
+          const mode = filterState.mode || "contains";
+          if (mode !== "contains") {
+            sp.set(`filters[${columnId}][mode]`, mode);
+          }
+        }
+      });
+      
+      // Reset to page 1 when filters change (if there are active filters)
+      if (hasActiveFilters) {
+        sp.set("page", "1");
       }
-    });
-    
-    // Reset to page 1 when filters change (if there are active filters)
-    if (hasActiveFilters) {
-      sp.set("page", "1");
-    }
-    
-    // Only update URL if something changed
-    const newUrl = `${pathname}?${sp.toString()}`;
-    const currentUrl = `${pathname}?${search.toString()}`;
-    if (newUrl !== currentUrl) {
-      router.replace(newUrl, { scroll: false });
-      // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
-      // No need to explicitly invalidate - the queryKey change triggers refetch automatically
-    }
+      
+      // Only update URL if something changed
+      const newUrl = `${pathname}?${sp.toString()}`;
+      const currentUrl = `${pathname}?${search.toString()}`;
+      if (newUrl !== currentUrl) {
+        // Set flag before router.replace to prevent "FROM URL" effect from running
+        isUpdatingFromUrlRef.current = true;
+        router.replace(newUrl, { scroll: false });
+        // Reset flag after a brief delay to allow URL to update
+        setTimeout(() => {
+          isUpdatingFromUrlRef.current = false;
+        }, 100);
+        // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
+        // No need to explicitly invalidate - the queryKey change triggers refetch automatically
+      }
+    }, 300); // 300ms debounce - enough to allow typing without being too slow
+
+    return () => clearTimeout(timeoutId);
   }, [filters, pathname, router, search]);
 
   // ✅ FIX 3: Move dragIdRef outside the useMemo to avoid hook-in-callback issue
