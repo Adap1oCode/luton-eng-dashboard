@@ -1779,6 +1779,26 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     }
   }, [onClearFilters]);
 
+  // Memoize filter onChange handler to prevent FilterCell re-renders
+  // This is critical for performance - without memoization, all FilterCells re-render on every keystroke
+  const handleFilterChange = React.useCallback((id: string, next: ColumnFilterState) => {
+    // Track that user is updating filters (prevents "FROM URL" effect from interfering)
+    lastUserFilterUpdateRef.current = Date.now();
+    
+    setFilters((prev) => {
+      // Ensure default mode is "contains" if not specified
+      const filterState: ColumnFilterState = {
+        value: next.value || "",
+        mode: next.mode || "contains",
+      };
+      const newFilters = { ...prev, [id]: filterState };
+
+      if (onFiltersChange) onFiltersChange(newFilters);
+
+      return newFilters; // keep functional setState contract
+    });
+  }, [onFiltersChange]);
+
   // Extract filter columns to match EXACTLY the header row structure
   // Use getHeaderGroups() to get the same columns in the same order as the header row
   const filterColumns: FilterColumn[] = React.useMemo(() => {
@@ -2072,23 +2092,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
             show: showMoreFilters,
             filters,
-            onChange: (id, next) => {
-              // Track that user is updating filters (prevents "FROM URL" effect from interfering)
-              lastUserFilterUpdateRef.current = Date.now();
-              
-              setFilters((prev) => {
-                // Ensure default mode is "contains" if not specified
-                const filterState: ColumnFilterState = {
-                  value: next.value || "",
-                  mode: next.mode || "contains",
-                };
-                const newFilters = { ...prev, [id]: filterState };
-
-                if (onFiltersChange) onFiltersChange(newFilters);
-
-                return newFilters; // keep functional setState contract
-              });
-            },
+            onChange: handleFilterChange,
           }}
         />
         {footer}

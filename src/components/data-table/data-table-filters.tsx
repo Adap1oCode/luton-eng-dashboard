@@ -48,21 +48,27 @@ const FilterCell = memo(({
   state: ColumnFilterState; 
   columnWidthPx?: number;
   onChange: (columnId: string, next: ColumnFilterState) => void;
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if this specific cell's props changed
+  // This prevents re-renders when other filter cells are being typed in
+  if (prevProps.column.id !== nextProps.column.id) return false;
+  if (prevProps.columnWidthPx !== nextProps.columnWidthPx) return false;
+  if (prevProps.onChange !== nextProps.onChange) return false;
+  
+  // Compare state values (not object reference) - this is the key optimization
+  if (prevProps.state.value !== nextProps.state.value) return false;
+  if (prevProps.state.mode !== nextProps.state.mode) return false;
+  
+  // All props are equal - skip re-render
+  return true;
 }) => {
-  // Use ref to access current state without including it in dependencies
-  // This prevents callback recreation on every state change
-  const stateRef = React.useRef(state);
-  React.useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(column.id, { ...stateRef.current, value: e.target.value });
-  }, [column.id, onChange]);
+    onChange(column.id, { ...state, value: e.target.value });
+  }, [column.id, state, onChange]);
 
   const handleModeChange = useCallback((mode: FilterMode) => {
-    onChange(column.id, { ...stateRef.current, mode });
-  }, [column.id, onChange]);
+    onChange(column.id, { ...state, mode });
+  }, [column.id, state, onChange]);
 
   if (column.disableInput) {
     return (
