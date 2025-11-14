@@ -23,15 +23,22 @@ export async function POST(req: Request) {
   }
 
   // Check permissions from the materialized view
+  // Allow if user has admin:impersonate permission OR is ADMINISTRATOR role
   const { data: viewRow } = await supabase
     .from("mv_effective_permissions")
-    .select("permissions")
+    .select("permissions, role_code")
     .eq("user_id", me.id)
-    .maybeSingle<{ permissions: string[] }>();
+    .maybeSingle<{ permissions: string[]; role_code: string | null }>();
 
-  const canImpersonate = (viewRow?.permissions ?? []).includes("admin:impersonate");
+  const hasImpersonatePermission = (viewRow?.permissions ?? []).includes("admin:impersonate");
+  const isAdministrator = viewRow?.role_code === "ADMINISTRATOR";
+  const canImpersonate = hasImpersonatePermission || isAdministrator;
+  
   if (!canImpersonate) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    return NextResponse.json({ 
+      error: "forbidden",
+      message: "You do not have permission to impersonate users. Administrator role or admin:impersonate permission required."
+    }, { status: 403 });
   }
 
   const res = NextResponse.json({ ok: true });

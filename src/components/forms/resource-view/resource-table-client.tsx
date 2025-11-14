@@ -94,6 +94,9 @@ type ResourceTableClientProps<TRow extends Record<string, any>> = {
   onClearFilters?: () => void;
   initialColumnVisibility?: VisibilityState;
   initialSorting?: Array<{ id: string; desc: boolean }>;
+  // SSR-parsed filters and extraQuery to eliminate duplicate parsing
+  initialFilters?: Record<string, string>;
+  initialExtraQuery?: Record<string, any>;
 };
 
 // move header and cell wrappers into shared data-table modules
@@ -114,6 +117,8 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   onClearFilters,
   initialColumnVisibility,
   initialSorting,
+  initialFilters,
+  initialExtraQuery,
 }: ResourceTableClientProps<TRow>) {
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState, isOptimisticallyDeleted } = useOptimistic();
@@ -145,6 +150,8 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     return config.quickFilters ?? [];
   }, [config.quickFilters]);
 
+  // Extract stable config properties to prevent unnecessary recalculations
+  // These are memoized with stable dependencies (property values, not object references)
   const configColumns = React.useMemo(() => {
     return (config as Record<string, unknown>)?.columns;
   }, [(config as Record<string, unknown>)?.columns]);
@@ -202,14 +209,20 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     return quickFilters.map((f) => ({ id: f.id, toQueryParam: f.toQueryParam }));
   }, [configQuickFilters]);
 
-  // Parse current filters from URL
-  const { filters: currentFilters } = parseListParams(searchParamsRecord, quickFilterMeta, {
+  // Parse quick filters from URL (always parse to handle navigation/user changes)
+  // Use SSR-parsed filters as initial/default values, but always re-parse from URL for current state
+  const { filters: parsedFilters } = parseListParams(searchParamsRecord, quickFilterMeta, {
     defaultPage: page,
     defaultPageSize: pageSize,
     max: 500,
   });
+  // Merge SSR filters as defaults (for initial load optimization), but URL parsing takes precedence
+  const currentFilters = React.useMemo(() => {
+    return { ...(initialFilters ?? {}), ...parsedFilters };
+  }, [initialFilters, parsedFilters]);
 
   // 🔑 Columns: prefer SSR-materialised `config.columns`, fallback to legacy `buildColumns(true)` (if ever provided)
+  // Memoized with stable dependencies (configColumns, configBuildColumns) to prevent unnecessary recalculations
   const baseColumns = React.useMemo<ColumnDef<TRow, unknown>[]>(() => {
     const injected = configColumns;
     if (Array.isArray(injected)) return injected as ColumnDef<TRow, unknown>[];
@@ -276,7 +289,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
   // ✅ Filters state tied to DataTableFilters
   // Initialize filters from URL search params (filters[columnId][value] and filters[columnId][mode])
-  const initialFilters = React.useMemo<Record<string, ColumnFilterState>>(() => {
+  const initialColumnFilters = React.useMemo<Record<string, ColumnFilterState>>(() => {
     const parsed: Record<string, ColumnFilterState> = {};
     search.forEach((value, key) => {
       // Parse structured filter format: filters[columnId][value] and filters[columnId][mode]
@@ -306,21 +319,25 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     return filtered;
   }, [search]);
 
-  const [filters, setFilters] = React.useState<Record<string, ColumnFilterState>>(initialFilters);
+  const [filters, setFilters] = React.useState<Record<string, ColumnFilterState>>(initialColumnFilters);
   
   // Ref to track if we're updating filters from URL (to prevent feedback loops)
   const isUpdatingFromUrlRef = React.useRef(false);
+  // Ref to prevent pagination sync effects from fighting each other
+  const isSyncingPaginationRef = React.useRef(false);
   const columnFilters = React.useMemo(() => {
     return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
   }, [filters]);
 
-  // Build extraQuery from filters (similar to ResourceListClient pattern)
+  // Build extraQuery from filters (for React Query fetch)
+  // Always rebuild from current filter state to ensure correctness
+  // SSR-provided initialExtraQuery helps avoid server-side parsing, but client rebuilds ensure accuracy
   // Must be declared after filters state is initialized
   const buildExtraQueryFromFilters = React.useCallback(() => {
     const extraQuery: Record<string, any> = { raw: "true" };
     const quickFilters = (config.quickFilters ?? []) as Array<{ id: string; toQueryParam?: (value: string) => Record<string, any> }>;
     
-    // Add quick filters (status, etc.)
+    // Add quick filters (status, etc.) from current state
     quickFilters.forEach((filter) => {
       const value = currentFilters[filter.id];
       if (value && filter.toQueryParam) {
@@ -344,28 +361,40 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
 
   // React Query hook (runs in parallel, but table still uses initialRows for now)
   const apiEndpoint = React.useMemo(() => getApiEndpoint(), [getApiEndpoint]);
+
+  // ✅ Controlled pagination (0-based index)
+  const [pagination, setPagination] = React.useState({
+    pageIndex: Math.max(0, page - 1),
+    pageSize,
+  });
+
+  const currentPage = React.useMemo(() => pagination.pageIndex + 1, [pagination.pageIndex]);
+  const currentPageSize = pagination.pageSize;
+
   // Include column filters in queryKey so React Query refetches when they change
-  // Must be declared after filters state is initialized
   const queryKey = React.useMemo(() => {
-    // Build a combined filter object for queryKey
     const combinedFilters: Record<string, string> = { ...currentFilters };
     Object.entries(filters).forEach(([columnId, filterState]) => {
       if (filterState?.value) {
-        // Include column filters in queryKey
         combinedFilters[`col_${columnId}`] = `${filterState.value}:${filterState.mode || "contains"}`;
       }
     });
-    return buildQueryKey(page, pageSize, combinedFilters);
-  }, [buildQueryKey, page, pageSize, currentFilters, filters]);
+    return buildQueryKey(currentPage, currentPageSize, combinedFilters);
+  }, [buildQueryKey, currentPage, currentPageSize, currentFilters, filters]);
 
-  const { data: queryData, isLoading: isQueryLoading, isFetching: isQueryFetching, error: queryError } = useQuery({
+  const {
+    data: queryData,
+    isLoading: isQueryLoading,
+    isFetching: isQueryFetching,
+    error: queryError,
+  } = useQuery({
     queryKey,
     queryFn: async () => {
       const extraQuery = buildExtraQueryFromFilters();
       return await fetchResourcePageClient<TRow>({
         endpoint: apiEndpoint,
-        page,
-        pageSize,
+        page: currentPage,
+        pageSize: currentPageSize,
         extraQuery,
       });
     },
@@ -374,6 +403,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     staleTime: 5 * 60 * 1000, // 5 minutes (matches ResourceListClient)
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false, // Don't refetch on mount when initialData is provided (SSR pattern)
     retry: (failureCount, error) => {
       // Don't retry on 4xx errors
       if (error instanceof Error && error.message.includes("4")) {
@@ -387,29 +417,23 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   // ⚙️ STEP 3: Switch table data source to React Query (with fallback to initialRows)
   // Get current rows from React Query, fallback to initialRows during loading or when query fails
   const currentRows = React.useMemo(() => {
-    // If query failed or returned undefined, use initialRows (SSR data)
     if (queryError || !queryData) {
       return initialRows;
     }
-    // If queryData exists and has rows array, use it
     if (Array.isArray(queryData.rows)) {
       return queryData.rows;
     }
-    // Fallback to initialRows if queryData structure is unexpected
     return initialRows;
   }, [queryData?.rows, queryData, queryError, initialRows]);
 
   // Get current total from React Query, fallback to initialTotal during loading
   const currentTotal = React.useMemo(() => {
-    // If query failed or returned undefined, use initialTotal (SSR data)
     if (queryError || !queryData) {
       return initialTotal;
     }
-    // If queryData exists and has total, use it
-    if (typeof queryData.total === 'number') {
+    if (typeof queryData.total === "number") {
       return queryData.total;
     }
-    // Fallback to initialTotal if queryData structure is unexpected
     return initialTotal;
   }, [queryData?.total, queryData, queryError, initialTotal]);
 
@@ -417,12 +441,6 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   const filteredRows = React.useMemo(() => {
     return currentRows.filter((row) => !isOptimisticallyDeleted((row as any)[idField]));
   }, [currentRows, isOptimisticallyDeleted, idField]);
-
-  // ✅ Controlled pagination (0-based index)
-  const [pagination, setPagination] = React.useState({
-    pageIndex: Math.max(0, page - 1),
-    pageSize,
-  });
 
   // ✅ NEW: State لإظهار/إخفاء قسم More Filters
   const [showMoreFilters, setShowMoreFilters] = React.useState(false);
@@ -670,7 +688,7 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       } as Partial<TRow>;
 
       // Get specific query key for optimistic update and invalidation
-      const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
+      const specificQueryKey = buildQueryKey(currentPage, currentPageSize, currentFilters);
       
       // Optimistically update the cache before API call
       queryClient.setQueryData(specificQueryKey, (prev: any) => {
@@ -707,14 +725,14 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       console.error("Inline edit error:", error);
       
       // Rollback optimistic update on error
-      const specificQueryKey = buildQueryKey(page, pageSize, currentFilters);
+      const specificQueryKey = buildQueryKey(currentPage, currentPageSize, currentFilters);
       queryClient.invalidateQueries({ queryKey: specificQueryKey });
       
       alert(`Error updating ${editingCell.columnId}`);
     } finally {
       setEditingCell(null);
     }
-  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint, buildQueryKey, page, pageSize, currentFilters]);
+  }, [editingCell, config, queryClient, filteredRows, idField, getApiEndpoint, buildQueryKey, currentPage, currentPageSize, currentFilters]);
 
   const handleInlineEditCancel = React.useCallback(() => setEditingCell(null), []);
 
@@ -1134,39 +1152,58 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     return () => document.removeEventListener("click", onClick, true);
   }, [config, router, confirm, markAsDeleted, clearOptimisticState, queryClient, getApiEndpoint]);
 
-  // 🔄 Keep URL in sync whenever the controlled pagination changes
-  // Also ensure URL uses the server's default pageSize (50) if URL has old value (10) or is missing
+  // 🔄 Sync pagination FROM URL/SSR defaults → client state
   React.useEffect(() => {
-    const nextPage = pagination.pageIndex + 1;
-    const nextSize = pagination.pageSize;
-    const curPage = Number(search.get("page") ?? String(page));
-    const curSize = Number(search.get("pageSize") ?? String(pageSize));
-    
-    // If URL has old default (10) or is missing, use server's default (50)
-    // This ensures the URL is updated to reflect the new default
-    const urlSize = search.get("pageSize");
-    const urlSizeNum = urlSize ? Number(urlSize) : null;
-    const shouldUpdateSize = urlSizeNum === null || urlSizeNum === 10;
-    
-    // Use server's default (50) if URL has old value or is missing, otherwise use current pagination
-    const finalSize = shouldUpdateSize ? pageSize : nextSize;
-    
-    // Only update if page changed, size changed, or we need to update from old default
-    if (curPage === nextPage && curSize === finalSize && !shouldUpdateSize) return;
-    
-    const sp = new URLSearchParams(search.toString());
-    sp.set("page", String(nextPage));
-    sp.set("pageSize", String(finalSize));
-    router.replace(`${pathname}?${sp.toString()}`);
-  }, [pagination.pageIndex, pagination.pageSize, pathname, router, search, page, pageSize]);
+    const urlPageParam = search.get("page");
+    const urlPageSizeParam = search.get("pageSize");
+    const parsedPage = urlPageParam ? Number(urlPageParam) : NaN;
+    const parsedPageSize = urlPageSizeParam ? Number(urlPageSizeParam) : NaN;
 
-  // 🔁 When SSR props change (after navigation), update local pagination state
-  React.useEffect(() => {
+    const nextPageIndex = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage - 1 : Math.max(0, page - 1);
+    const nextPageSize = Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : pageSize;
+
     setPagination((prev) => {
-      const next = { pageIndex: Math.max(0, page - 1), pageSize };
-      return prev.pageIndex === next.pageIndex && prev.pageSize === next.pageSize ? prev : next;
+      if (prev.pageIndex === nextPageIndex && prev.pageSize === nextPageSize) {
+        return prev;
+      }
+      isSyncingPaginationRef.current = true;
+      setTimeout(() => {
+        isSyncingPaginationRef.current = false;
+      }, 0);
+      return { pageIndex: nextPageIndex, pageSize: nextPageSize };
     });
-  }, [page, pageSize]);
+  }, [search, page, pageSize]);
+
+  // 🔄 Sync pagination FROM client state → URL (maintain navigation + SSR hydration)
+  React.useEffect(() => {
+    if (isSyncingPaginationRef.current) {
+      return;
+    }
+
+    const nextPage = currentPage;
+    const nextSize = currentPageSize;
+    const sp = new URLSearchParams(search.toString());
+
+    const existingPageParam = sp.get("page");
+    const existingSizeParam = sp.get("pageSize");
+    const existingPage = existingPageParam ? Number(existingPageParam) : NaN;
+    const existingSize = existingSizeParam ? Number(existingSizeParam) : NaN;
+
+    const needsPageUpdate = !Number.isFinite(existingPage) ? nextPage !== page : existingPage !== nextPage;
+    const needsSizeUpdate = !Number.isFinite(existingSize) ? nextSize !== pageSize : existingSize !== nextSize;
+
+    if (!needsPageUpdate && !needsSizeUpdate) {
+      return;
+    }
+
+    sp.set("page", String(nextPage));
+    sp.set("pageSize", String(nextSize));
+    isSyncingPaginationRef.current = true;
+    router.replace(`${pathname}?${sp.toString()}`);
+    setTimeout(() => {
+      isSyncingPaginationRef.current = false;
+    }, 0);
+  }, [currentPage, currentPageSize, pathname, router, search, page, pageSize]);
 
   // 🔄 Sync filters FROM URL when search params change (handles back/forward navigation)
   // This runs when URL changes externally (e.g., browser back/forward)

@@ -35,7 +35,28 @@ export async function protectRoute(
     return null;
   }
 
-  const ctx = await getSessionContext();
+  let ctx;
+  try {
+    ctx = await getSessionContext();
+  } catch (error) {
+    // Log the error for troubleshooting (errors should be visible, not swallowed)
+    const { logger } = await import("@/lib/obs/logger");
+    logger.error({
+      component: "route-guards",
+      function: "protectRoute",
+      pathname,
+      warehouseParam,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : String(error)
+    }, "Failed to get session context - redirecting to login");
+    
+    // Always redirect to login for any error (defense in depth)
+    // This ensures unauthenticated users are redirected even if error message format changes
+    redirect(`/auth/login?next=${encodeURIComponent(pathname)}`);
+  }
   
   const guards = buildGuards({
     roleCode: ctx.effectiveUser.roleCode,
@@ -75,7 +96,28 @@ export async function protectEditRoute(
     redirect("/");
   }
 
-  const ctx = await getSessionContext();
+  let ctx;
+  try {
+    ctx = await getSessionContext();
+  } catch (error) {
+    // Log the error for troubleshooting (errors should be visible, not swallowed)
+    const { logger } = await import("@/lib/obs/logger");
+    logger.error({
+      component: "route-guards",
+      function: "protectEditRoute",
+      pathname,
+      recordWarehouseCode,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : String(error)
+    }, "Failed to get session context - redirecting to login");
+    
+    // Always redirect to login for any error (defense in depth)
+    // This ensures unauthenticated users are redirected even if error message format changes
+    redirect(`/auth/login?next=${encodeURIComponent(pathname)}`);
+  }
   
   const guards = buildGuards({
     roleCode: ctx.effectiveUser.roleCode,

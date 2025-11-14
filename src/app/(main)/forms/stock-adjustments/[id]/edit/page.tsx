@@ -171,17 +171,17 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
     locationsCount: defaults.locations?.length || 0,
   });
   
-  if (defaults.multi_location) {
-    // Load locations server-side for multi_location entries
-    // First try the latest entry_id, but if no locations found, try finding them by tally_card_number
-    try {
+  // Always load locations server-side (even for single-location entries)
+  // This standardizes the approach: all entries use the locations table
+  // First try the latest entry_id, but if no locations found, try finding them by tally_card_number
+  try {
       const { createClient } = await import("@/lib/supabase-server");
       const sb = await createClient();
       
       // Try to get locations for the latest entry_id
       let { data: locationsData } = await sb
         .from("tcm_user_tally_card_entry_locations")
-        .select("id, location, qty, pos")
+        .select("id, location, qty, pos, reason_code")
         .eq("entry_id", entryIdToUse)
         .order("pos", { ascending: true });
       
@@ -207,7 +207,7 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
             for (const entry of allEntries) {
               const { data: locs } = await sb
                 .from("tcm_user_tally_card_entry_locations")
-                .select("id, location, qty, pos")
+                .select("id, location, qty, pos, reason_code")
                 .eq("entry_id", entry.id)
                 .order("pos", { ascending: true });
               
@@ -226,6 +226,7 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
         location: loc.location,
         qty: loc.qty,
         pos: loc.pos ?? (idx + 1),
+        reason_code: loc.reason_code || "UNSPECIFIED",
       })) || [];
       
       console.log("[EditStockAdjustmentPage] Loaded locations:", defaults.locations.length);
@@ -233,25 +234,38 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
       console.warn("Failed to load locations server-side:", err);
       defaults.locations = [];
     }
-  } else if (!defaults.multi_location) {
-    defaults.locations = [];
-  }
+    
+    // If no locations found but entry has qty/location (legacy single-location entry),
+    // create a default location row from parent values
+    // This handles entries that haven't been backfilled yet
+    if (defaults.locations.length === 0 && defaults.qty !== null && defaults.qty !== undefined && defaults.location) {
+      defaults.locations = [{
+        id: `temp-${Date.now()}`,
+        location: defaults.location,
+        qty: defaults.qty,
+        pos: 1,
+        reason_code: defaults.reason_code || "UNSPECIFIED",
+      }];
+      console.log("[EditStockAdjustmentPage] Created default location from parent qty/location");
+    }
   
-  // Ensure qty and location are set from defaults (they should already be there from the API)
-  // But make sure they're not null/undefined which would cause form to show empty
-  if (defaults.multi_location) {
-    // For multi_location, qty and location should be aggregated values from parent
-    // They should already be set, but ensure they're not null
-    if (defaults.qty === null || defaults.qty === undefined) {
-      // Calculate from locations if available
-      const totalQty = defaults.locations?.reduce((sum: number, loc: any) => sum + (loc.qty || 0), 0) || 0;
-      defaults.qty = totalQty;
-    }
-    if (defaults.location === null || defaults.location === undefined || defaults.location === "") {
-      // Calculate from locations if available
-      const locationsText = defaults.locations?.map((loc: any) => loc.location).filter(Boolean).join(", ") || null;
-      defaults.location = locationsText;
-    }
+  // Always ensure qty and location are set from locations array (for display consistency)
+  // Calculate aggregated values from locations
+  if (defaults.locations && defaults.locations.length > 0) {
+    const totalQty = defaults.locations.reduce((sum: number, loc: any) => sum + (loc.qty || 0), 0);
+    const locationsText = defaults.locations.map((loc: any) => loc.location).filter(Boolean).join(", ") || null;
+    
+    // Update defaults for display (parent fields are now read-only summaries)
+    defaults.qty = totalQty;
+    defaults.location = locationsText;
+    
+    // Auto-set multi_location based on locations count
+    defaults.multi_location = defaults.locations.length > 1;
+  } else {
+    // No locations - set defaults to null/empty string (not null for location field)
+    defaults.qty = null;
+    defaults.location = ""; // Empty string instead of null to avoid validation error
+    defaults.multi_location = false;
   }
   if (defaults.reason_code) {
     const normalizedReason = String(defaults.reason_code).toUpperCase() as ReasonCodeType;
@@ -264,7 +278,7 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
   }
 
   const primaryButtonPermissions = {
-    any: ["resource:tcm_user_tally_card_entries:update"]
+    any: ["screen:stock-adjustments:update"]
   };
 
   return (

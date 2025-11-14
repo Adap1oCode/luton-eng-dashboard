@@ -32,10 +32,27 @@ export async function sendMagicLink(email: string, originFromClient: string, nex
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
 
-  // If you’ve set a canonical site URL, prefer that; else fall back to derived; else the client-provided origin.
-  const siteEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  // Derive origin from request headers (most reliable for current request)
   const derivedOrigin = host ? `${proto}://${host}` : "";
-  const origin = siteEnv || derivedOrigin || originFromClient;
+  
+  // Check if this is a localhost request
+  const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const siteEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  
+  // CRITICAL: Always use derived origin for localhost requests, regardless of NEXT_PUBLIC_SITE_URL
+  // This ensures localhost requests NEVER use production URLs
+  let origin: string;
+  if (isLocalhost && derivedOrigin) {
+    // Localhost detected - always use it, ignore NEXT_PUBLIC_SITE_URL
+    origin = derivedOrigin;
+  } else if (isDevelopment && derivedOrigin) {
+    // Development mode - prefer derived origin over NEXT_PUBLIC_SITE_URL
+    origin = derivedOrigin;
+  } else {
+    // Production or no derived origin - use NEXT_PUBLIC_SITE_URL or fallback
+    origin = siteEnv || derivedOrigin || originFromClient;
+  }
 
   // 3) Send the magic link
   const supabase = await getServerClient();

@@ -48,13 +48,23 @@ function parseHashParams(hash: string): Record<string, string> {
   // Remove the # if present
   const hashWithoutHash = hash.startsWith("#") ? hash.slice(1) : hash;
   
-  // Parse query string format: access_token=...&type=recovery
-  hashWithoutHash.split("&").forEach((pair) => {
-    const [key, value] = pair.split("=");
-    if (key && value) {
-      params[key] = decodeURIComponent(value);
-    }
-  });
+  // Use URLSearchParams for proper parsing (handles values with "=" correctly)
+  try {
+    const urlParams = new URLSearchParams(hashWithoutHash);
+    urlParams.forEach((value, key) => {
+      params[key] = value; // URLSearchParams already decodes
+    });
+  } catch {
+    // Fallback to manual parsing if URLSearchParams fails (shouldn't happen with valid hash)
+    hashWithoutHash.split("&").forEach((pair) => {
+      const equalIndex = pair.indexOf("=");
+      if (equalIndex > 0) {
+        const key = decodeURIComponent(pair.slice(0, equalIndex));
+        const value = decodeURIComponent(pair.slice(equalIndex + 1));
+        params[key] = value;
+      }
+    });
+  }
   
   return params;
 }
@@ -67,6 +77,7 @@ export function ResetPasswordForm() {
   const [pending, start] = useTransition();
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -78,40 +89,81 @@ export function ResetPasswordForm() {
   });
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // CRITICAL: Check for reset token SYNCHRONOUSLY before any async operations
+    // Supabase password reset links can come in two formats:
+    // 1. Hash fragment: #access_token=...&type=recovery (older format)
+    // 2. Query parameter: ?code=... (newer format, requires exchange)
+    const checkToken = (): boolean => {
+      if (typeof window === "undefined") return false;
+      
+      // Check for code query parameter first (newer Supabase format)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      if (code) {
+        // Code parameter found - this is a valid reset link
+        // Note: Supabase will auto-exchange this code and authenticate the user
+        // We need to show the form even though user will be authenticated
+        setTokenValid(true);
+        return true;
+      }
+      
+      // Check for hash fragment (older format)
+      const hash = window.location.hash;
+      const params = parseHashParams(hash);
+      
+      if (params.access_token && params.type === "recovery") {
+        setTokenValid(true);
+        return true; // Recovery token found
+      }
+      
+      // No valid token found
+      setTokenValid(false);
+      setTokenError("Invalid or missing reset token. Please request a new password reset.");
+      return false;
+    };
+
+    // Check if user is already authenticated (only if no recovery token)
     const checkAuth = async () => {
+      // Check for token SYNCHRONOUSLY first (before any async calls)
+      const hasRecoveryToken = checkToken();
+      
+      // If recovery token is present, allow form to be shown even if authenticated
+      // (Supabase recovery tokens/codes auto-authenticate users)
+      if (hasRecoveryToken) {
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      // Only check authentication and redirect if there's no recovery token
       const supabase = supabaseBrowser();
       const {
         data: { user },
       } = await supabase.auth.getUser();
       
       if (user) {
-        // User is already logged in, redirect to dashboard
-        toast.info("You are already logged in", {
-          description: "Redirecting to dashboard...",
-        });
-        router.push("/dashboard");
-        return;
+        // User is authenticated but no recovery token - redirect to their default homepage
+        // Fetch default homepage via API to avoid hardcoded paths
+        try {
+          const res = await fetch("/api/me/role");
+          if (res.ok) {
+            const data = (await res.json()) as { defaultHomepage?: string | null };
+            const redirectPath = data.defaultHomepage || "/dashboard";
+            router.push(redirectPath);
+            return;
+          }
+        } catch {
+          // Fallback: let middleware handle redirect on next navigation
+          // For now, show error message but user can navigate away
+        }
+        
+        // Set a more helpful error message for authenticated users
+        setTokenError("You are already logged in. To reset your password, please use the 'Forgot Password' link from the login page.");
       }
-    };
-
-    // Extract token from URL hash
-    const checkToken = () => {
-      if (typeof window === "undefined") return;
       
-      const hash = window.location.hash;
-      const params = parseHashParams(hash);
-      
-      if (params.access_token && params.type === "recovery") {
-        setTokenValid(true);
-      } else {
-        setTokenValid(false);
-        setTokenError("Invalid or missing reset token. Please request a new password reset.");
-      }
+      setIsCheckingAuth(false);
     };
 
     checkAuth();
-    checkToken();
   }, [router]);
 
   const onSubmit = (values: z.infer<typeof FormSchema>) => {
@@ -122,14 +174,15 @@ export function ResetPasswordForm() {
       try {
         const supabase = supabaseBrowser();
         
-        // Update password - Supabase will use the token from the URL hash automatically
+        // Update password - Supabase will use the recovery session (from code exchange or hash token)
         const { error } = await supabase.auth.updateUser({
           password,
         });
 
         if (error) {
           // Handle expired or invalid token
-          if (error.message.includes("expired") || error.message.includes("invalid")) {
+          const errorMsg = error.message.toLowerCase();
+          if (errorMsg.includes("expired") || errorMsg.includes("invalid") || errorMsg.includes("token")) {
             setTokenValid(false);
             setTokenError("This reset link has expired or is invalid. Please request a new password reset.");
             toast.error("Reset link expired", {
@@ -137,18 +190,23 @@ export function ResetPasswordForm() {
             });
             return;
           }
+          // Handle network errors
+          if (errorMsg.includes("network") || errorMsg.includes("fetch") || errorMsg.includes("connection")) {
+            toast.error("Network error", {
+              description: "Please check your connection and try again.",
+            });
+            return;
+          }
+          // Generic error fallback
           throw error;
         }
 
         // Sign out any existing sessions to force re-login with new password
         await supabase.auth.signOut();
 
-        toast.success("Password reset successful", {
-          description: "Your password has been updated. Please log in with your new password.",
-        });
-
-        // Redirect to login with success message
-        router.push("/auth/login?reset=success");
+        // Use hard redirect to ensure clean state after sign out
+        // Don't show toast here - let login page handle it to avoid duplicate toasts
+        window.location.href = "/auth/login?reset=success";
       } catch (err: unknown) {
         toast.error("Failed to reset password", {
           description: getErrorMessage(err),
@@ -159,8 +217,8 @@ export function ResetPasswordForm() {
 
   const togglePasswordVisibility = () => setShowPassword((s) => !s);
 
-  // Show loading state while checking token
-  if (tokenValid === null) {
+  // Show loading state while checking token and auth status
+  if (tokenValid === null || isCheckingAuth) {
     return (
       <div className="mx-auto w-full max-w-md">
         <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">

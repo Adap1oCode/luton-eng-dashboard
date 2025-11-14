@@ -85,16 +85,16 @@ export async function fetchResourcePage<T>({ endpoint, page, pageSize, extraQuer
   if (process.env.NODE_ENV !== "production") {
     console.log(`[fetchResourcePage] Response for ${endpoint}:`, {
       hasRows: !!payload.rows,
-      hasData: !!payload.data,
       rowsCount: payload.rows?.length ?? 0,
-      dataCount: payload.data?.length ?? 0,
-      total: payload.total ?? payload.count,
+      total: payload.total,
       payloadKeys: Object.keys(payload),
     });
   }
   
-  const rows = (payload.rows ?? payload.data ?? []) as T[];
-  const totalCandidate = Number(payload.total ?? payload.count);
+  // API always returns {rows, total} - no need for {data, count} fallback
+  const rows = (payload.rows ?? []) as T[];
+  // Ensure proper number conversion (API may return string numbers)
+  const totalCandidate = Number(payload.total);
   const total = Number.isFinite(totalCandidate) ? totalCandidate : rows.length;
 
   return { rows, total };

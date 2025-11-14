@@ -73,6 +73,7 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
       columns: [
         "snapshot_at",
         "snapshot_at_pretty", // formatted server-side if not present
+        "updated_by_user_id", // needed for enrichment to full_name
         "tally_card_number",
         "warehouse_id",
         "item_number",
@@ -84,11 +85,12 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
     ui: {
       columns: [
         { key: "snapshot_at_pretty", label: "Snapshot", format: "date", width: 200 }, // Full timestamp (date + time)
+        { key: "full_name", label: "Updated By", width: 150 }, // Enriched server-side from updated_by_user_id
         { key: "tally_card_number", label: "Tally Card Number", width: 180 },
-        { key: "warehouse_id", label: "Warehouse ID", width: 180 },
-        { key: "item_number", label: "Item Number", format: "number", width: 140 },
+        { key: "warehouse", label: "Warehouse", width: 200 },
+        { key: "item_number", label: "Item Number", format: "number", width: 180 },
         { key: "note", label: "Note", width: 280 },
-        { key: "is_active", label: "Active", width: 100 },
+        { key: "is_active", label: "Active", format: "text", width: 100 },
       ],
       tabBadgeCount: true,
     },

@@ -3,7 +3,6 @@
 
 import { useState, useTransition } from "react";
 import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SwitchUserDialog } from "./switch-user-dialog";
 
@@ -34,12 +33,27 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [pending, start] = useTransition();
-  const router = useRouter();
 
   const handleLogout = () => {
     start(async () => {
       try {
         const supabase = supabaseBrowser();
+        
+        // Clear impersonation cookie if present
+        try {
+          await fetch("/api/impersonate", { method: "DELETE" });
+        } catch {
+          // Ignore errors - cookie may not exist
+        }
+        
+        // Clear localStorage auth-related data
+        try {
+          localStorage.removeItem("remember_login");
+        } catch {
+          // Ignore localStorage errors (e.g., private mode)
+        }
+        
+        // Sign out from Supabase (clears session cookies)
         const { error } = await supabase.auth.signOut();
         
         if (error) {
@@ -53,9 +67,9 @@ export function NavUser({
           description: "You have been successfully logged out.",
         });
 
-        // Redirect to login page
-        router.push("/auth/login");
-        router.refresh(); // Force a refresh to clear any cached data
+        // Use window.location.href for hard redirect to ensure all state is cleared
+        // This ensures cookies, cache, and React state are fully reset
+        window.location.href = "/auth/login";
       } catch (err) {
         toast.error("Logout failed", {
           description: "An unexpected error occurred. Please try again.",

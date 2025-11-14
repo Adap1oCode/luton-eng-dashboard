@@ -87,7 +87,13 @@ function createLokiTransport(): Writable | null {
 
   try {
     const u = new URL(urlStr);
+    
+    // Grafana Cloud Loki push API requires Basic auth with:
+    // - Username: Your Grafana instance ID (number, not username)
+    // - Password: A regular API key (not service account token)
+    // Service account tokens (glsa_...) don't work for Loki push API
     const auth = Buffer.from(`${user}:${pass}`).toString("base64");
+    
     const optionsBase: RequestOptions = {
       method: "POST",
       hostname: u.hostname,
@@ -124,14 +130,26 @@ function createLokiTransport(): Writable | null {
       const req = https.request(optionsBase, (res) => {
         // Log response status for debugging (only in dev)
         if (process.env.NODE_ENV !== 'production') {
-          if (res.statusCode !== 204 && res.statusCode !== 200) {
-            console.warn(`[LOKI] Unexpected status code: ${res.statusCode}`);
-          } else {
-            console.log(`[LOKI] ✅ Logs sent successfully (${lines.length} lines)`);
-          }
+          let responseBody = '';
+          res.on("data", (chunk) => {
+            responseBody += chunk.toString();
+          });
+          res.on("end", () => {
+            if (res.statusCode !== 204 && res.statusCode !== 200) {
+              console.warn(`[LOKI] ❌ Status ${res.statusCode}: ${responseBody || res.statusMessage}`);
+              if (res.statusCode === 401) {
+                console.warn('[LOKI] Authentication failed. Check LOKI_USER and LOKI_PASS in .env.local');
+                console.warn('[LOKI] For Grafana Cloud, you may need a regular API key (not service account token)');
+              }
+            } else {
+              console.log(`[LOKI] ✅ Logs sent successfully (${lines.length} lines)`);
+            }
+            cb?.();
+          });
+        } else {
+          res.on("data", () => {});
+          res.on("end", () => cb?.());
         }
-        res.on("data", () => {});
-        res.on("end", () => cb?.());
       });
       req.on("error", (err) => {
         if (process.env.NODE_ENV !== 'production') {

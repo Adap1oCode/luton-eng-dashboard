@@ -67,22 +67,9 @@ export const formSchema = z
       path: ["locations"],
     }
   )
-  .refine(
-    (data) => {
-      // If multi_location is true, total qty can be 0 only if reason_code is COUNT_CORRECTION
-      if (data.multi_location && data.locations) {
-        const totalQty = data.locations.reduce((sum, loc) => sum + (loc.qty || 0), 0);
-        if (totalQty === 0 && data.reason_code !== "COUNT_CORRECTION") {
-          return false;
-        }
-      }
-      return true;
-    },
-    {
-      message: "Total quantity cannot be zero unless reason code is 'Count Correction'",
-      path: ["locations"],
-    }
-  );
+  // Note: Zero quantity validation removed - zero is valid for out-of-stock scenarios
+  // Validation is now handled in the UI component (stock-adjustment-form-with-locations.tsx)
+  // which uses allowsZeroQuantity() function that now returns true for all reason codes
 
 // Default values for the form
 export const defaultValues = {
@@ -261,24 +248,18 @@ export const stockAdjustmentCreateConfig: FormConfig & {
           name: "location",
           label: "Location",
           kind: "select",
-          required: true, // Required (conditional validation handled in schema)
-          placeholder: "Select location...",
+          required: false, // Read-only, calculated from locations table
+          readOnly: true,
+          placeholder: "Calculated from locations...",
           optionsKey: "warehouseLocations",
         },
         {
           name: "qty",
           label: "Quantity",
           kind: "number",
-          required: true, // Required (conditional validation handled in schema)
-          placeholder: "e.g. -4 or 12",
-        },
-        {
-          name: "reason_code",
-          label: "Reason",
-          kind: "select",
-          required: true,
-          placeholder: "Select reason...",
-          optionsKey: "reasonCodes",
+          required: false, // Read-only, calculated from locations table
+          readOnly: true,
+          placeholder: "Calculated from locations...",
         },
         {
           name: "note",

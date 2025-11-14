@@ -79,6 +79,8 @@ export default async function Page(props: { searchParams?: Promise<SPRecord> | S
         initialTotal={total}
         page={page}
         pageSize={pageSize}
+        initialFilters={filters}
+        initialExtraQuery={extraQuery}
       />
     </PageShell>
   );

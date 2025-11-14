@@ -5,7 +5,7 @@ import { useFormContext } from "react-hook-form";
 
 import AddLocationSection from "./add-location-section";
 import LocationsTable, { type LocationRow } from "./locations-table";
-import { allowsZeroQuantity } from "@/lib/config/stock-adjustment-reason-codes";
+import { allowsZeroQuantity, DEFAULT_REASON_CODE } from "@/lib/config/stock-adjustment-reason-codes";
 import type { ResolvedOptions } from "@/lib/forms/types";
 
 type Props = {
@@ -15,16 +15,24 @@ type Props = {
 
 export default function StockAdjustmentFormWithLocations({ entryId, options }: Props) {
   const { watch, setValue, setError, clearErrors } = useFormContext();
-  const multiLocation = watch("multi_location") ?? false;
   const reasonCode = watch("reason_code") ?? "UNSPECIFIED";
   const locations = watch("locations") ?? [];
 
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
 
-  // Load existing locations when editing
-  // Only load if locations are not already set (from server-side defaults)
+  // Auto-detect multi_location based on locations array length
+  const multiLocation = locations.length > 1;
+
+  // Auto-update multi_location flag when locations change
   useEffect(() => {
-    if (entryId && multiLocation) {
+    const newMultiLocation = locations.length > 1;
+    setValue("multi_location", newMultiLocation, { shouldValidate: false, shouldDirty: false });
+  }, [locations.length, setValue]);
+
+  // Load existing locations when editing
+  // Always load locations, even for single-location entries
+  useEffect(() => {
+    if (entryId) {
       const currentLocations = watch("locations");
       // Only fetch if locations are empty or not set
       if (!currentLocations || currentLocations.length === 0) {
@@ -38,6 +46,7 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
                 location: loc.location,
                 qty: loc.qty,
                 pos: loc.pos,
+                reason_code: loc.reason_code || DEFAULT_REASON_CODE,
               }));
               setValue("locations", formatted);
             }
@@ -47,7 +56,7 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
           });
       }
     }
-  }, [entryId, multiLocation, setValue, watch]);
+  }, [entryId, setValue, watch]);
 
   // Convert locations array to LocationRow format
   const locationRows: LocationRow[] = useMemo(() => {
@@ -56,6 +65,7 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
       location: loc.location || "",
       qty: loc.qty || 0,
       pos: loc.pos,
+      reason_code: loc.reason_code || "UNSPECIFIED",
     }));
   }, [locations]);
 
@@ -66,25 +76,25 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
 
   // Compute aggregated location text (comma-separated)
   const aggregatedLocation = useMemo(() => {
-    if (!multiLocation || locationRows.length === 0) return null;
+    if (locationRows.length === 0) return null;
     return locationRows.map((loc) => loc.location).filter(Boolean).join(", ") || null;
-  }, [multiLocation, locationRows]);
+  }, [locationRows]);
 
-  // Update parent qty and location when locations change (for multi-location mode)
+  // Update parent qty and location when locations change
+  // Always update, even for single-location entries (for display consistency)
   useEffect(() => {
-    if (multiLocation) {
-      setValue("qty", totalQty, { shouldValidate: false });
-      // Set location to aggregated value (comma-separated locations) for display
-      setValue("location", aggregatedLocation, { shouldValidate: false });
-    }
-  }, [multiLocation, totalQty, aggregatedLocation, setValue]);
+    setValue("qty", totalQty, { shouldValidate: false });
+    // Set location to aggregated value (comma-separated locations) for display
+    setValue("location", aggregatedLocation, { shouldValidate: false });
+  }, [totalQty, aggregatedLocation, setValue]);
 
-  const handleAddLocation = (location: string, qty: number) => {
+  const handleAddLocation = (location: string, qty: number, reason_code: string) => {
     const newLocation: LocationRow = {
       id: `temp-${Date.now()}-${Math.random()}`,
       location,
       qty,
       pos: locationRows.length + 1,
+      reason_code: reason_code || "UNSPECIFIED",
     };
     const updated = [...locationRows, newLocation];
     setValue("locations", updated, { shouldValidate: true, shouldDirty: true });
@@ -104,6 +114,37 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
       next.delete(id);
       return next;
     });
+  };
+
+  const handleUpdateLocationQuantity = (locationId: string, newQty: number) => {
+    // Ensure newQty is a proper number (not string)
+    const qtyNumber = typeof newQty === "number" ? newQty : Number(newQty) || 0;
+    
+    const updated = locationRows.map((loc) => {
+      if (loc.id === locationId) {
+        return {
+          ...loc,
+          qty: qtyNumber,
+        };
+      }
+      return loc;
+    });
+    setValue("locations", updated, { shouldValidate: true, shouldDirty: true });
+    console.log("[StockAdjustmentFormWithLocations] Updated location quantity:", locationId, "to", qtyNumber);
+  };
+
+  const handleUpdateReasonCode = (locationId: string, newReasonCode: string) => {
+    const updated = locationRows.map((loc) => {
+      if (loc.id === locationId) {
+        return {
+          ...loc,
+          reason_code: newReasonCode || DEFAULT_REASON_CODE,
+        };
+      }
+      return loc;
+    });
+    setValue("locations", updated, { shouldValidate: true, shouldDirty: true });
+    console.log("[StockAdjustmentFormWithLocations] Updated location reason_code:", locationId, "to", newReasonCode);
   };
 
   const handleToggleSelect = (id: string) => {
@@ -126,34 +167,29 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
     }
   };
 
-  // Validation: if multi_location is true, require at least one location
-  const hasLocationError = multiLocation && locationRows.length === 0;
-  const hasZeroQtyError =
-    multiLocation &&
-    totalQty === 0 &&
-    !allowsZeroQuantity(reasonCode);
+  // Validation: always require at least one location
+  const hasLocationError = locationRows.length === 0;
+  // Zero quantity is now allowed for all reason codes (out of stock scenarios)
+  const hasZeroQtyError = false; // Always false since allowsZeroQuantity() returns true
 
   // Set form errors for validation
   useEffect(() => {
     if (hasLocationError) {
       setError("locations", {
         type: "manual",
-        message: "At least one location is required when multi-location mode is enabled.",
+        message: "At least one location is required.",
       });
     } else if (hasZeroQtyError) {
+      // Note: This error should never show now since allowsZeroQuantity() returns true for all reason codes
+      // But keeping the check for safety in case the function changes in the future
       setError("locations", {
         type: "manual",
-        message: "Total quantity cannot be zero unless reason code is 'Count Correction'.",
+        message: "Total quantity cannot be zero.",
       });
     } else {
       clearErrors("locations");
     }
   }, [hasLocationError, hasZeroQtyError, setError, clearErrors]);
-
-  // Don't render if multi_location is false
-  if (!multiLocation) {
-    return null;
-  }
 
   return (
     <div className="space-y-6">
@@ -168,13 +204,15 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
         selectedLocations={selectedLocations}
         onToggleAll={handleToggleAll}
         totalQty={totalQty}
+        onUpdateQuantity={handleUpdateLocationQuantity}
+        onUpdateReasonCode={handleUpdateReasonCode}
       />
 
       {/* Validation Messages */}
       {hasLocationError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-700 dark:bg-red-900/30">
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
-            At least one location is required when multi-location mode is enabled.
+            At least one location is required.
           </p>
         </div>
       )}
@@ -182,7 +220,7 @@ export default function StockAdjustmentFormWithLocations({ entryId, options }: P
       {hasZeroQtyError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-700 dark:bg-red-900/30">
           <p className="text-sm font-medium text-red-800 dark:text-red-200">
-            Total quantity cannot be zero unless reason code is "Count Correction".
+            Total quantity cannot be zero.
           </p>
         </div>
       )}

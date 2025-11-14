@@ -59,21 +59,21 @@ async function enrichHistoryRows(
     if (row.card_uid) cardUids.add(row.card_uid);
   }
 
-  // Fetch users (for full_name)
+  // Fetch users (for full_name) from mv_effective_permissions view for consistency
   const usersMap = new Map<string, { full_name: string }>();
   if (userIds.size > 0) {
     const userIdsArray = Array.from(userIds);
     
     const { data: users, error: usersError } = await sb
-      .from("users")
-      .select("id, full_name")
-      .in("id", userIdsArray);
+      .from("mv_effective_permissions")
+      .select("user_id, full_name")
+      .in("user_id", userIdsArray);
     
     if (usersError) {
       console.error("Failed to fetch users for enrichment:", usersError);
     } else if (users) {
       for (const user of users) {
-        usersMap.set(user.id, { full_name: user.full_name });
+        usersMap.set(user.user_id, { full_name: user.full_name });
       }
     }
   }
@@ -97,6 +97,28 @@ async function enrichHistoryRows(
     }
   }
 
+  // Helper to format timestamp with date + 24h time
+  const formatTimestamp = (value: unknown) => {
+    if (!value) return null;
+    try {
+      const date = new Date(value as string);
+      if (isNaN(date.getTime())) return null;
+      const datePart = date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const timePart = date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      return `${datePart} ${timePart}`;
+    } catch {
+      return null;
+    }
+  };
+
   // Enrich rows with user names, warehouse names, and formatted dates with timestamps
   return rows.map((row) => {
     const enriched: any = { ...row };
@@ -119,26 +141,8 @@ async function enrichHistoryRows(
     }
 
     // Format updated_at_pretty with date + timestamp (ensuring full timestamp is shown)
-    if (row.updated_at) {
-      try {
-        const date = new Date(row.updated_at);
-        // Date part: "Mon DD, YYYY"
-        const datePart = date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-        // Time part: "HH:MM" (24-hour format, hours and minutes only)
-        const timePart = date.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        });
-        enriched.updated_at_pretty = `${datePart} ${timePart}`;
-      } catch {
-        enriched.updated_at_pretty = null;
-      }
-    }
+    enriched.updated_at_pretty = formatTimestamp(row.updated_at);
+    enriched.snapshot_at_pretty = formatTimestamp(row.snapshot_at);
 
     return enriched;
   });
@@ -249,7 +253,7 @@ export const GET = withLogging(
       // Enrichment (user.full_name, warehouse) happens server-side after query
       const projectionColumns = historyCfg.projection?.columns ?? [];
       // Enriched columns that are added server-side (not in base table)
-      const enrichedColumns = new Set(["full_name", "warehouse", "updated_at_pretty"]);
+      const enrichedColumns = new Set(["full_name", "warehouse", "updated_at_pretty", "snapshot_at_pretty"]);
       // Base columns that exist in the table (filter out enriched columns)
       const baseColumns = projectionColumns
         .filter((col: string) => !enrichedColumns.has(col))

@@ -122,7 +122,8 @@ if (!user && !isPublicExact) {
   }
 
   // 2) Authenticated → keep them out of "/" and auth pages; honor safe `next`
-  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/auth/forgot-password" || pathname === "/auth/reset-password";
+  // Note: /auth/reset-password is excluded - component handles recovery token logic
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/auth/forgot-password";
   if (user && (pathname === "/" || isAuthPage)) {
     const requestedNext = safeNext(searchParams.get("next"));
     

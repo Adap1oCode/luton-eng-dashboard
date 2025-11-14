@@ -73,7 +73,7 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
       cancelHref={`/forms/${resourceKey}`}
       primaryLabel="Update"
       primaryButtonPermissions={{
-        any: ["resource:tcm_tally_cards:update"]
+        any: ["screen:tally-cards:update"]
       }}
     >
       <EditWithTabs
