@@ -310,6 +310,8 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   
   // Ref to track if we're updating filters from URL (to prevent feedback loops)
   const isUpdatingFromUrlRef = React.useRef(false);
+  // Track last time user updated filters to prevent "FROM URL" effect from overwriting recent user input
+  const lastUserFilterUpdateRef = React.useRef<number>(0);
   const columnFilters = React.useMemo(() => {
     return Object.entries(filters).map(([id, v]) => ({ id, value: v }));
   }, [filters]);
@@ -1196,6 +1198,13 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       return;
     }
 
+    // Skip if user just updated filters (within last 500ms) to prevent overwriting user input
+    // This prevents the effect from running immediately after user types, which could clear the input
+    const timeSinceLastUserUpdate = Date.now() - lastUserFilterUpdateRef.current;
+    if (timeSinceLastUserUpdate < 500) {
+      return;
+    }
+
     const urlFilters: Record<string, ColumnFilterState> = {};
     search.forEach((value, key) => {
       const match = key.match(/^filters\[(.+?)\]\[(value|mode)\]$/);
@@ -1322,17 +1331,22 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
       const newUrl = `${pathname}?${sp.toString()}`;
       const currentUrl = `${pathname}?${search.toString()}`;
       if (newUrl !== currentUrl) {
-        // Set flag before router.replace to prevent "FROM URL" effect from running
+        // Set flag BEFORE router.replace to prevent "FROM URL" effect from running
+        // This is critical - the flag must be set before the URL changes
         isUpdatingFromUrlRef.current = true;
         router.replace(newUrl, { scroll: false });
-        // Reset flag after a brief delay to allow URL to update
+        // Reset flag after URL update completes (longer delay to ensure router processes it)
+        // This prevents the "FROM URL" effect from running and potentially resetting filters
         setTimeout(() => {
           isUpdatingFromUrlRef.current = false;
-        }, 100);
+        }, 200);
         // Note: React Query will auto-refetch because queryKey includes filters via buildQueryKey
         // No need to explicitly invalidate - the queryKey change triggers refetch automatically
+      } else {
+        // No URL change needed, but ensure flag is clear
+        isUpdatingFromUrlRef.current = false;
       }
-    }, 300); // 300ms debounce - enough to allow typing without being too slow
+    }, 300); // 300ms debounce - balance between responsiveness and avoiding excessive updates
 
     return () => clearTimeout(timeoutId);
   }, [filters, pathname, router, search]);
@@ -2042,6 +2056,9 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
             show: showMoreFilters,
             filters,
             onChange: (id, next) => {
+              // Track that user is updating filters (prevents "FROM URL" effect from interfering)
+              lastUserFilterUpdateRef.current = Date.now();
+              
               setFilters((prev) => {
                 // Ensure default mode is "contains" if not specified
                 const filterState: ColumnFilterState = {
