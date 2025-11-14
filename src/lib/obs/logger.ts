@@ -107,7 +107,9 @@ function createLokiTransport(): Writable | null {
 
       const lines = buf.splice(0, buf.length);
       // Loki needs [[timestampNs, line], ...]
-      const nowNs = BigInt(Date.now()) * 1_000_000n;
+      // Use string concatenation instead of BigInt to avoid potential issues
+      const nowMs = Date.now();
+      const nowNs = String(nowMs * 1_000_000);
 
       const payload = JSON.stringify({
         streams: [
@@ -116,7 +118,7 @@ function createLokiTransport(): Writable | null {
               service: "luton-eng-dashboard",
               env: process.env.NODE_ENV ?? "dev",
             },
-            values: lines.map((line) => [nowNs.toString(), line]),
+            values: lines.map((line) => [nowNs, line]),
           },
         ],
       });
@@ -172,18 +174,30 @@ function createLokiTransport(): Writable | null {
 
 // ---------------- Fan-out logger (write to both if enabled) ----------------
 
-const base = createBaseLogger();
+// Wrap logger initialization in try-catch to prevent module load failures
+let base: Logger;
+let logtail: Writable | null = null;
+let loki: Writable | null = null;
 
-const logtail = createLogtailTransport();
-const loki = createLokiTransport();
+try {
+  base = createBaseLogger();
+  logtail = createLogtailTransport();
+  loki = createLokiTransport();
 
-// Debug: Log if Loki is enabled (only in development)
-if (process.env.NODE_ENV !== 'production' && process.env.LOG_ENABLE_LOKI === 'true') {
-  if (loki) {
-    console.log('[LOGGER] ✅ Loki transport enabled and ready');
-  } else {
-    console.warn('[LOGGER] ⚠️ Loki transport disabled - check LOKI_URL, LOKI_USER, LOKI_PASS in .env.local');
+  // Debug: Log if Loki is enabled (only in development)
+  if (process.env.NODE_ENV !== 'production' && process.env.LOG_ENABLE_LOKI === 'true') {
+    if (loki) {
+      console.log('[LOGGER] ✅ Loki transport enabled and ready');
+    } else {
+      console.warn('[LOGGER] ⚠️ Loki transport disabled - check LOKI_URL, LOKI_USER, LOKI_PASS in .env.local');
+    }
   }
+} catch (err) {
+  // If logger initialization fails, create a minimal fallback logger
+  console.error('[LOGGER] Failed to initialize logger, using fallback:', err);
+  base = pino({ level: 'info' });
+  logtail = null;
+  loki = null;
 }
 
 // We emit once, and, if transports exist, also forward the raw JSON line to them.
