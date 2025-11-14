@@ -35,3 +35,4 @@ const permissions: ResourceConfig<Permission, PermissionInput> = {
 
 export default permissions;
 
+

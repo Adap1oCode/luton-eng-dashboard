@@ -601,6 +601,7 @@ BEGIN
       RETURNING id INTO v_new_id;
       
     ELSIF v_table_text = 'public.tcm_tally_cards' OR v_table_name_only = 'tcm_tally_cards' THEN
+      -- FIXED: Removed warehouse column - only use warehouse_id (matches stock-adjustments pattern)
       INSERT INTO public.tcm_tally_cards (
         card_uid,
         warehouse_id,

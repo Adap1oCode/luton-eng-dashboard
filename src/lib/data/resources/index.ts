@@ -28,7 +28,6 @@ const resources = {
   warehouse_locations,
   roles,
   role_warehouse_rules,
-  permissions,
   tcm_tally_cards,
   tcm_user_tally_card_entries,
   tcm_user_tally_card_entry_locations,

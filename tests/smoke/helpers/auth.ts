@@ -34,3 +34,4 @@ export async function login(
   await page.waitForURL(/\/forms\/tally-cards/, { timeout: 10000 });
 }
 
+

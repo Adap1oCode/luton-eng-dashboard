@@ -3,6 +3,7 @@ import type { ResourceConfig, TcmTallyCard, UUID } from "../types";
 export type TallyCardInput = {
   card_uid?: UUID | null;
   warehouse_id?: UUID | null;
+  // warehouse field removed - only use warehouse_id (matches stock-adjustments pattern)
   tally_card_number: string;
   item_number: number | string;
   note?: string | null;
@@ -25,6 +26,7 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
     if (input.card_uid !== undefined) base.card_uid = input.card_uid ?? null;
     if (input.tally_card_number !== undefined) base.tally_card_number = String(input.tally_card_number).trim();
     if (input.warehouse_id !== undefined) base.warehouse_id = input.warehouse_id;
+    // Only use warehouse_id - warehouse name/code should not be passed
 
     if (input.item_number !== undefined) {
       base.item_number = typeof input.item_number === "string" ? Number(input.item_number) : input.item_number;

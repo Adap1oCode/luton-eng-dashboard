@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -16,7 +20,10 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [
+    ['list'], // Real-time progress in console
+    ['html'], // HTML report for detailed results
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -24,7 +31,19 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    
+    /* Timeout for each action (click, fill, etc.) */
+    actionTimeout: 10000,
+    
+    /* Timeout for navigation */
+    navigationTimeout: 30000,
   },
+  
+  /* Global timeout for each test */
+  timeout: 30000, // 30 seconds per test
+  
+  /* Global timeout for the whole test run */
+  globalTimeout: 300000, // 5 minutes total (19 tests × ~15s each = ~5min)
 
   /* Configure projects for major browsers */
   projects: [
