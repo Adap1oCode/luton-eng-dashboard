@@ -409,20 +409,33 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   // Use initialTotal during SSR and initial hydration to prevent hydration mismatches
   const currentTotal = React.useMemo(() => {
     // During SSR and initial hydration, always use initialTotal
+    // This ensures server and client render the same value
     if (!isMounted) {
       return initialTotal;
     }
+    
+    // After mount, check if query has actually fetched new data
+    // If queryData matches initialData (same reference or same values), use initialTotal
+    // This prevents hydration mismatches when React Query hasn't actually refetched yet
+    const isInitialData = queryData && 
+      queryData.rows === initialRows && 
+      queryData.total === initialTotal;
+    
+    if (isInitialData) {
+      return initialTotal;
+    }
+    
     // If query failed or returned undefined, use initialTotal (SSR data)
     if (queryError || !queryData) {
       return initialTotal;
     }
-    // If queryData exists and has total, use it (only after mount)
+    // If queryData exists and has total, use it (only after mount and if it's new data)
     if (typeof queryData.total === 'number') {
       return queryData.total;
     }
     // Fallback to initialTotal if queryData structure is unexpected
     return initialTotal;
-  }, [queryData?.total, queryData, queryError, initialTotal, isMounted]);
+  }, [queryData?.total, queryData, queryError, initialTotal, isMounted, initialRows]);
 
   // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
