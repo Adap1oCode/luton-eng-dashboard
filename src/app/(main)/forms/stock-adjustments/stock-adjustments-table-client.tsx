@@ -79,8 +79,6 @@ export function StockAdjustmentsTableClient({
         page={page}
         pageSize={pageSize}
         initialColumnVisibility={initialColumnVisibility}
-        initialFilters={initialFilters}
-        initialExtraQuery={initialExtraQuery}
       />
       <InventoryInfoDialog
         open={showInventoryDialog}
