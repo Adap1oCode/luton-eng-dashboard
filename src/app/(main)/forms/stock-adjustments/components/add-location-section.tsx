@@ -10,9 +10,10 @@ import { SearchableSelect, type SearchableSelectOption } from "@/components/form
 import type { LocationRow } from "./locations-table";
 import type { Option } from "@/lib/forms/types";
 import { isValidLocationEntry } from "../lib/validate-location-entry";
+import { STOCK_ADJUSTMENT_REASON_CODES, DEFAULT_REASON_CODE } from "@/lib/config/stock-adjustment-reason-codes";
 
 type Props = {
-  onAdd: (location: string, qty: number) => void;
+  onAdd: (location: string, qty: number, reason_code: string) => void;
   expanded?: boolean;
   locationOptions?: Option[]; // Warehouse locations for dropdown
 };
@@ -21,6 +22,7 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
   const [expanded, setExpanded] = useState(initialExpanded);
   const [location, setLocation] = useState("");
   const [qty, setQty] = useState<number | "">("");
+  const [reasonCode, setReasonCode] = useState<string>(DEFAULT_REASON_CODE);
 
   // Compute if the Add button should be disabled
   const isAddDisabled = useMemo(() => {
@@ -32,9 +34,10 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
     if (!isValidLocationEntry(location, qty)) {
       return;
     }
-    onAdd(location.trim(), Number(qty));
+    onAdd(location.trim(), Number(qty), reasonCode);
     setLocation("");
     setQty("");
+    setReasonCode(DEFAULT_REASON_CODE); // Reset to default
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -97,6 +100,25 @@ export default function AddLocationSection({ onAdd, expanded: initialExpanded = 
                   onKeyPress={handleKeyPress}
                   placeholder="e.g. -4 or 12"
                   className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Reason
+                </label>
+                <SearchableSelect
+                  options={STOCK_ADJUSTMENT_REASON_CODES.map((code) => ({
+                    id: code.value,
+                    label: code.label,
+                    value: code.value,
+                  })) as SearchableSelectOption[]}
+                  value={reasonCode || DEFAULT_REASON_CODE}
+                  onChange={(selectedId) => {
+                    setReasonCode(selectedId || DEFAULT_REASON_CODE);
+                  }}
+                  placeholder="Unspecified (default)"
+                  searchPlaceholder="Search reason..."
                 />
               </div>
 

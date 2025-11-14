@@ -26,6 +26,7 @@ import {
   Grid2x2,
   MapPin,
   Package,
+  Key,
   type LucideIcon,
 } from "lucide-react";
 
@@ -133,7 +134,7 @@ export const sidebarItems: NavGroup[] = [
             title: "Compare Stock",
             url: "/forms/compare-stock",
             icon: GitCompare,
-            requiredAny: ["screen:stock-compare:view"],
+            requiredAny: ["screen:compare-stock:view"],
           },
         ],
       },
@@ -161,7 +162,7 @@ export const sidebarItems: NavGroup[] = [
       title: "Compare Stock",
       url: "/forms/compare-stock",
       icon: GitCompare,
-      requiredAny: ["screen:stock-compare:view"],
+      requiredAny: ["screen:compare-stock:view"],
     },
   ],
   },
@@ -169,32 +170,31 @@ export const sidebarItems: NavGroup[] = [
   // Administration
   {
     id: 5,
+    label: "Administration",
     items: [
       {
-        title: "Administration",
+        title: "Users",
         url: "/forms/users",
         icon: Users,
-        requiredAny: ["menu:forms:users", "menu:forms:roles", "menu:forms:role_warehouse_rules"],
-        subItems: [
-          {
-            title: "Users",
-            url: "/forms/users",
-            icon: Users,
-            requiredAny: ["menu:forms:users"],
-          },
-          {
-            title: "Roles",
-            url: "/forms/roles",
-            icon: Lock,
-            requiredAny: ["menu:forms:roles"],
-          },
-          {
-            title: "Role-Warehouse Rules",
-            url: "/forms/role-warehouse-rules",
-            icon: Lock,
-            requiredAny: ["menu:forms:role_warehouse_rules"],
-          },
-        ],
+        requiredAny: ["screen:users:view"],
+      },
+      {
+        title: "Roles",
+        url: "/forms/roles",
+        icon: Lock,
+        requiredAny: ["screen:roles:view"],
+      },
+      {
+        title: "Permissions",
+        url: "/forms/permissions",
+        icon: Key,
+        requiredAny: ["screen:permissions:view"],
+      },
+      {
+        title: "Role-Warehouse Rules",
+        url: "/forms/role-warehouse-rules",
+        icon: Lock,
+        requiredAny: ["menu:forms:role_warehouse_rules"],
       },
     ],
   },

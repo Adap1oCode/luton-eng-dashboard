@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { EllipsisVertical, CircleUser, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { SwitchUserDialog } from "./switch-user-dialog";
 
@@ -20,6 +19,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { supabaseBrowser } from "@/lib/supabase";
 import { getInitials } from "@/lib/utils";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 
 export function NavUser({
   user,
@@ -34,12 +34,27 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [pending, start] = useTransition();
-  const router = useRouter();
 
   const handleLogout = () => {
     start(async () => {
       try {
         const supabase = supabaseBrowser();
+        
+        // Clear impersonation cookie if present
+        try {
+          await fetch("/api/impersonate", { method: "DELETE" });
+        } catch {
+          // Ignore errors - cookie may not exist
+        }
+        
+        // Clear localStorage auth-related data
+        try {
+          localStorage.removeItem("remember_login");
+        } catch {
+          // Ignore localStorage errors (e.g., private mode)
+        }
+        
+        // Sign out from Supabase (clears session cookies)
         const { error } = await supabase.auth.signOut();
         
         if (error) {
@@ -53,9 +68,9 @@ export function NavUser({
           description: "You have been successfully logged out.",
         });
 
-        // Redirect to login page
-        router.push("/auth/login");
-        router.refresh(); // Force a refresh to clear any cached data
+        // Use window.location.href for hard redirect to ensure all state is cleared
+        // This ensures cookies, cache, and React state are fully reset
+        window.location.href = "/auth/login";
       } catch (err) {
         toast.error("Logout failed", {
           description: "An unexpected error occurred. Please try again.",
@@ -111,24 +126,24 @@ export function NavUser({
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <CircleUser />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <MessageSquareDot />
-                Notifications
-              </DropdownMenuItem>
-
-              {/* Impersonation dialog */}
-              <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
-              <ArrowLeftRight />  
-                Switch User
-              </DropdownMenuItem>
+              <PermissionGate any={["screen:account:view"]}>
+                <DropdownMenuItem>
+                  <CircleUser />
+                  Account
+                </DropdownMenuItem>
+              </PermissionGate>
+              <PermissionGate any={["screen:notifications:view"]}>
+                <DropdownMenuItem>
+                  <MessageSquareDot />
+                  Notifications
+                </DropdownMenuItem>
+              </PermissionGate>
+              <PermissionGate any={["screen:switch-user:view"]}>
+                <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
+                  <ArrowLeftRight />  
+                  Switch User
+                </DropdownMenuItem>
+              </PermissionGate>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
@@ -140,7 +155,6 @@ export function NavUser({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Impersonation dialog (admin-gated by API) */}
         <SwitchUserDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
       </SidebarMenuItem>
     </SidebarMenu>

@@ -40,6 +40,17 @@ export const OPTIONS_PROVIDERS: Record<string, OptionProviderConfig> = {
     sort: { column: "code", desc: false }, // Sort by code
     // Future: Could combine code + name like: labelField: (w) => `${w.code} - ${w.name}`
   },
+  roles: {
+    resourceKey: "roles",
+    idField: "id", // UUID - saved to role_id field
+    labelField: (row: any) => {
+      const code = row.role_code ? `${row.role_code}` : "";
+      const name = row.role_name ? ` - ${row.role_name}` : "";
+      return `${code}${name}` || "Unknown Role";
+    },
+    filter: { is_active: true }, // Only show active roles
+    sort: { column: "role_code", desc: false }, // Sort by role_code
+  },
   items: {
     resourceKey: "inventory-unique", // Uses friendly alias
     idField: "item_number", // bigint - saved to item_number field

@@ -1,11 +1,114 @@
-// Auto-generated configuration for User Management
-import { BaseViewConfig } from "@/components/data-table/view-defaults";
-import { ToolbarConfig, ActionConfig } from "@/components/forms/shell/toolbar/types";
+// -----------------------------------------------------------------------------
+// FILE: src/app/(main)/forms/users/users.config.tsx
+// TYPE: Unified config for Users screen
+// PURPOSE: Single config file (aligned with stock-adjustments pattern)
+// -----------------------------------------------------------------------------
+import Link from "next/link";
+import { Plus, Trash2, Download } from "lucide-react";
+import type {
+  ToolbarConfig,
+  ActionConfig,
+} from "@/components/forms/shell/toolbar/types";
+import {
+  makeActionsColumn,
+  type BaseViewConfig,
+  type TColumnDef,
+} from "@/components/data-table/view-defaults";
 
-export const usersViewConfig: BaseViewConfig<any> = {
-  resourceKeyForDelete: "users",
-  formsRouteSegment: "users",
+// -----------------------------------------------------------------------------
+// Constants
+// -----------------------------------------------------------------------------
+const ROUTE_SEGMENT = "users" as const;
+const API_ENDPOINT = "/api/users" as const;
+export const RESOURCE_KEY = "users" as const;
+const PERMISSION_PREFIX = `screen:${RESOURCE_KEY}` as const;
+export const RESOURCE_TITLE = "User Management" as const;
+
+export type UserRow = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+  created_at: string | null;
+  active: boolean | null;
+};
+
+// -----------------------------------------------------------------------------
+// Columns Definition
+// -----------------------------------------------------------------------------
+function buildColumns(): TColumnDef<UserRow>[] {
+  return [
+    {
+      id: "id",
+      accessorKey: "id",
+      header: () => null,
+      cell: () => null,
+      enableHiding: true,
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 0,
+      meta: { routingOnly: true },
+    },
+    {
+      id: "name",
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => {
+        const id = row.original.id;
+        const name = row.getValue<string | null>("name");
+        
+        return (
+          <Link
+            href={`/forms/users/${id}/edit`}
+            className="font-medium text-blue-600 transition-colors duration-150 hover:text-blue-800 hover:underline"
+          >
+            {name ?? "—"}
+          </Link>
+        );
+      },
+      enableSorting: true,
+      size: 200,
+    },
+    {
+      id: "email",
+      accessorKey: "email",
+      header: "Email",
+      enableSorting: true,
+      size: 250,
+    },
+    {
+      id: "role",
+      accessorKey: "role",
+      header: "Role",
+      enableSorting: true,
+      size: 200,
+    },
+    {
+      id: "created_at",
+      accessorKey: "created_at",
+      header: "Created",
+      enableSorting: true,
+      size: 180,
+    },
+    {
+      id: "active",
+      accessorKey: "active",
+      header: "Active",
+      enableSorting: true,
+      size: 100,
+    },
+    makeActionsColumn<UserRow>(),
+  ];
+}
+
+// -----------------------------------------------------------------------------
+// View Config
+// -----------------------------------------------------------------------------
+export const usersViewConfig: BaseViewConfig<UserRow> = {
+  resourceKeyForDelete: RESOURCE_KEY,
+  formsRouteSegment: ROUTE_SEGMENT,
   idField: "id",
+  apiEndpoint: API_ENDPOINT,
   toolbar: { left: [], right: [] },
   quickFilters: [],
   features: {
@@ -13,79 +116,21 @@ export const usersViewConfig: BaseViewConfig<any> = {
     pagination: true,
     sortable: true,
   },
-  buildColumns: () => [
-    {
-      id: "id",
-      accessorKey: "id",
-      header: "Id",
-      cell: ({ row }) => row.getValue("id"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    },
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => row.getValue("name"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    },
-    {
-      id: "email",
-      accessorKey: "email",
-      header: "Email",
-      cell: ({ row }) => row.getValue("email"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    },
-    {
-      id: "role",
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => row.getValue("role"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    },
-    {
-      id: "created_at",
-      accessorKey: "created_at",
-      header: "Created At",
-      cell: ({ row }) => row.getValue("created_at"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    },
-    {
-      id: "active",
-      accessorKey: "active",
-      header: "Active",
-      cell: ({ row }) => row.getValue("active"),
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-      size: 150,
-    }
-  ],
+  buildColumns,
 };
 
+// -----------------------------------------------------------------------------
+// Toolbar Config
+// -----------------------------------------------------------------------------
 export const usersToolbar: ToolbarConfig = {
   left: [
     {
       id: "new",
-      label: "New User Management",
+      label: "New User",
       icon: "Plus",
       variant: "default",
-      href: "/forms/users/new",
-      requiredAny: ["resource:users:create"],
+      href: `/forms/${ROUTE_SEGMENT}/new`,
+      requiredAny: [`${PERMISSION_PREFIX}:create`],
     },
     {
       id: "delete",
@@ -94,63 +139,42 @@ export const usersToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
-      requiredAny: ["resource:users:delete"],
+      requiredAny: [`${PERMISSION_PREFIX}:delete`],
+    },
+    {
+      id: "exportCsv",
+      label: "Export CSV",
+      icon: "Download",
+      variant: "outline",
+      onClickId: "exportCsv",
     },
   ],
   right: [],
 };
 
+// -----------------------------------------------------------------------------
+// Actions Config
+// -----------------------------------------------------------------------------
 export const usersActions: ActionConfig = {
   deleteSelected: {
     method: "DELETE",
-    endpoint: "/api/users/bulk-delete",
+    endpoint: `${API_ENDPOINT}/bulk-delete`,
   },
   exportCsv: {
     method: "GET",
-    endpoint: "/api/users/export",
+    endpoint: `${API_ENDPOINT}/export`,
     target: "_blank",
   },
 };
 
-export const usersChips = [
-  {
-    id: "id",
-    label: "Id",
-    type: "text",
-  },
-  {
-    id: "name",
-    label: "Name",
-    type: "text",
-  },
-  {
-    id: "email",
-    label: "Email",
-    type: "text",
-  },
-  {
-    id: "role",
-    label: "Role",
-    type: "text",
-  },
-  {
-    id: "created_at",
-    label: "Created At",
-    type: "date",
-  },
-  {
-    id: "active",
-    label: "Active",
-    type: "boolean",
-  }
-];
-
-export const title = "User Management";
-
+// -----------------------------------------------------------------------------
+// Combined Config
+// -----------------------------------------------------------------------------
 export const config = {
-  title,
+  title: RESOURCE_TITLE,
+  apiEndpoint: API_ENDPOINT,
+  resourceKey: RESOURCE_KEY,
   viewConfig: usersViewConfig,
   toolbar: usersToolbar,
-  chips: usersChips,
   actions: usersActions,
 };

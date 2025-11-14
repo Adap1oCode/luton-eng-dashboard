@@ -8,13 +8,14 @@ export type RoleInput = {
   can_manage_roles?: boolean;
   can_manage_cards?: boolean;
   can_manage_entries?: boolean;
+  role_family?: string | null;
 };
 
 const roles: ResourceConfig<Role, RoleInput> = {
   table: "roles",
   pk: "id",
   select:
-    "id, role_code, role_name, description, is_active, can_manage_roles, can_manage_cards, can_manage_entries, created_at, updated_at",
+    "id, role_code, role_name, description, is_active, can_manage_roles, can_manage_cards, can_manage_entries, role_family, created_at, updated_at",
   search: ["role_code", "role_name"],
   activeFlag: "is_active",
   defaultSort: { column: "role_code" },
@@ -27,6 +28,7 @@ const roles: ResourceConfig<Role, RoleInput> = {
     can_manage_roles: input.can_manage_roles ?? false,
     can_manage_cards: input.can_manage_cards ?? false,
     can_manage_entries: input.can_manage_entries ?? true,
+    role_family: input.role_family ?? null,
   }),
 
   toDomain: (row: unknown) => row as Role,
@@ -41,6 +43,7 @@ const roles: ResourceConfig<Role, RoleInput> = {
       can_manage_roles: { type: "bool", write: true },
       can_manage_cards: { type: "bool", write: true },
       can_manage_entries: { type: "bool", write: true },
+      role_family: { type: "text", nullable: true, write: true },
       created_at: { type: "timestamp", nullable: true, readonly: true },
       updated_at: { type: "timestamp", nullable: true, readonly: true },
     },

@@ -29,9 +29,13 @@ export async function POST(req: Request) {
     .eq("user_id", me.id)
     .maybeSingle<{ permissions: string[] }>();
 
-  const canImpersonate = (viewRow?.permissions ?? []).includes("admin:impersonate");
+  const canImpersonate = (viewRow?.permissions ?? []).includes("screen:switch-user:update");
+  
   if (!canImpersonate) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    return NextResponse.json({ 
+      error: "forbidden",
+      message: "You do not have permission to switch users. screen:switch-user:update permission required."
+    }, { status: 403 });
   }
 
   const res = NextResponse.json({ ok: true });

@@ -59,10 +59,19 @@ export function SwitchUserDialog({ open, onOpenChange }: { open: boolean; onOpen
     (async () => {
       try {
         const res = await fetch("/api/admin/users", { cache: "no-store" });
-        const data = (await res.json()) as UserLite[];
-        if (active) setUsers(data);
+        if (!res.ok) {
+          console.error("Failed to fetch users:", res.status, res.statusText);
+          if (active) setUsers([]);
+          return;
+        }
+        const data = await res.json();
+        // Ensure data is an array (API might return error object)
+        if (active) {
+          setUsers(Array.isArray(data) ? data : []);
+        }
       } catch (error) {
         console.error("Failed to fetch users:", error);
+        if (active) setUsers([]);
       }
     })();
     return () => {
@@ -85,10 +94,23 @@ export function SwitchUserDialog({ open, onOpenChange }: { open: boolean; onOpen
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ userId: selected }),
       });
-      if (res.ok) {
-        onOpenChange(false);
-        router.refresh();
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Failed to switch user:", res.status, errorData);
+        // Show error to user (you might want to use a toast/notification here)
+        const errorMessage = errorData.message || errorData.error || res.statusText || "Unknown error";
+        alert(`Failed to switch user: ${errorMessage}`);
+        return;
       }
+      
+      // Success - close dialog and refresh
+      onOpenChange(false);
+      // Force a full page reload to ensure all context is refreshed
+      window.location.reload();
+    } catch (error) {
+      console.error("Error switching user:", error);
+      alert(`Error switching user: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
     }

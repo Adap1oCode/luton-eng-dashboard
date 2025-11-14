@@ -33,10 +33,13 @@ export function getReasonCodeLabel(value: string | null | undefined): string {
 
 /**
  * Check if a reason code allows zero quantity
+ * Zero quantity is valid for out-of-stock scenarios, so we allow it for all reason codes
  */
 export function allowsZeroQuantity(reasonCode: string | null | undefined): boolean {
-  return reasonCode === "COUNT_CORRECTION";
+  // Zero quantity is valid for all reason codes (e.g., out of stock)
+  return true;
 }
+
 
 
 

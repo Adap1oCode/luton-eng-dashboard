@@ -1,3 +1,4 @@
+import { PermissionGate } from "@/components/auth/permissions-gate";
 import RolesForm from "./roles-form";
 
 export default async function Page({ searchParams }: { searchParams?: { id?: string } }) {
@@ -5,24 +6,26 @@ export default async function Page({ searchParams }: { searchParams?: { id?: str
   const initialRoleId = resolvedSearchParams?.id ?? null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {" "}
-      {/* تحسين الخلفية لتكون تدريجية وجذابة */}
-      <div className="mx-auto max-w-7xl space-y-8 p-6">
+    <PermissionGate any={["screen:roles:create"]}>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         {" "}
-        {/* زيادة المسافات وزيادة العرض للحداثة */}
-        {/* Page Header */}
-        <NewRolePageHeader />
-        {/* Toolbar */}
-        <NewRoleToolbar />
-        {/* Main Form */}
-        <div className="rounded-xl bg-white shadow-md dark:bg-gray-800 dark:shadow-lg">
+        {/* تحسين الخلفية لتكون تدريجية وجذابة */}
+        <div className="mx-auto max-w-7xl space-y-8 p-6">
           {" "}
-          {/* حواف مستديرة أكبر وشادو أقوى */}
-          <RolesForm initialRoleId={initialRoleId} />
+          {/* زيادة المسافات وزيادة العرض للحداثة */}
+          {/* Page Header */}
+          <NewRolePageHeader />
+          {/* Toolbar */}
+          <NewRoleToolbar />
+          {/* Main Form */}
+          <div className="rounded-xl bg-white shadow-md dark:bg-gray-800 dark:shadow-lg">
+            {" "}
+            {/* حواف مستديرة أكبر وشادو أقوى */}
+            <RolesForm initialRoleId={initialRoleId} />
+          </div>
         </div>
       </div>
-    </div>
+    </PermissionGate>
   );
 }
 

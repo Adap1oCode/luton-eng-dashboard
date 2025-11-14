@@ -3,6 +3,7 @@ import type { ResourceConfig, TcmTallyCard, UUID } from "../types";
 export type TallyCardInput = {
   card_uid?: UUID | null;
   warehouse_id?: UUID | null;
+  // warehouse field removed - only use warehouse_id (matches stock-adjustments pattern)
   tally_card_number: string;
   item_number: number | string;
   note?: string | null;
@@ -25,6 +26,7 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
     if (input.card_uid !== undefined) base.card_uid = input.card_uid ?? null;
     if (input.tally_card_number !== undefined) base.tally_card_number = String(input.tally_card_number).trim();
     if (input.warehouse_id !== undefined) base.warehouse_id = input.warehouse_id;
+    // Only use warehouse_id - warehouse name/code should not be passed
 
     if (input.item_number !== undefined) {
       base.item_number = typeof input.item_number === "string" ? Number(input.item_number) : input.item_number;
@@ -73,6 +75,7 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
       columns: [
         "snapshot_at",
         "snapshot_at_pretty", // formatted server-side if not present
+        "updated_by_user_id", // needed for enrichment to full_name
         "tally_card_number",
         "warehouse_id",
         "item_number",
@@ -84,11 +87,12 @@ const tcm_tally_cards: ResourceConfig<TcmTallyCard, TallyCardInput> = {
     ui: {
       columns: [
         { key: "snapshot_at_pretty", label: "Snapshot", format: "date", width: 200 }, // Full timestamp (date + time)
+        { key: "full_name", label: "Updated By", width: 150 }, // Enriched server-side from updated_by_user_id
         { key: "tally_card_number", label: "Tally Card Number", width: 180 },
-        { key: "warehouse_id", label: "Warehouse ID", width: 180 },
-        { key: "item_number", label: "Item Number", format: "number", width: 140 },
+        { key: "warehouse", label: "Warehouse", width: 200 },
+        { key: "item_number", label: "Item Number", format: "number", width: 180 },
         { key: "note", label: "Note", width: 280 },
-        { key: "is_active", label: "Active", width: 100 },
+        { key: "is_active", label: "Active", format: "text", width: 100 },
       ],
       tabBadgeCount: true,
     },

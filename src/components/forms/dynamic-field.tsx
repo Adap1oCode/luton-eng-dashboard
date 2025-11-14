@@ -69,7 +69,8 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
                 placeholder={field.placeholder}
                 readOnly={field.readOnly || isDisabledByMultiLocation}
                 disabled={isDisabledByMultiLocation}
-                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+                title={field.readOnly || isDisabledByMultiLocation ? "This field is read-only" : undefined}
+                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}
               />
             )}
 
@@ -81,7 +82,8 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
                 placeholder={field.placeholder}
                 readOnly={field.readOnly || isDisabledByMultiLocation}
                 disabled={isDisabledByMultiLocation}
-                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted" : ""}
+                title={field.readOnly || isDisabledByMultiLocation ? "This field is read-only" : undefined}
+                className={field.readOnly || isDisabledByMultiLocation ? "bg-muted text-muted-foreground cursor-not-allowed" : ""}
               />
             )}
 
@@ -123,8 +125,18 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
 
             {(field.kind === "select" || field.kind === "multiselect") && (
               <>
-                {/* Use SearchableSelect for all select fields (except multiselect) */}
-                {field.kind === "select" ? (
+                {/* For location field: always render as read-only text input (like tally_card_number) when readOnly */}
+                {field.kind === "select" && field.name === "location" && (field.readOnly || isDisabledByMultiLocation) ? (
+                  <Input
+                    {...rhf}
+                    value={rhf.value ?? ""}
+                    placeholder={field.placeholder}
+                    readOnly={true}
+                    disabled={true}
+                    title="This field is read-only"
+                    className="bg-muted text-muted-foreground cursor-not-allowed"
+                  />
+                ) : field.kind === "select" ? (
                   <SearchableSelect
                     options={(options ?? []).map((o) => {
                       // For location fields: SearchableSelect uses id for matching, but form stores value (location name)

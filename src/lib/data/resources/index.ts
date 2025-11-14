@@ -19,6 +19,7 @@ import v_table_report_combined from "./dbdocs/v_table_report_combined.config.ts"
 import tcm_user_tally_card_entry_locations from "./tcm_user_tally_card_entry_locations.config.ts";
 import warehouse_locations from "./warehouse_locations.config.ts";
 import v_tcm_compare_stock from "./v_tcm_compare_stock.config.ts";
+import permissions from "./permissions.config.ts";
 
 const resources = {
   // ✅ Database table names (primary keys)
@@ -50,6 +51,8 @@ const resources = {
   "inventory-unique": v_inventory_unique,
   "inventory-current": v_inventory_current,
   "compare-stock": v_tcm_compare_stock,
+  // ✅ Permissions
+  "permissions": permissions,
   // ✅ Dashboard-friendly aliases for inventory resources
   "inventory-summary": inventory_summary,
   "inventory-warehouse": inventoryWarehouse,
@@ -67,6 +70,7 @@ export {
   warehouse_locations,
   roles,
   role_warehouse_rules,
+  permissions,
   tcm_tally_cards,
   tcm_tally_cards_current,
   tcm_user_tally_card_entries,

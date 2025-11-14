@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ import type { ActionConfig } from "./types";
  */
 export function useToolbarActions(actionConfig?: ActionConfig) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const selectedIds = useSelectionStore((s) => s.selectedIds);
   const { confirm, ConfirmComponent } = useConfirmDialog();
   const { markAsDeleted, clearOptimisticState } = useOptimistic();
@@ -63,9 +65,10 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
       const res = await fetch(url, init);
       if (res.ok) {
         toast.success(`Successfully deleted ${ids.length} record(s)`);
-        // Clear optimistic state and refresh
+        // Clear optimistic state and invalidate React Query cache
         clearOptimisticState();
-        router.refresh();
+        // Invalidate all queries - React Query will only refetch observed (mounted) queries
+        queryClient.invalidateQueries();
       } else {
         // Revert optimistic state on error
         clearOptimisticState();
@@ -96,7 +99,8 @@ export function useToolbarActions(actionConfig?: ActionConfig) {
 
     const res = await fetch(url, init);
     if (res.ok) {
-      router.refresh();
+      // Invalidate all queries - React Query will only refetch observed (mounted) queries
+      queryClient.invalidateQueries();
     } else {
       toast.error("Operation failed. Please try again.");
     }

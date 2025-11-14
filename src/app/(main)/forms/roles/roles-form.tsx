@@ -4,9 +4,11 @@ import { Card } from "@/components/ui/card";
 
 import { useRolesForm } from "./hooks/use-roles-form";
 import { AddWarehouseSection } from "./sections/add-warehouse-section";
+import { AddPermissionSection } from "./sections/add-permission-section";
 import FooterActions from "./sections/footer-actions";
 import { RoleDetailsSection } from "./sections/role-details-section";
 import { WarehousesTable } from "./sections/warehouses-table";
+import { PermissionsTable } from "./sections/permissions-table";
 
 export default function RolesForm({ initialRoleId = null }: { initialRoleId?: string | null }) {
   // Centralized form state/logic (create & edit handled inside the hook)
@@ -22,6 +24,12 @@ export default function RolesForm({ initialRoleId = null }: { initialRoleId?: st
 
       {/* Current warehouse assignments for this role */}
       <WarehousesTable form={form} />
+
+      {/* Assign a permission to this role family */}
+      <AddPermissionSection form={form} />
+
+      {/* Current permission assignments for this role family */}
+      <PermissionsTable form={form} />
 
       {/* Footer actions (Cancel / Save) */}
       <Card className="p-4">

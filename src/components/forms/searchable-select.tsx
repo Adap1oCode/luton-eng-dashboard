@@ -115,7 +115,7 @@ export function SearchableSelect({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full rounded-md border border-input bg-background py-2 pr-3 pl-9 text-sm text-foreground focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none dark:bg-input/30"
                 autoFocus
               />
             </div>

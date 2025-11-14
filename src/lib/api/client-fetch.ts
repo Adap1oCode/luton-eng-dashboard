@@ -38,6 +38,7 @@ export async function fetchResourcePageClient<T>({
   }
 
   const payload: any = (await res.json()) ?? {};
+  // Normalize payload: API always returns {rows, total}, but keep fallback for legacy support
   const rows = (payload.rows ?? payload.data ?? []) as T[];
   const totalCandidate = Number(payload.total ?? payload.count);
   const total = Number.isFinite(totalCandidate) ? totalCandidate : rows.length;

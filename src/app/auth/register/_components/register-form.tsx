@@ -2,7 +2,7 @@
 import React, { useState, useTransition } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Github, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -123,8 +123,8 @@ export function RegisterFormV1() {
           <h1 className="mb-3 text-3xl font-bold text-foreground">Create an account</h1>
         </div>
 
-        {/* Social Login Buttons */}
-        <div className="mb-8 grid grid-cols-2 gap-4">
+        {/* Social Login Buttons - Hidden for now */}
+        {/* <div className="mb-8 grid grid-cols-2 gap-4">
           <Button
             variant="outline"
             size="lg"
@@ -162,7 +162,6 @@ export function RegisterFormV1() {
           </Button>
         </div>
 
-        {/* Divider */}
         <div className="relative mb-8">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border"></div>
@@ -170,7 +169,7 @@ export function RegisterFormV1() {
           <div className="relative flex justify-center text-sm uppercase">
             <span className="bg-card px-4 font-medium tracking-wider text-muted-foreground">OR CONTINUE WITH</span>
           </div>
-        </div>
+        </div> */}
 
         {/* Form */}
         <Form {...form}>

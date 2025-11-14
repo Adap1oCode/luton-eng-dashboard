@@ -15,8 +15,9 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       // Don't refetch on reconnect (saves bandwidth)
       refetchOnReconnect: false,
-      // Background refetch when data becomes stale
-      refetchOnMount: true,
+      // Don't refetch on mount by default when initialData is provided (SSR pattern)
+      // Components can override this per-query if needed
+      refetchOnMount: false,
     },
     mutations: {
       // Retry mutations once

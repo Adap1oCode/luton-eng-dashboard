@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
 function safeNext(raw: string | null): string | null {
@@ -45,19 +45,44 @@ export async function GET(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 
-  // Your auth-js version expects the code as an argument
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  // Exchange the code for a session
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    console.error("[auth/v1/callback] exchangeCodeForSession error:", {
+      error: error.message,
+      code: code.substring(0, 20) + "...",
+      url: url.toString(),
+    });
     const fallbackNext = requestedNext || "/dashboard";
     const to = new URL("/login", url.origin);
     to.searchParams.set("next", fallbackNext);
     to.searchParams.set("error", "magic_link_failed");
     return NextResponse.redirect(to);
   }
+
+  console.log("[auth/v1/callback] Successfully exchanged code for session:", {
+    userId: data?.user?.id,
+    email: data?.user?.email,
+  });
 
   // Success — session cookies are set
   // Determine redirect destination: requested next > default homepage > /dashboard
