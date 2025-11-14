@@ -1,7 +1,8 @@
 // src/components/data-table/data-table-filters.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,6 +36,89 @@ type Props = {
   onChange: (columnId: string, next: ColumnFilterState) => void;
 };
 
+// Memoized filter cell component to prevent unnecessary re-renders
+// Only re-renders when its own filter state changes, not when other filters change
+const FilterCell = memo(({ 
+  column, 
+  state, 
+  columnWidthPx, 
+  onChange 
+}: { 
+  column: FilterColumn; 
+  state: ColumnFilterState; 
+  columnWidthPx?: number;
+  onChange: (columnId: string, next: ColumnFilterState) => void;
+}) => {
+  // Use ref to access current state without including it in dependencies
+  // This prevents callback recreation on every state change
+  const stateRef = React.useRef(state);
+  React.useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(column.id, { ...stateRef.current, value: e.target.value });
+  }, [column.id, onChange]);
+
+  const handleModeChange = useCallback((mode: FilterMode) => {
+    onChange(column.id, { ...stateRef.current, mode });
+  }, [column.id, onChange]);
+
+  if (column.disableInput) {
+    return (
+      <th
+        key={column.id}
+        className="bg-muted/50 border border-gray-200 p-3 text-left text-xs dark:border-gray-700"
+        style={columnWidthPx ? { width: `${columnWidthPx}px` } : undefined}
+      >
+        <div />
+      </th>
+    );
+  }
+
+  return (
+    <th
+      key={column.id}
+      className="bg-muted/50 border border-gray-200 p-3 text-left text-xs dark:border-gray-700"
+      style={columnWidthPx ? { width: `${columnWidthPx}px` } : undefined}
+    >
+      <div className="flex items-center justify-end gap-2">
+        <Input
+          placeholder="Filter..."
+          value={state.value}
+          onChange={handleInputChange}
+          className="h-9 placeholder:font-normal"
+          style={{ width: "calc(100% - 2.75rem)" }}
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 px-2 py-1 shrink-0 flex items-center justify-center">
+              <Filter className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-36 p-1">
+            <div className="space-y-1">
+              {(["contains", "startsWith", "endsWith", "equals", "notEquals"] as FilterMode[]).map((m) => (
+                <Button
+                  key={m}
+                  variant={state.mode === m ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 w-full justify-start text-xs"
+                  onClick={() => handleModeChange(m)}
+                >
+                  {modeLabel(m)}
+                </Button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </th>
+  );
+});
+
+FilterCell.displayName = "FilterCell";
+
 export function DataTableFilters({
   columns,
   columnWidthsPx,
@@ -55,51 +139,13 @@ export function DataTableFilters({
       {columns.map((c) => {
         const state = filters[c.id] ?? { value: "", mode: "contains" as FilterMode };
         return (
-          <th
+          <FilterCell
             key={c.id}
-            className="bg-muted/50 border border-gray-200 p-3 text-left text-xs dark:border-gray-700"
-            style={
-              columnWidthsPx?.[c.id]
-                ? { width: `${columnWidthsPx[c.id]}px` }
-                : undefined
-            }
-          >
-            {c.disableInput ? (
-              <div />
-            ) : (
-              <div className="flex items-center justify-end gap-2">
-                <Input
-                  placeholder="Filter..."
-                  value={state.value}
-                  onChange={(e) => onChange(c.id, { ...state, value: e.target.value })}
-                  className="h-9 placeholder:font-normal"
-                  style={{ width: "calc(100% - 2.75rem)" }}
-                />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 px-2 py-1 shrink-0 flex items-center justify-center">
-                      <Filter className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-36 p-1">
-                    <div className="space-y-1">
-                      {(["contains", "startsWith", "endsWith", "equals", "notEquals"] as FilterMode[]).map((m) => (
-                        <Button
-                          key={m}
-                          variant={state.mode === m ? "default" : "ghost"}
-                          size="sm"
-                          className="h-7 w-full justify-start text-xs"
-                          onClick={() => onChange(c.id, { ...state, mode: m })}
-                        >
-                          {modeLabel(m)}
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-          </th>
+            column={c}
+            state={state}
+            columnWidthPx={columnWidthsPx?.[c.id]}
+            onChange={onChange}
+          />
         );
       })}
     </tr>
