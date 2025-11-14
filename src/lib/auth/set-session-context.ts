@@ -111,7 +111,27 @@ export async function setSessionContext(cookiesOrHeaders: HeadersLike): Promise<
       cache: "no-store",
     });
 
-    const body = await res.json();
+    // Check content-type before parsing - if it's HTML, the API route crashed
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("❌ Session context API returned non-JSON response:", {
+        status: res.status,
+        contentType,
+        preview: text.substring(0, 200),
+      });
+      throw new Error(`session_context_api_failed: API route returned ${contentType} instead of JSON (status ${res.status})`);
+    }
+
+    // Parse JSON only if content-type is correct
+    let body: any;
+    try {
+      body = await res.json();
+    } catch (parseErr: any) {
+      // If JSON parsing fails, log the raw response for debugging
+      console.error("❌ Failed to parse session context response as JSON:", parseErr);
+      throw new Error(`session_context_parse_failed: ${parseErr?.message || 'Invalid JSON response'}`);
+    }
 
     if (!res.ok) {
       const msg = (body?.error as string) || `session_context_failed (${res.status})`;

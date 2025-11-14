@@ -10,7 +10,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
 // Fail fast during dev if vars are missing (remember to restart dev server after editing .env.local)
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+// Only throw in browser context - server code should never import this file
+if (typeof window !== "undefined" && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
   throw new Error(
     "[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
       "Ensure they exist in .env.local and restart the dev server."
