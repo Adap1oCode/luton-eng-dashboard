@@ -410,17 +410,8 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
   const currentTotal = React.useMemo(() => {
     // During SSR and initial hydration, always use initialTotal
     // This ensures server and client render the same value
-    if (!isMounted) {
-      return initialTotal;
-    }
-    
-    // After mount, check if query has actually fetched new data
-    // If dataUpdatedAt matches initialDataUpdatedAt (or is very close), it's still initial data
-    // This prevents hydration mismatches when React Query hasn't actually refetched yet
-    const initialDataTime = Date.now() - (5 * 60 * 1000); // Approximate initial data time
-    const isStillInitialData = dataUpdatedAt && dataUpdatedAt <= initialDataTime + 1000; // 1 second tolerance
-    
-    if (isStillInitialData && queryData && queryData.total === initialTotal) {
+    // Also use initialTotal if query is still fetching (to avoid showing stale data during refetch)
+    if (!isMounted || isQueryFetching) {
       return initialTotal;
     }
     
@@ -428,13 +419,13 @@ export default function ResourceTableClient<TRow extends Record<string, any>>({
     if (queryError || !queryData) {
       return initialTotal;
     }
-    // If queryData exists and has total, use it (only after mount and if it's new data)
+    // If queryData exists and has total, use it (only after mount and fetch complete)
     if (typeof queryData.total === 'number') {
       return queryData.total;
     }
     // Fallback to initialTotal if queryData structure is unexpected
     return initialTotal;
-  }, [queryData?.total, queryData, queryError, initialTotal, isMounted, dataUpdatedAt]);
+  }, [queryData?.total, queryData, queryError, initialTotal, isMounted, isQueryFetching]);
 
   // 🎯 Filter out optimistically deleted rows from current data
   const filteredRows = React.useMemo(() => {
