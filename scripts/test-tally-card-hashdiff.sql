@@ -45,3 +45,6 @@ WHERE c.relname = 'tcm_tally_cards'
 
 
 
+
+
+

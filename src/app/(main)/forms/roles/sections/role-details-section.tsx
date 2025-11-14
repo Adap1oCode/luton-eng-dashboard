@@ -17,6 +17,7 @@ type Props = {
     name: string;
     description: string;
     isActive: boolean;
+    roleFamily: string | null;
     createdAt: string | null;
     updatedAt: string | null;
 
@@ -24,6 +25,7 @@ type Props = {
     setName: (v: string) => void;
     setDescription: (v: string) => void;
     setIsActive: (v: boolean) => void;
+    setRoleFamily: (v: string | null) => void;
 
     // computed
     assignedCount: number;
@@ -75,6 +77,18 @@ export function RoleDetailsSection({ form }: Props) {
                 placeholder="Optional description of the role"
                 rows={4}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role Family</label>
+              <Input
+                className="mt-1 rounded-lg border-2 border-gray-300 bg-white focus:border-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                value={form.roleFamily ?? ""}
+                onChange={(e) => form.setRoleFamily(e.target.value || null)}
+                placeholder="e.g. STORE_OFFICERS"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Role family for permission inheritance (e.g. STORE_OFFICERS)
+              </p>
             </div>
             <div className="flex items-center space-x-3 pt-2">
               {" "}

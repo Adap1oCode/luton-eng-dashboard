@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { EllipsisVertical, CircleUser, CreditCard, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
+import { EllipsisVertical, CircleUser, MessageSquareDot, LogOut, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { SwitchUserDialog } from "./switch-user-dialog";
 
@@ -19,6 +19,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { supabaseBrowser } from "@/lib/supabase";
 import { getInitials } from "@/lib/utils";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 
 export function NavUser({
   user,
@@ -125,24 +126,24 @@ export function NavUser({
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <CircleUser />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <MessageSquareDot />
-                Notifications
-              </DropdownMenuItem>
-
-              {/* Impersonation dialog */}
-              <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
-              <ArrowLeftRight />  
-                Switch User
-              </DropdownMenuItem>
+              <PermissionGate any={["screen:account:view"]}>
+                <DropdownMenuItem>
+                  <CircleUser />
+                  Account
+                </DropdownMenuItem>
+              </PermissionGate>
+              <PermissionGate any={["screen:notifications:view"]}>
+                <DropdownMenuItem>
+                  <MessageSquareDot />
+                  Notifications
+                </DropdownMenuItem>
+              </PermissionGate>
+              <PermissionGate any={["screen:switch-user:view"]}>
+                <DropdownMenuItem onClick={() => setSwitcherOpen(true)}>
+                  <ArrowLeftRight />  
+                  Switch User
+                </DropdownMenuItem>
+              </PermissionGate>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
@@ -154,7 +155,6 @@ export function NavUser({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Impersonation dialog (admin-gated by API) */}
         <SwitchUserDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
       </SidebarMenuItem>
     </SidebarMenu>

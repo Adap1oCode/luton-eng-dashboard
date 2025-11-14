@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 
 interface ToolbarProps {
   selectedCount: number;
@@ -34,26 +35,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <div className="space-y-4">
       <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
         <div className="flex flex-wrap items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                New
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={onCreateNew}>Basic Data (Quick Add)</DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/forms/roles/new">Detailed Data</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <PermissionGate any={["screen:roles:create"]}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={onCreateNew}>Basic Data (Quick Add)</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/forms/roles/new">Detailed Data</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </PermissionGate>
 
-          <Button variant="destructive" disabled={selectedCount === 0} onClick={onDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          <PermissionGate any={["screen:roles:delete"]}>
+            <Button variant="destructive" disabled={selectedCount === 0} onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          </PermissionGate>
 
           <Button variant="outline" disabled={selectedCount === 0} onClick={onDuplicate}>
             <Copy className="mr-2 h-4 w-4" />

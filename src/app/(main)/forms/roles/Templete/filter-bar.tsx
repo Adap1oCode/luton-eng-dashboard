@@ -10,6 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { PermissionGate } from "@/components/auth/permissions-gate";
 
 // Define proper types
 type Column = {
@@ -220,14 +221,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExportCSV}
-            className="bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+          <PermissionGate any={["screen:roles:export"]}>
+            <Button
+              variant="outline"
+              onClick={handleExportCSV}
+              className="bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </PermissionGate>
 
           <Button
             variant="outline"

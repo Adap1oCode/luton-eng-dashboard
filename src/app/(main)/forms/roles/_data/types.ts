@@ -13,6 +13,7 @@ export type RoleInput = {
   name: string;
   description?: string | null;
   is_active?: boolean;     // default true
+  role_family?: string | null;
 };
 
 export type ListParams = { page?: number; pageSize?: number; q?: string; activeOnly?: boolean };
