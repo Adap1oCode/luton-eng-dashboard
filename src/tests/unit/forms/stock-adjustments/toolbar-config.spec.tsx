@@ -26,7 +26,7 @@ describe('Stock Adjustments Toolbar Config', () => {
       expect(newButton?.icon).toBe('Plus')
       expect(newButton?.variant).toBe('default')
       expect(newButton?.href).toBe('/forms/stock-adjustments/new')
-      expect(newButton?.requiredAny).toEqual(['resource:tcm_user_tally_card_entries:create'])
+      expect(newButton?.requiredAny).toEqual(['screen:stock-adjustments:create'])
 
       // Delete button
       const deleteButton = leftButtons.find(btn => btn.id === 'delete')
@@ -36,7 +36,7 @@ describe('Stock Adjustments Toolbar Config', () => {
       expect(deleteButton?.variant).toBe('destructive')
       expect(deleteButton?.action).toBe('deleteSelected')
       expect(deleteButton?.enableWhen).toBe('anySelected')
-      expect(deleteButton?.requiredAny).toEqual(['resource:tcm_user_tally_card_entries:delete'])
+      expect(deleteButton?.requiredAny).toEqual(['screen:stock-adjustments:delete'])
 
       // Export CSV button
       const exportButton = leftButtons.find(btn => btn.id === 'exportCsv')
@@ -119,12 +119,12 @@ describe('Stock Adjustments Toolbar Config', () => {
   describe('Permission Requirements', () => {
     it('should have correct permission requirements for new button', () => {
       const newButton = stockAdjustmentsToolbar.left.find(btn => btn.id === 'new')
-      expect(newButton?.requiredAny).toEqual(['resource:tcm_user_tally_card_entries:create'])
+      expect(newButton?.requiredAny).toEqual(['screen:stock-adjustments:create'])
     })
 
     it('should have correct permission requirements for delete button', () => {
       const deleteButton = stockAdjustmentsToolbar.left.find(btn => btn.id === 'delete')
-      expect(deleteButton?.requiredAny).toEqual(['resource:tcm_user_tally_card_entries:delete'])
+      expect(deleteButton?.requiredAny).toEqual(['screen:stock-adjustments:delete'])
     })
   })
 })

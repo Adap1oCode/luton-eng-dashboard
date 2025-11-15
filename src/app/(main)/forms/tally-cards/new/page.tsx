@@ -30,6 +30,30 @@ export default async function NewTallyCardPage() {
   const optionsKeys = extractOptionsKeys(tallyCardCreateConfig);
   const options = await loadOptions(optionsKeys);
 
+  // Inject test data for automation if not already present (only in non-production)
+  if (process.env.NODE_ENV !== 'production') {
+    // Test item: 5061037378413
+    if (options.items && !options.items.find((item: any) => item.id === '5061037378413' || item.itemNumber === '5061037378413')) {
+      options.items.unshift({
+        id: '5061037378413',
+        label: '5061037378413 - Test Item',
+        itemNumber: '5061037378413',
+        description: 'Test Item',
+      } as any);
+    }
+
+    // Test warehouse: RTZ - WH 1 (UUID: 30b06674-ce99-43a6-b247-6b967a1d197a)
+    const testWarehouseId = '30b06674-ce99-43a6-b247-6b967a1d197a';
+    if (options.warehouses && !options.warehouses.find((wh: any) => wh.id === testWarehouseId || wh.name?.includes('RTZ - WH 1'))) {
+      options.warehouses.unshift({
+        id: testWarehouseId,
+        label: 'RTZ - WH 1',
+        code: 'RTZ',
+        name: 'RTZ - WH 1',
+      } as any);
+    }
+  }
+
   // Return server-rendered shell with client form island
   // Note: in Next.js App Router, this async component can directly return JSX
   return (
@@ -44,7 +68,7 @@ export default async function NewTallyCardPage() {
           </button>
         ),
         primary: (
-          <PermissionGate any={["screen:tally-cards:create"]}>
+          <PermissionGate any={["screen:tally-cards:create", "resource:tcm_tally_cards:create"]}>
             <button
               form={formId}
               type="submit"

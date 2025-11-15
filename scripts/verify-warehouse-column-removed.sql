@@ -30,3 +30,6 @@ WHERE table_schema = 'public'
 
 -- Expected result: 1 row with warehouse_id (uuid, nullable or not-null)
 
+
+
+

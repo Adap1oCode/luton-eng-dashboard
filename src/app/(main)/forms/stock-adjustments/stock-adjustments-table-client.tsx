@@ -19,8 +19,6 @@ interface StockAdjustmentsTableClientProps {
   initialTotal: number;
   page: number;
   pageSize: number;
-  initialFilters?: Record<string, string>;
-  initialExtraQuery?: Record<string, any>;
 }
 
 export function StockAdjustmentsTableClient({
@@ -28,8 +26,6 @@ export function StockAdjustmentsTableClient({
   initialTotal,
   page,
   pageSize,
-  initialFilters,
-  initialExtraQuery,
 }: StockAdjustmentsTableClientProps) {
   const [showInventoryDialog, setShowInventoryDialog] = useState(false);
   const [selectedItemNumber, setSelectedItemNumber] = useState<string | number | null>(null);

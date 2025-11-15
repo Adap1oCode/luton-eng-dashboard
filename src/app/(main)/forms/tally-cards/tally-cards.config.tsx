@@ -28,7 +28,9 @@ import { ItemNumberCell } from "@/components/data-table/cells/item-number-cell";
 const ROUTE_SEGMENT = "tally-cards" as const;
 const API_ENDPOINT = "/api/v_tcm_tally_cards_current" as const;
 const RESOURCE_KEY = "tcm_tally_cards" as const;
-const PERMISSION_PREFIX = `resource:${RESOURCE_KEY}` as const;
+const PERMISSION_PREFIX = `screen:${ROUTE_SEGMENT}` as const;
+// Backward compatibility: support both old and new permission names
+const OLD_PERMISSION_PREFIX = `resource:${RESOURCE_KEY}` as const;
 export const RESOURCE_TITLE = "Tally Cards" as const;
 
 // -----------------------------------------------------------------------------
@@ -267,7 +269,7 @@ export const tallyCardsToolbar: ToolbarConfig = {
       icon: "Plus",
       variant: "default",
       href: `/forms/${ROUTE_SEGMENT}/new`,
-      requiredAny: [`${PERMISSION_PREFIX}:create`],
+      requiredAny: [`${PERMISSION_PREFIX}:create`, `${OLD_PERMISSION_PREFIX}:create`],
     },
     {
       id: "delete",
@@ -276,7 +278,7 @@ export const tallyCardsToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
-      requiredAny: [`${PERMISSION_PREFIX}:delete`],
+      requiredAny: [`${PERMISSION_PREFIX}:delete`, `${OLD_PERMISSION_PREFIX}:delete`],
     },
     {
       id: "exportCsv",

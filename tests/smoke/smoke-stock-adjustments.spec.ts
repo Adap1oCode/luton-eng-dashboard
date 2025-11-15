@@ -92,6 +92,14 @@ test.describe('Smoke Tests - Stock Adjustments @smoke', () => {
     await expect(page).toHaveURL(/\/forms\/stock-adjustments/);
     await page.waitForLoadState('networkidle');
 
+    // Use search/filter to find RTZ-999 (user confirmed column filters work)
+    const searchInput = page.getByRole('searchbox').or(page.getByPlaceholder(/search/i)).first();
+    if (await searchInput.isVisible().catch(() => false)) {
+      await searchInput.fill('RTZ-999');
+      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
+    }
+
     // Verify RTZ-999 appears in table
     const rtz999Link = page.getByRole('link', { name: 'RTZ-999' }).or(
       page.getByText('RTZ-999')
@@ -139,6 +147,14 @@ test.describe('Smoke Tests - Stock Adjustments @smoke', () => {
     await expect(page).toHaveURL(/\/forms\/stock-adjustments/);
     await page.waitForLoadState('networkidle');
 
+    // Use search/filter to find RTZ-999 after edit
+    const searchInputAfterEdit = page.getByRole('searchbox').or(page.getByPlaceholder(/search/i)).first();
+    if (await searchInputAfterEdit.isVisible().catch(() => false)) {
+      await searchInputAfterEdit.fill('RTZ-999');
+      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
+    }
+
     // Step 3: Verify History
     // Navigate back to edit page
     const updatedRow = page.locator('tr').filter({ hasText: 'RTZ-999' }).first();
@@ -181,5 +197,6 @@ test.describe('Smoke Tests - Stock Adjustments @smoke', () => {
     await expect(firstHistoryRow).toContainText(/test user.*tally card manager/i);
   });
 });
+
 
 

@@ -99,9 +99,14 @@ test.describe('Smoke Tests - Tally Cards @smoke', () => {
 
     // Verify redirect to list page
     await expect(page).toHaveURL(/\/forms\/tally-cards/);
+    await page.waitForLoadState('networkidle');
+
+    // Use search/filter to find RTZ-999 (user confirmed column filters work)
+    await searchForRecord(page, 'RTZ-999');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000); // Wait for filter to apply
 
     // Verify RTZ-999 appears in table
-    await page.waitForLoadState('networkidle');
     const rtz999Link = page.getByRole('link', { name: 'RTZ-999' }).or(
       page.getByText('RTZ-999')
     );
@@ -132,6 +137,11 @@ test.describe('Smoke Tests - Tally Cards @smoke', () => {
     // Verify redirect and updated data
     await expect(page).toHaveURL(/\/forms\/tally-cards/);
     await page.waitForLoadState('networkidle');
+
+    // Use search/filter to find RTZ-999 after edit
+    await searchForRecord(page, 'RTZ-999');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000); // Wait for filter to apply
 
     // Step 3: Verify History
     // Navigate back to edit page

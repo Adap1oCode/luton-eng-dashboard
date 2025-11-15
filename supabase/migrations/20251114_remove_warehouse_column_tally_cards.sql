@@ -424,3 +424,6 @@ $function$;
 -- 2. Updated fn_scd2_patch_base to only use warehouse_id (no warehouse column)
 -- 3. API route needs to be updated to convert warehouse text to warehouse_id if provided
 
+
+
+

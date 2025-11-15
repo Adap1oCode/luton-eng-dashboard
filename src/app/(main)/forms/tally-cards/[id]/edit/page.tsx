@@ -63,7 +63,7 @@ export default async function EditTallyCardPage({ params }: { params: Promise<{ 
   const loadedOptions = await loadOptions(optionsKeys, currentValues);
 
   const primaryButtonPermissions = {
-    any: ["screen:tally-cards:update"]
+    any: ["screen:tally-cards:update", "resource:tcm_tally_cards:update"]
   };
 
   return (

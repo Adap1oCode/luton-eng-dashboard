@@ -25,7 +25,9 @@ import type { InlineEditConfig } from "@/components/data-table/inline-edit-cell"
 const ROUTE_SEGMENT = "stock-adjustments" as const;
 const API_ENDPOINT = "/api/v_tcm_user_tally_card_entries" as const;
 export const RESOURCE_KEY = "tcm_user_tally_card_entries" as const;
-const PERMISSION_PREFIX = `resource:${RESOURCE_KEY}` as const;
+const PERMISSION_PREFIX = `screen:${ROUTE_SEGMENT}` as const;
+// Backward compatibility: support both old and new permission names
+const OLD_PERMISSION_PREFIX = `resource:${RESOURCE_KEY}` as const;
 export const RESOURCE_TITLE = "Stock Adjustments" as const;
 
 // -----------------------------------------------------------------------------
@@ -340,7 +342,7 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       icon: "Plus",
       variant: "default",
       href: `/forms/${ROUTE_SEGMENT}/new`,
-      requiredAny: [`${PERMISSION_PREFIX}:create`],
+      requiredAny: [`${PERMISSION_PREFIX}:create`, `${OLD_PERMISSION_PREFIX}:create`],
     },
     {
       id: "delete",
@@ -349,7 +351,7 @@ export const stockAdjustmentsToolbar: ToolbarConfig = {
       variant: "destructive",
       action: "deleteSelected",
       enableWhen: "anySelected",
-      requiredAny: [`${PERMISSION_PREFIX}:delete`],
+      requiredAny: [`${PERMISSION_PREFIX}:delete`, `${OLD_PERMISSION_PREFIX}:delete`],
     },
     {
       id: "exportCsv",

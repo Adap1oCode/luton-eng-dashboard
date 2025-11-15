@@ -216,7 +216,9 @@ export async function GET(req: NextRequest) {
     let targetAppUser: MeRow | null = null;
 
     if (requestedImpersonateId) {
-      const canImpersonate = realCtx.permissions.includes("screen:switch-user:update");
+      // Backward compatibility: support both old and new permission names
+      const canImpersonate = realCtx.permissions.includes("screen:switch-user:update") || 
+                             realCtx.permissions.includes("admin:impersonate");
       if (!canImpersonate) {
         impersonationDenied = "missing_permission_screen:switch-user:update";
         console.info(

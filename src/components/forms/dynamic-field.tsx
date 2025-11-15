@@ -42,7 +42,7 @@ export type FieldDef = {
 };
 
 export function DynamicField({ field, options }: { field: FieldDef; options?: Option[] }) {
-  const { control, watch } = useFormContext();
+  const { control, watch, setValue, trigger } = useFormContext();
   const multiLocation = watch("multi_location") ?? false;
   
   if (field.hidden) return null;
@@ -153,7 +153,17 @@ export function DynamicField({ field, options }: { field: FieldDef; options?: Op
                     onChange={(selectedId) => {
                       // For location fields, selectedId is already the location name (value)
                       // For other fields, selectedId is the id (UUID or item_number)
-                      rhf.onChange(selectedId);
+                      const valueToSet = selectedId ? String(selectedId) : "";
+                      
+                      // Use both onChange and setValue for reliable form state updates
+                      rhf.onChange(valueToSet);
+                      setValue(field.name, valueToSet, { 
+                        shouldValidate: true, 
+                        shouldDirty: true,
+                        shouldTouch: true
+                      });
+                      trigger(field.name);
+                      rhf.onBlur();
                     }}
                     placeholder={field.placeholder ?? "Select..."}
                     searchPlaceholder={

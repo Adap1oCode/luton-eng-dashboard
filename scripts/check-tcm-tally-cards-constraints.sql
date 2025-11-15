@@ -71,3 +71,6 @@ WHERE table_schema = 'public'
   AND table_name = 'tcm_tally_cards'
 ORDER BY ordinal_position;
 
+
+
+

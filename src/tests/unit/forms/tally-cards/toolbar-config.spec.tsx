@@ -25,7 +25,7 @@ describe('Tally Cards Toolbar Config', () => {
       expect(newButton?.icon).toBe('Plus')
       expect(newButton?.variant).toBe('default')
       expect(newButton?.href).toBe('/forms/tally-cards/new')
-      expect(newButton?.requiredAny).toEqual(['resource:tcm_tally_cards:create'])
+      expect(newButton?.requiredAny).toEqual(['screen:tally-cards:create'])
 
       // Delete button
       const deleteButton = leftButtons.find(btn => btn.id === 'delete')
@@ -35,7 +35,7 @@ describe('Tally Cards Toolbar Config', () => {
       expect(deleteButton?.variant).toBe('destructive')
       expect(deleteButton?.action).toBe('deleteSelected')
       expect(deleteButton?.enableWhen).toBe('anySelected')
-      expect(deleteButton?.requiredAny).toEqual(['resource:tcm_tally_cards:delete'])
+      expect(deleteButton?.requiredAny).toEqual(['screen:tally-cards:delete'])
 
       // Export CSV button
       const exportButton = leftButtons.find(btn => btn.id === 'exportCsv')
@@ -89,12 +89,12 @@ describe('Tally Cards Toolbar Config', () => {
   describe('Permission Requirements', () => {
     it('should have correct permission requirements for new button', () => {
       const newButton = tallyCardsToolbar.left.find(btn => btn.id === 'new')
-      expect(newButton?.requiredAny).toEqual(['resource:tcm_tally_cards:create'])
+      expect(newButton?.requiredAny).toEqual(['screen:tally-cards:create'])
     })
 
     it('should have correct permission requirements for delete button', () => {
       const deleteButton = tallyCardsToolbar.left.find(btn => btn.id === 'delete')
-      expect(deleteButton?.requiredAny).toEqual(['resource:tcm_tally_cards:delete'])
+      expect(deleteButton?.requiredAny).toEqual(['screen:tally-cards:delete'])
     })
   })
 })

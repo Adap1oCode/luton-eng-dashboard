@@ -160,7 +160,7 @@ export const stockAdjustmentCreateConfig: FormConfig & {
   key: "stock-adjustments",
   title: "New Stock Adjustment",
   subtitle: "Record a quick adjustment against a Tally Card",
-  permissionKey: "resource:tcm_user_tally_card_entries:create",
+  permissionKey: "screen:stock-adjustments:create",
   resource: "tcm_user_tally_card_entries",
   submitLabel: "Save Adjustment",
 

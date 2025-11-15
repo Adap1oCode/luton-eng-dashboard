@@ -65,7 +65,7 @@ export const tallyCardCreateConfig: FormConfig & {
   key: "tally-cards",
   title: "New Tally Card",
   subtitle: "Create a new tally card",
-  permissionKey: "resource:tcm_tally_cards:create",
+  permissionKey: "screen:tally-cards:create",
   resource: "tcm_tally_cards",
   submitLabel: "Save Tally Card",
 

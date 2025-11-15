@@ -278,7 +278,7 @@ export default async function EditStockAdjustmentPage({ params }: { params: Prom
   }
 
   const primaryButtonPermissions = {
-    any: ["screen:stock-adjustments:update"]
+    any: ["screen:stock-adjustments:update", "resource:tcm_user_tally_card_entries:update"]
   };
 
   return (

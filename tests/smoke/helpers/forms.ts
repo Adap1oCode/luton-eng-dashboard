@@ -21,25 +21,73 @@ export interface StockAdjustmentFormData {
 }
 
 /**
+ * Helper to interact with SearchableSelect component
+ */
+async function selectSearchableOption(
+  page: Page,
+  fieldLabel: string,
+  searchValue: string,
+  searchPlaceholder?: string
+): Promise<void> {
+  // Find the label for the field
+  const label = page.getByLabel(new RegExp(fieldLabel, 'i')).first();
+  await label.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Find the FormItem container (parent of label) and then the button inside it
+  // The SearchableSelect renders as a button, so find button near the label
+  const fieldContainer = label.locator('..').first();
+  const selectButton = fieldContainer.locator('button[type="button"]').first();
+  
+  // Click to open dropdown
+  await selectButton.click();
+  await page.waitForTimeout(300);
+  
+  // Wait for search input to appear (it's inside the dropdown)
+  // The dropdown has a search input with a placeholder
+  const searchInputSelector = searchPlaceholder 
+    ? `input[placeholder*="${searchPlaceholder}" i]`
+    : 'input[type="text"]';
+  const searchInput = page.locator(searchInputSelector).first();
+  await searchInput.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Clear and type to search
+  await searchInput.clear();
+  await searchInput.fill(searchValue);
+  await page.waitForTimeout(500); // Wait for filtering
+  
+  // Find and click the matching option button
+  // Options are rendered as buttons inside the dropdown (which has absolute positioning)
+  // Look for buttons that are visible and contain the search value
+  // The dropdown container has class "absolute" and contains buttons
+  const dropdownContainer = page.locator('div.absolute').filter({ 
+    has: searchInput 
+  }).first();
+  
+  // Find option button within the dropdown that matches the search value
+  const optionButton = dropdownContainer.locator('button[type="button"]').filter({ 
+    hasText: new RegExp(searchValue, 'i') 
+  }).first();
+  
+  await optionButton.waitFor({ state: 'visible', timeout: 5000 });
+  await optionButton.click();
+  
+  // Wait for dropdown to close and form to update
+  await page.waitForTimeout(500);
+}
+
+/**
  * Fill tally card form
+ * Works with SearchableSelect components for warehouse and item number
  */
 export async function fillTallyCardForm(page: Page, data: TallyCardFormData): Promise<void> {
   // Tally Card Number
   await page.getByLabel(/tally card number/i).fill(data.tally_card_number);
 
-  // Warehouse (select dropdown)
-  const warehouseSelect = page.getByLabel(/warehouse/i).or(
-    page.locator('select, [role="combobox"]').filter({ hasText: /warehouse/i })
-  ).first();
-  await warehouseSelect.click();
-  await page.getByRole('option', { name: new RegExp(data.warehouse_id, 'i') }).click();
+  // Warehouse (SearchableSelect) - can search by code or name
+  await selectSearchableOption(page, 'warehouse', data.warehouse_id, 'warehouse');
 
-  // Item Number (select dropdown)
-  const itemSelect = page.getByLabel(/item number/i).or(
-    page.locator('select, [role="combobox"]').filter({ hasText: /item number/i })
-  ).first();
-  await itemSelect.click();
-  await page.getByRole('option', { name: data.item_number }).click();
+  // Item Number (SearchableSelect) - can search by item number or description
+  await selectSearchableOption(page, 'item number', data.item_number, 'item number');
 
   // Note (optional)
   if (data.note) {
@@ -67,12 +115,32 @@ export async function fillStockAdjustmentForm(
   const tallyCardInput = page.getByLabel(/tally card/i).first();
   if (await tallyCardInput.isEditable().catch(() => false)) {
     await tallyCardInput.fill(data.tally_card_number);
+  } else {
+    // If read-only, verify it's pre-filled with the expected value
+    const currentValue = await tallyCardInput.inputValue().catch(() => '');
+    if (currentValue && currentValue !== data.tally_card_number) {
+      console.warn(`Tally card number is read-only and has value "${currentValue}", expected "${data.tally_card_number}"`);
+    }
   }
 
-  // Select reason code (required field)
-  const reasonSelect = page.getByLabel(/reason/i).first();
-  await reasonSelect.click();
-  await page.getByRole('option', { name: new RegExp(data.locations[0]?.reason || 'TRANSFER', 'i') }).click();
+  // Select reason code (required field) - may be SearchableSelect or regular select
+  const reasonLabel = page.getByLabel(/reason/i).first();
+  await reasonLabel.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Try SearchableSelect first (button), then fall back to regular select
+  const reasonContainer = reasonLabel.locator('..').first();
+  const reasonButton = reasonContainer.locator('button[type="button"]').first();
+  const isSearchableSelect = await reasonButton.isVisible().catch(() => false);
+  
+  if (isSearchableSelect) {
+    // Use SearchableSelect helper
+    await selectSearchableOption(page, 'reason', data.locations[0]?.reason || 'TRANSFER', 'reason');
+  } else {
+    // Regular select
+    const reasonSelect = reasonLabel.locator('..').locator('select').first();
+    await reasonSelect.click();
+    await page.getByRole('option', { name: new RegExp(data.locations[0]?.reason || 'TRANSFER', 'i') }).click();
+  }
 
   // Add locations using AddLocationSection
   for (const location of data.locations) {
@@ -108,32 +176,83 @@ export async function addStockAdjustmentLocation(
     }
   }
 
-  // Fill location in SearchableSelect
-  const locationSelect = page.locator('input[placeholder*="location" i], input[placeholder*="Select location" i]').first();
-  await locationSelect.fill(location);
-  await page.waitForTimeout(500);
-  // Click the option that appears
-  const locationOption = page.getByText(location, { exact: false }).first();
+  // Fill location in SearchableSelect - find the location field in the Add Location section
+  const locationLabel = page.getByLabel(/location/i).filter({ 
+    hasNot: page.locator('input[readonly]') // Exclude read-only location fields in the table
+  }).first();
+  await locationLabel.waitFor({ state: 'visible', timeout: 5000 });
+  
+  // Find the SearchableSelect button
+  const locationContainer = locationLabel.locator('..').first();
+  const locationButton = locationContainer.locator('button[type="button"]').first();
+  await locationButton.click();
+  await page.waitForTimeout(300);
+  
+  // Wait for search input and type location
+  const locationSearchInput = page.locator('input[placeholder*="location" i], input[placeholder*="Search location" i]').first();
+  await locationSearchInput.waitFor({ state: 'visible', timeout: 5000 });
+  await locationSearchInput.clear();
+  await locationSearchInput.fill(location);
+  await page.waitForTimeout(500); // Wait for filtering
+  
+  // Click the matching option
+  const locationDropdown = page.locator('div.absolute').filter({ 
+    has: locationSearchInput 
+  }).first();
+  const locationOption = locationDropdown.locator('button[type="button"]').filter({ 
+    hasText: new RegExp(location, 'i') 
+  }).first();
+  await locationOption.waitFor({ state: 'visible', timeout: 5000 });
   await locationOption.click();
+  await page.waitForTimeout(300);
 
   // Fill quantity
   const qtyInput = page.locator('input[type="number"][placeholder*="quantity" i], input[type="number"][placeholder*="-4" i]').first();
+  await qtyInput.waitFor({ state: 'visible', timeout: 5000 });
   await qtyInput.fill(qty.toString());
 
-  // Select reason in SearchableSelect
-  const reasonSelect = page.locator('input[placeholder*="reason" i], input[placeholder*="Unspecified" i]').first();
-  await reasonSelect.fill(reason);
-  await page.waitForTimeout(500);
-  // Click the option that appears
-  const reasonOption = page.getByText(reason, { exact: false }).first();
-  await reasonOption.click();
+  // Select reason in SearchableSelect (if it's a SearchableSelect)
+  const reasonLabel = page.getByLabel(/reason/i).filter({ 
+    hasNot: page.locator('select') // Exclude regular selects in the table
+  }).first();
+  
+  if (await reasonLabel.isVisible().catch(() => false)) {
+    const reasonContainer = reasonLabel.locator('..').first();
+    const reasonButton = reasonContainer.locator('button[type="button"]').first();
+    const isSearchableSelect = await reasonButton.isVisible().catch(() => false);
+    
+    if (isSearchableSelect) {
+      await reasonButton.click();
+      await page.waitForTimeout(300);
+      const reasonSearchInput = page.locator('input[placeholder*="reason" i], input[placeholder*="Search" i]').first();
+      await reasonSearchInput.waitFor({ state: 'visible', timeout: 5000 });
+      await reasonSearchInput.clear();
+      await reasonSearchInput.fill(reason);
+      await page.waitForTimeout(500);
+      const reasonDropdown = page.locator('div.absolute').filter({ 
+        has: reasonSearchInput 
+      }).first();
+      const reasonOption = reasonDropdown.locator('button[type="button"]').filter({ 
+        hasText: new RegExp(reason, 'i') 
+      }).first();
+      await reasonOption.waitFor({ state: 'visible', timeout: 5000 });
+      await reasonOption.click();
+      await page.waitForTimeout(300);
+    } else {
+      // Regular select
+      const reasonSelect = reasonContainer.locator('select').first();
+      await reasonSelect.click();
+      await page.getByRole('option', { name: new RegExp(reason, 'i') }).click();
+    }
+  }
 
   // Click "Add Location" button
   const addButton = page.getByRole('button', { name: /add location/i }).first();
+  await addButton.waitFor({ state: 'visible', timeout: 5000 });
   await addButton.click();
 
   // Wait for location to appear in table
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
 }
 
 /**

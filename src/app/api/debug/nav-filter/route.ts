@@ -14,7 +14,8 @@ export async function GET(_req: NextRequest) {
     // Get user permissions from the request (you'll need to implement this)
     // For now, let's use the permissions you showed me
     const userPermissions = [
-      "admin:impersonate",
+      "admin:impersonate", // Old permission name (backward compatibility)
+      "screen:switch-user:update", // New permission name
       "entries:read:any",
       "menu:dashboard",
       "menu:forms:roles",
@@ -33,6 +34,7 @@ export async function GET(_req: NextRequest) {
       "resource:role_warehouse_rules:delete",
       "resource:role_warehouse_rules:read",
       "resource:role_warehouse_rules:update",
+      // Old permission names (backward compatibility)
       "resource:tcm_tally_cards:create",
       "resource:tcm_tally_cards_current:read",
       "resource:tcm_tally_cards:delete",
@@ -42,6 +44,15 @@ export async function GET(_req: NextRequest) {
       "resource:tcm_user_tally_card_entries:delete",
       "resource:tcm_user_tally_card_entries:read",
       "resource:tcm_user_tally_card_entries:update",
+      // New permission names
+      "screen:tally-cards:create",
+      "screen:tally-cards:delete",
+      "screen:tally-cards:read",
+      "screen:tally-cards:update",
+      "screen:stock-adjustments:create",
+      "screen:stock-adjustments:delete",
+      "screen:stock-adjustments:read",
+      "screen:stock-adjustments:update",
       "resource:users:create",
       "resource:users:delete",
       "resource:users:read",
