@@ -68,7 +68,6 @@ jobs:
             echo "has_errors=false" >> $GITHUB_OUTPUT
             echo "ℹ️ No errors detected - skipping Cursor agent"
           fi
-          echo "DEBUG: has_errors = ${{ steps.errors.outputs.has_errors }}"
 
       # Install Cursor CLI if errors were detected
       - name: Install Cursor CLI
