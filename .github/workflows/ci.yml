@@ -2,8 +2,9 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main, develop]
+    # Only run on PRs, not direct pushes to main/develop
+    # Direct pushes are fast (pre-push hooks run locally)
+    # Full verification runs in nightly builds
 
 jobs:
   verify:
@@ -20,10 +21,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Install Playwright browsers
-        run: npx playwright install chromium
-      
-      - name: Run CI PR verification
+      - name: Run CI PR verification (fast path)
         run: npm run ci:pr
       
       - name: Docs updated check

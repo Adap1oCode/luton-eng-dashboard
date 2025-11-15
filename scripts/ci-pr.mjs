@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * CI PR Verification Script (Tier 3)
- * PR verification: all Tier 2 checks + E2E smoke + docs check
- * Runtime: ~5-10 minutes
+ * PR verification: fast Tier 2 checks (typecheck, lint, unit tests) + docs check
+ * Runtime: ~1-3 minutes (fast path, skips build + health check)
  * Blocks: PR merge
+ * Note: Build and health check run in nightly builds
  */
 
 import { spawn } from 'child_process';
@@ -77,10 +78,11 @@ async function main() {
   log('  CI PR VERIFICATION (Tier 3: PR Merge)', colors.bright);
   log('='.repeat(60) + '\n', colors.bright);
 
-  // First run all Tier 2 checks (ci:verify)
-  log(`${colors.blue}▶${colors.reset} Running Tier 2 verification (ci:verify)...`, colors.blue);
+  // First run all Tier 2 checks (ci:verify) in fast mode (skip build + health check)
+  // Build and health check run in nightly builds to keep PR CI fast (~1-3 min)
+  log(`${colors.blue}▶${colors.reset} Running Tier 2 verification (ci:verify --fast)...`, colors.blue);
   try {
-    await runCommand('npm', ['run', 'ci:verify']);
+    await runCommand('npm', ['run', 'ci:verify', '--', '--fast']);
   } catch (err) {
     log(`\n${colors.red}${'='.repeat(60)}${colors.reset}`, colors.red);
     log(`  ❌ CI PR VERIFICATION FAILED: Tier 2 checks failed`, colors.red);
