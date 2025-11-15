@@ -223,7 +223,7 @@ async function main() {
     case 'available':
       await findAvailablePorts();
       break;
-    case 'kill':
+    case 'kill': {
       const port = parseInt(process.argv[3]);
       if (isNaN(port)) {
         log(`${colors.red}Please provide a valid port number${colors.reset}`);
@@ -231,6 +231,7 @@ async function main() {
       }
       await killProcessOnPort(port);
       break;
+    }
     case 'help':
     case '--help':
     case '-h':

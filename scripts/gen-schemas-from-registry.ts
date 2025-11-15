@@ -241,7 +241,7 @@ for (const [key, cfg] of Object.entries(registry)) {
     .map(([name, spec]) => {
       const base = zFromFieldWrite(spec);
       const anySpec = spec as any;
-      const isOptional = anySpec?.required === false || anySpec?.defaulted === true;
+      const isOptional = !anySpec?.required || anySpec?.defaulted;
       return `  ${name}: ${isOptional ? `${base}.optional()` : base},`;
     })
     .join("\n");

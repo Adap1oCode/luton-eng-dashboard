@@ -1,4 +1,4 @@
-﻿import type { Filter } from "@/components/dashboard/client/data-filters";
+import type { Filter } from "@/components/dashboard/client/data-filters";
 
 import { normalizeFieldValue } from "@/components/dashboard/client/normalize"; // ✅ import
 import type { DashboardTile, DashboardWidget } from "@/components/dashboard/types";
@@ -45,7 +45,7 @@ export function attachTileActions(
     // clickable if tile flagged and we have either a rpcName or a template filter or a tile.filter
     const hasTemplate = preCalculated && widget.filter !== undefined;
     const hasTileFilter = tile.filter !== undefined;
-    const canClick = tile.clickable === true && (Boolean(rpcName) || hasTemplate || hasTileFilter);
+    const canClick = tile.clickable && (Boolean(rpcName) || hasTemplate || hasTileFilter);
     
     // Debug logging for outOfStockCount tile
     if (tile.key === 'outOfStockCount') {

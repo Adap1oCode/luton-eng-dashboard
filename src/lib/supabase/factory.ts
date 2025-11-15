@@ -381,7 +381,7 @@ export function createSupabaseProvider<T, TInput>(
       if (hasSchema) {
         const writableKeys = new Set(
           Object.entries(fields)
-            .filter(([, spec]) => (spec as any)?.write === true && !(spec as any)?.readonly)
+            .filter(([, spec]) => (spec as any)?.write && !(spec as any)?.readonly)
             .map(([k]) => k),
         );
         payload = Object.fromEntries(Object.entries(base).filter(([k]) => writableKeys.has(k)));

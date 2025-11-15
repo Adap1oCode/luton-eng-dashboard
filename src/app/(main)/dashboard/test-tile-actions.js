@@ -15,7 +15,7 @@ console.log('🔧 Mock tile configuration:');
 console.log(JSON.stringify(mockTile, null, 2));
 
 // Test the canClick logic from tile-actions.ts
-const canClick = mockTile.clickable === true && (Boolean(mockTile.rpcName) || false || false);
+const canClick = mockTile.clickable && (Boolean(mockTile.rpcName) || false || false);
 console.log('\n🔧 canClick evaluation:');
 console.log('  - tile.clickable === true:', mockTile.clickable === true);
 console.log('  - Boolean(rpcName):', Boolean(mockTile.rpcName));

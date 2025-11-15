@@ -122,7 +122,6 @@ export default function AddItemSection({ form }: Props) {
     return () => {
       ignore = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemNumber]);
 
   const optionLabel = (i: Item) => `${i.itemNo} — ${i.description || "No description"}`;

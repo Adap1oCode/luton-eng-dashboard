@@ -155,7 +155,6 @@ if (!process.env.AUTH_SCOPING_ENABLED) {
 // Avoid "server-only" import errors when unit-testing server modules in Vitest.
 // In tests, we don't actually need server-only behavior; stub the module.
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   require.resolve("server-only");
   // If present, replace it with a no-op module via Node's module cache.
   // @ts-ignore

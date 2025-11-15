@@ -162,12 +162,10 @@ export function useRolesForm(opts?: { initialRoleId?: string | null }) {
     Promise.all([loadWarehouses(), loadAssigned(), loadRoleIfAny(), loadPermissions()])
       .catch((e) => toast.error(String(e?.message ?? e)))
       .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleId]);
 
   useEffect(() => {
     loadAssignedPermissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFamily]);
 
   // selection helpers

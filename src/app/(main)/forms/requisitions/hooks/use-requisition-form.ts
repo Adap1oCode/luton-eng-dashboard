@@ -120,7 +120,6 @@ export function useRequisitionForm(): RequisitionFormState {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
 
   // ---------------------------

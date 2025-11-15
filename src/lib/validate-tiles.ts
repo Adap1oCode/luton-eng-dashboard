@@ -14,15 +14,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function resolveValue(value: any): any {
   return value === "today" ? new Date().toISOString().split("T")[0] : value;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilter(query: any, filter: any): any {
   if (Array.isArray(filter.and)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     filter.and.forEach((f: any) => {
       query = applyFilter(query, f);
     });
@@ -45,7 +42,6 @@ function applyFilter(query: any, filter: any): any {
   return query;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getDisplayTitle(tile: any): string {
   return tile?.title ?? tile?.label ?? "Untitled";
 }
@@ -54,7 +50,6 @@ function daysBetween(a: string, b: string): number {
   return Math.abs(Math.ceil((+new Date(b) - +new Date(a)) / (1000 * 60 * 60 * 24)));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isType(tile: any, expected: string): boolean {
   return typeof tile?.type === "string" && tile.type === expected;
 }
@@ -91,7 +86,6 @@ export async function runValidation(config: DashboardConfig, configId: string): 
           continue;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const days = data.map((row: any) => daysBetween(row[start], row[end])).filter(Boolean);
         const avg = Math.round(days.reduce((a, b) => a + b, 0) / days.length);
 
@@ -123,7 +117,6 @@ export async function runValidation(config: DashboardConfig, configId: string): 
         if (isType(tile, "invalid_date")) {
           const { data } = await supabase.from(config.id).select(column);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invalids = (data ?? []).filter((r: any) => isNaN(Date.parse(r[column] ?? "")));
           results.push({
             dashboard: configId,
@@ -139,7 +132,6 @@ export async function runValidation(config: DashboardConfig, configId: string): 
           const { count } = await supabase
             .from(config.id)
             .select("*", { count: "exact", head: true })
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .gt(column, (tile as any).min);
 
           results.push({ dashboard: configId, key: tile.key, label: displayTitle, value: count, status: "pass" });
@@ -149,7 +141,6 @@ export async function runValidation(config: DashboardConfig, configId: string): 
         if (isType(tile, "one_of") && "values" in tile && Array.isArray((tile as any).values)) {
           const { data } = await supabase.from(config.id).select(column);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invalid = (data ?? []).filter((r: any) => !(tile as any).values.includes(r[column]));
           results.push({
             dashboard: configId,

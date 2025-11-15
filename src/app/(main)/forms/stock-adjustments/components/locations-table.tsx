@@ -58,9 +58,10 @@ export default function LocationsTable({
     switch (type) {
       case "increase":
         return currentQty + amountNum;
-      case "decrease":
+      case "decrease": {
         const result = currentQty - amountNum;
         return result >= 0 ? result : null;
+      }
       case "set":
         return amountNum;
     }
