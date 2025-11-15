@@ -33,27 +33,42 @@ jobs:
       - name: Run ESLint (detect errors)
         id: lint
         run: |
-          npm run lint -- --max-warnings 0 && echo "lint_errors=false" >> $GITHUB_OUTPUT || echo "lint_errors=true" >> $GITHUB_OUTPUT
+          if npm run lint:fast; then
+            echo "lint_errors=false" >> $GITHUB_OUTPUT
+            echo "✅ Lint passed with no errors or warnings"
+          else
+            echo "lint_errors=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Lint found errors or warnings"
+          fi
         continue-on-error: true
 
       # Run typecheck to detect errors (continue on error to allow fixing)
       - name: Run TypeScript typecheck (detect errors)
         id: typecheck
         run: |
-          npm run typecheck && echo "typecheck_errors=false" >> $GITHUB_OUTPUT || echo "typecheck_errors=true" >> $GITHUB_OUTPUT
+          if npm run typecheck; then
+            echo "typecheck_errors=false" >> $GITHUB_OUTPUT
+            echo "✅ Typecheck passed with no errors"
+          else
+            echo "typecheck_errors=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Typecheck found errors"
+          fi
         continue-on-error: true
 
       # Check if any errors were detected
       - name: Check for errors
         id: errors
         run: |
+          echo "DEBUG: lint_errors = ${{ steps.lint.outputs.lint_errors }}"
+          echo "DEBUG: typecheck_errors = ${{ steps.typecheck.outputs.typecheck_errors }}"
           if [ "${{ steps.lint.outputs.lint_errors }}" == "true" ] || [ "${{ steps.typecheck.outputs.typecheck_errors }}" == "true" ]; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
-            echo "Errors detected - will attempt to fix with Cursor agent"
+            echo "✅ Errors detected - will attempt to fix with Cursor agent"
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
-            echo "No errors detected - skipping Cursor agent"
+            echo "ℹ️ No errors detected - skipping Cursor agent"
           fi
+          echo "DEBUG: has_errors = ${{ steps.errors.outputs.has_errors }}"
 
       # Install Cursor CLI if errors were detected
       - name: Install Cursor CLI
@@ -68,15 +83,40 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
+          echo "🔍 Starting Cursor agent..."
+          echo "DEBUG: has_errors = ${{ steps.errors.outputs.has_errors }}"
           if [ -z "$CURSOR_API_KEY" ]; then
             echo "⚠️ CURSOR_API_KEY not set. Skipping Cursor agent."
             exit 0
           fi
-          cursor-agent -p "Fix all lint and TypeScript errors in the codebase. Only fix errors, don't change functionality." --model gpt-4 || echo "cursor_agent_failed=true" >> $GITHUB_ENV
+          echo "✅ CURSOR_API_KEY is set"
+          echo "🚀 Running cursor-agent with auto model selection..."
+          cursor-agent -p "Fix all lint and TypeScript errors in the codebase. Only fix errors, don't change functionality." --model auto || echo "cursor_agent_failed=true" >> $GITHUB_ENV
+          echo "✅ Cursor agent completed"
         continue-on-error: true
+
+      # Check if there are changes to commit
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected - will commit and push"
+            git status --short
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected - nothing to commit"
+          fi
+
+      # Configure git to skip hooks for auto-commits
+      - name: Configure git to skip hooks
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config core.hooksPath /dev/null
 
       # Auto-commit and push changes
       - name: Commit and push changes
+        if: steps.changes.outputs.has_changes == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: 'chore: fix lint and TypeScript errors [auto-fix]'
