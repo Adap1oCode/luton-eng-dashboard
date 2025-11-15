@@ -6,13 +6,19 @@ on:
     - cron: "30 1 * * *"
   workflow_dispatch: {} # allow manual trigger from the Actions tab
 
+permissions:
+  contents: write # Required for auto-commit and push
+
 jobs:
   lint-and-typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # Prevent hanging
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,10 +29,57 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # If your script is called something else, change "lint" below
-      - name: Run ESLint
-        run: npm run lint
+      # Run lint to detect errors and warnings (continue on error to allow fixing)
+      - name: Run ESLint (detect errors)
+        id: lint
+        run: |
+          npm run lint -- --max-warnings 0 && echo "lint_errors=false" >> $GITHUB_OUTPUT || echo "lint_errors=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
-      # If your script is called something else, change "typecheck" below
-      - name: Run TypeScript typecheck
-        run: npm run typecheck
+      # Run typecheck to detect errors (continue on error to allow fixing)
+      - name: Run TypeScript typecheck (detect errors)
+        id: typecheck
+        run: |
+          npm run typecheck && echo "typecheck_errors=false" >> $GITHUB_OUTPUT || echo "typecheck_errors=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # Check if any errors were detected
+      - name: Check for errors
+        id: errors
+        run: |
+          if [ "${{ steps.lint.outputs.lint_errors }}" == "true" ] || [ "${{ steps.typecheck.outputs.typecheck_errors }}" == "true" ]; then
+            echo "has_errors=true" >> $GITHUB_OUTPUT
+            echo "Errors detected - will attempt to fix with Cursor agent"
+          else
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+            echo "No errors detected - skipping Cursor agent"
+          fi
+
+      # Install Cursor CLI if errors were detected
+      - name: Install Cursor CLI
+        if: steps.errors.outputs.has_errors == 'true'
+        run: |
+          curl https://cursor.com/install -fsS | bash || echo "cursor_install_failed=true" >> $GITHUB_ENV
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      # Run Cursor agent to fix errors
+      - name: Run Cursor Agent to fix lint and TS errors
+        if: steps.errors.outputs.has_errors == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping Cursor agent."
+            exit 0
+          fi
+          cursor-agent -p "Fix all lint and TypeScript errors in the codebase. Only fix errors, don't change functionality." --model gpt-4 || echo "cursor_agent_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Auto-commit and push changes
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore: fix lint and TypeScript errors [auto-fix]'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+          skip_dirty_check: true
