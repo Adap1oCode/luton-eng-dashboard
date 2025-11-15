@@ -23,6 +23,7 @@
 *.sh
 !scripts/*.sh
 .cache/
+.eslintcache
 
 # debug logs
 npm-debug.log*

@@ -90,9 +90,17 @@ jobs:
           fi
           echo "✅ CURSOR_API_KEY is set"
           echo "🚀 Running cursor-agent with auto model selection..."
-          cursor-agent -p "Fix all lint and TypeScript errors in the codebase. Only fix errors, don't change functionality." --model auto || echo "cursor_agent_failed=true" >> $GITHUB_ENV
+          cursor-agent -p "Fix the following ESLint warnings that were detected: no-case-declarations, no-constant-binary-expression, prefer-const, no-unexpected-multiline, and remove unused eslint-disable directives. Only fix these specific lint warnings, don't change functionality or fix other issues." --model auto || echo "cursor_agent_failed=true" >> $GITHUB_ENV
           echo "✅ Cursor agent completed"
         continue-on-error: true
+
+      # Clean up temporary files before checking changes
+      - name: Clean up temporary files
+        if: steps.errors.outputs.has_errors == 'true'
+        run: |
+          # Remove files that shouldn't be committed
+          rm -f .eslintcache check-errors.mjs
+          git clean -fd || true
 
       # Check if there are changes to commit
       - name: Check for changes
