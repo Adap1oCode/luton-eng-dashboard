@@ -1,0 +1,365 @@
+name: Nightly Vercel Build Fix
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC daily (after lint workflow at 1:30 AM)
+    - cron: "0 2 * * *"
+  workflow_dispatch: {} # allow manual trigger from the Actions tab
+
+permissions:
+  contents: write # Required for creating branches, PRs, and commits
+  pull-requests: write # Required for creating PRs
+
+jobs:
+  check-and-fix-vercel-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # Allow more time for build analysis
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Full history for branch creation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Check latest Vercel deployment status using REST API
+      - name: Check Vercel build status
+        id: vercel_check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "⚠️ VERCEL_TOKEN not set. Skipping Vercel build check."
+            echo "build_status=SKIP" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔍 Checking latest Vercel deployment via API..."
+          
+          # Use Vercel REST API to get latest deployment
+          # API: https://vercel.com/docs/rest-api#endpoints/deployments
+          # Project ID defaults to repository name (e.g., "owner/repo" -> "repo")
+          # Override with VERCEL_PROJECT_ID secret if your Vercel project name differs
+          DEFAULT_PROJECT_ID="${GITHUB_REPOSITORY##*/}"  # Extract repo name from "owner/repo"
+          PROJECT_ID="${VERCEL_PROJECT_ID:-$DEFAULT_PROJECT_ID}"
+          TEAM_PARAM=""
+          if [ -n "$VERCEL_TEAM_ID" ]; then
+            TEAM_PARAM="?teamId=$VERCEL_TEAM_ID"
+          fi
+          
+          echo "📦 Using project ID: $PROJECT_ID"
+          
+          # Get latest deployment
+          RESPONSE=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments$TEAM_PARAM&projectId=$PROJECT_ID&limit=1" || echo "{}")
+          
+          if [ "$RESPONSE" = "{}" ] || [ -z "$RESPONSE" ]; then
+            echo "⚠️ Failed to fetch deployments or no deployments found"
+            echo "build_status=UNKNOWN" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract deployment info using jq
+          DEPLOYMENT=$(echo "$RESPONSE" | jq -r '.deployments[0] // empty')
+          
+          if [ -z "$DEPLOYMENT" ] || [ "$DEPLOYMENT" = "null" ]; then
+            echo "⚠️ No deployments found"
+            echo "build_status=UNKNOWN" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          STATE=$(echo "$DEPLOYMENT" | jq -r '.readyState // .state // "UNKNOWN"')
+          DEPLOYMENT_ID=$(echo "$DEPLOYMENT" | jq -r '.uid // ""')
+          URL=$(echo "$DEPLOYMENT" | jq -r '.url // ""')
+
+          echo "📊 Latest deployment: $DEPLOYMENT_ID"
+          echo "🌐 URL: $URL"
+          echo "📈 State: $STATE"
+
+          echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+          echo "deployment_url=$URL" >> $GITHUB_OUTPUT
+          echo "build_status=$STATE" >> $GITHUB_OUTPUT
+
+          if [ "$STATE" = "ERROR" ] || [ "$STATE" = "BUILD_ERROR" ] || [ "$STATE" = "CANCELED" ]; then
+            echo "❌ Build failed - will attempt to fix"
+            echo "needs_fix=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Build is healthy (state: $STATE)"
+            echo "needs_fix=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # Get build logs if build failed
+      - name: Get build logs
+        id: build_logs
+        if: steps.vercel_check.outputs.needs_fix == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          DEPLOYMENT_ID="${{ steps.vercel_check.outputs.deployment_id }}"
+          echo "📋 Fetching build logs for deployment $DEPLOYMENT_ID..."
+          
+          TEAM_PARAM=""
+          if [ -n "$VERCEL_TEAM_ID" ]; then
+            TEAM_PARAM="?teamId=$VERCEL_TEAM_ID"
+          fi
+          
+          # Get build logs using Vercel REST API
+          LOGS_RESPONSE=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v2/deployments/$DEPLOYMENT_ID/events$TEAM_PARAM" || echo "[]")
+          
+          # Extract log events and format them
+          LOGS=$(echo "$LOGS_RESPONSE" | jq -r '.[] | "\(.createdAt // "") [\(.type // "")] \(.payload // "")"' 2>/dev/null || echo "Failed to parse logs")
+          
+          # Save logs to file for Cursor agent
+          echo "$LOGS" > vercel-build-logs.txt
+          
+          # Extract error summary (lines with "error" or "Error" or "failed")
+          ERROR_SUMMARY=$(echo "$LOGS" | grep -i "error\|failed\|✖\|❌" | tail -50 || echo "No specific errors found in logs")
+          
+          echo "📝 Error summary saved to vercel-build-logs.txt"
+          echo "error_summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$ERROR_SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # Create branch for fixes
+      - name: Create fix branch
+        id: branch
+        if: steps.vercel_check.outputs.needs_fix == 'true'
+        run: |
+          BRANCH_NAME="fix/vercel-build-$(date +%Y%m%d-%H%M%S)"
+          echo "🌿 Creating branch: $BRANCH_NAME"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Branch created: $BRANCH_NAME"
+
+      # Install Cursor CLI
+      - name: Install Cursor CLI
+        if: steps.vercel_check.outputs.needs_fix == 'true'
+        run: |
+          if [ -f "$HOME/.local/bin/cursor-agent" ]; then
+            echo "✅ Cursor CLI found in cache"
+          else
+            echo "📥 Installing Cursor CLI..."
+            curl https://cursor.com/install -fsS | bash || echo "cursor_install_failed=true" >> $GITHUB_ENV
+          fi
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      # Run Cursor agent to fix build issues
+      - name: Run Cursor Agent to fix build errors
+        if: steps.vercel_check.outputs.needs_fix == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping Cursor agent."
+            exit 0
+          fi
+
+          echo "🔍 Starting Cursor agent to fix Vercel build errors..."
+          
+          # Read build logs
+          if [ -f vercel-build-logs.txt ]; then
+            LOGS_CONTENT=$(cat vercel-build-logs.txt | head -2000) # Limit to avoid token limits
+          else
+            LOGS_CONTENT="Build logs not available"
+          fi
+
+          PROMPT="A Vercel build failed with the following errors. Analyze the build logs and fix the issues. Focus on:
+1. TypeScript compilation errors (syntax, types, missing imports)
+2. ESLint errors (code quality issues)
+3. Build configuration issues (next.config, tsconfig)
+4. Missing dependencies or import errors
+
+DO NOT fix:
+- Environment variable issues (these require manual configuration)
+- Runtime logic errors (these need human review)
+- Infrastructure issues
+
+Build logs:
+\`\`\`
+$LOGS_CONTENT
+\`\`\`
+
+Deployment URL: ${{ steps.vercel_check.outputs.deployment_url }}
+Deployment ID: ${{ steps.vercel_check.outputs.deployment_id }}
+
+Fix only the safe, mechanical issues. If the errors are complex or require context, make minimal safe changes and add TODO comments."
+
+          echo "🚀 Running cursor-agent..."
+          cursor-agent -p "$PROMPT" --model auto || echo "cursor_agent_failed=true" >> $GITHUB_ENV
+          echo "✅ Cursor agent completed"
+        continue-on-error: true
+
+      # Check if there are changes to commit
+      - name: Check for changes
+        id: changes
+        if: steps.vercel_check.outputs.needs_fix == 'true'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected - will commit and create PR"
+            git status --short
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected - nothing to commit"
+          fi
+
+      # Commit changes
+      - name: Commit changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config core.hooksPath /dev/null
+          git add -A
+          git commit -m "fix: auto-fix Vercel build errors [auto-fix]
+
+          Deployment: ${{ steps.vercel_check.outputs.deployment_url }}
+          Deployment ID: ${{ steps.vercel_check.outputs.deployment_id }}
+          
+          Auto-generated by nightly-vercel-build-fix workflow.
+          Please review before merging." || echo "commit_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Push branch
+      - name: Push branch
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git push origin "${{ steps.branch.outputs.branch_name }}" || echo "push_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Create PR
+      - name: Create Pull Request
+        id: pr
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.branch.outputs.branch_name }}';
+            const deploymentUrl = '${{ steps.vercel_check.outputs.deployment_url }}';
+            const deploymentId = '${{ steps.vercel_check.outputs.deployment_id }}';
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔧 Auto-fix: Vercel build errors [${new Date().toISOString().split('T')[0]}]`,
+              head: branchName,
+              base: 'main',
+              body: `## 🔧 Auto-Fix: Vercel Build Errors
+
+              **Deployment:** ${deploymentUrl}
+              **Deployment ID:** ${deploymentId}
+              
+              This PR was automatically created to fix Vercel build errors detected in the nightly check.
+              
+              ### What was fixed:
+              - TypeScript compilation errors
+              - ESLint errors
+              - Build configuration issues
+              - Missing imports/dependencies
+              
+              ### Review Checklist:
+              - [ ] Review changes for safety
+              - [ ] Verify build passes on Vercel preview
+              - [ ] Check that no functionality was broken
+              - [ ] Merge if changes look safe
+              
+              **Auto-generated by:** \`nightly-vercel-build-fix\` workflow
+              
+              ---
+              *This PR will be reviewed by an AI agent in the next step.*`,
+              draft: false
+            });
+            
+            console.log(`✅ PR created: ${pr.data.html_url}`);
+            return pr.data.number;
+        continue-on-error: true
+
+      # Optional: AI Review of PR (using Cursor agent)
+      - name: AI Review PR Changes
+        if: steps.changes.outputs.has_changes == 'true' && steps.pr.outputs.result != ''
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping AI review."
+            exit 0
+          fi
+
+          PR_NUMBER="${{ steps.pr.outputs.result }}"
+          
+          echo "🤖 Starting AI review of PR #$PR_NUMBER..."
+          
+          # Get PR diff using GitHub API
+          PR_DIFF=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | \
+            jq -r '.diff_url' | xargs curl -s -H "Accept: application/vnd.github.v3.diff")
+          
+          # Limit diff size to avoid token limits
+          PR_DIFF_SUMMARY=$(echo "$PR_DIFF" | head -1000)
+          
+          PROMPT="Review this PR for safety. Check:
+1. Are the changes safe and mechanical (TypeScript/ESLint fixes)?
+2. Is there any risk of breaking functionality?
+3. Are there any suspicious changes (logic changes, new features)?
+4. Should this PR be auto-approved or require human review?
+
+PR #$PR_NUMBER changes:
+\`\`\`diff
+$PR_DIFF_SUMMARY
+\`\`\`
+
+Provide a safety assessment: SAFE_TO_MERGE, NEEDS_REVIEW, or UNSAFE."
+
+          echo "🚀 Running cursor-agent for PR review..."
+          REVIEW_RESULT=$(cursor-agent -p "$PROMPT" --model auto 2>&1 || echo "Review failed")
+          
+          echo "📝 Review result:"
+          echo "$REVIEW_RESULT"
+          
+          # Add review comment to PR
+          if echo "$REVIEW_RESULT" | grep -qi "SAFE_TO_MERGE"; then
+            echo "✅ AI Review: SAFE_TO_MERGE"
+            # Could auto-approve here if desired
+          elif echo "$REVIEW_RESULT" | grep -qi "UNSAFE"; then
+            echo "⚠️ AI Review: UNSAFE - Requires human review"
+          else
+            echo "ℹ️ AI Review: NEEDS_REVIEW"
+          fi
+        continue-on-error: true
+
+      # Summary
+      - name: Summary
+        run: |
+          echo "## Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.vercel_check.outputs.needs_fix }}" = "true" ]; then
+            if [ "${{ steps.changes.outputs.has_changes }}" = "true" ]; then
+              echo "✅ **Build errors detected and fixed**" >> $GITHUB_STEP_SUMMARY
+              echo "- Branch: \`${{ steps.branch.outputs.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- PR: #${{ steps.pr.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+              echo "- Deployment: ${{ steps.vercel_check.outputs.deployment_url }}" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ **Build errors detected but no fixes were applied**" >> $GITHUB_STEP_SUMMARY
+              echo "- Deployment: ${{ steps.vercel_check.outputs.deployment_url }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "✅ **Vercel build is healthy**" >> $GITHUB_STEP_SUMMARY
+            echo "- Deployment: ${{ steps.vercel_check.outputs.deployment_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+

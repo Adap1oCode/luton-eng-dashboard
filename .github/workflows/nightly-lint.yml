@@ -63,17 +63,38 @@ jobs:
           echo "DEBUG: typecheck_errors = ${{ steps.typecheck.outputs.typecheck_errors }}"
           if [ "${{ steps.lint.outputs.lint_errors }}" == "true" ] || [ "${{ steps.typecheck.outputs.typecheck_errors }}" == "true" ]; then
             echo "has_errors=true" >> $GITHUB_OUTPUT
-            echo "✅ Errors detected - will attempt to fix with Cursor agent"
+            echo "✅ Errors detected - will run auto-fixes and Cursor agent"
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No errors detected - skipping Cursor agent"
+            echo "ℹ️ No errors detected - skipping auto-fixes"
           fi
 
-      # Install Cursor CLI if errors were detected
+      # Run mechanical auto-fixes (safe, low-risk)
+      - name: Run Prettier formatting
+        if: steps.errors.outputs.has_errors == 'true'
+        run: |
+          echo "🎨 Running Prettier formatting..."
+          npm run format || echo "prettier_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Run ESLint auto-fix (removes unused imports + other fixes)
+        if: steps.errors.outputs.has_errors == 'true'
+        run: |
+          echo "🔧 Running ESLint auto-fix (removes unused imports)..."
+          npm run lint -- --fix || echo "eslint_fix_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Install Cursor CLI if errors were detected (with caching)
       - name: Install Cursor CLI
         if: steps.errors.outputs.has_errors == 'true'
         run: |
-          curl https://cursor.com/install -fsS | bash || echo "cursor_install_failed=true" >> $GITHUB_ENV
+          if [ -f "$HOME/.local/bin/cursor-agent" ]; then
+            echo "✅ Cursor CLI found in cache"
+          else
+            echo "📥 Installing Cursor CLI..."
+            curl https://cursor.com/install -fsS | bash || echo "cursor_install_failed=true" >> $GITHUB_ENV
+          fi
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       # Run Cursor agent to fix errors
