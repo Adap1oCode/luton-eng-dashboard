@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { execSync } from 'child_process'
-import { existsSync, readFileSync, statSync } from 'fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 
 describe('Performance Build Integration', () => {
@@ -38,7 +38,7 @@ describe('Performance Build Integration', () => {
       if (existsSync(staticDir)) {
         const chunksDir = join(staticDir, 'chunks')
         if (existsSync(chunksDir)) {
-          const files = require('fs').readdirSync(chunksDir)
+          const files = readdirSync(chunksDir)
           files.forEach((file: string) => {
             if (file.endsWith('.js')) {
               const filePath = join(chunksDir, file)

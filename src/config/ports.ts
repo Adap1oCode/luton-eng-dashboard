@@ -11,6 +11,8 @@
  * - 3030-3039: Health check ports
  */
 
+import { createServer } from 'net';
+
 export const PORTS = {
   // Main Application Ports
   PRODUCTION: 3000,           // Production server
@@ -56,8 +58,7 @@ export function getPortForEnvironment(env: 'development' | 'production' | 'test'
  */
 export async function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const net = require('net');
-    const server = net.createServer();
+    const server = createServer();
     
     server.listen(port, () => {
       server.once('close', () => {

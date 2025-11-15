@@ -24,10 +24,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDataTableInstance } from "@/hooks/use-data-table-instance";
 
-import { DataTable as DataTableNew } from "../../../../../components/data-table/data-table";
-import { DataTablePagination } from "../../../../../components/data-table/data-table-pagination";
-import { DataTableViewOptions } from "../../../../../components/data-table/data-table-view-options";
-import { withDndColumn } from "../../../../../components/data-table/table-utils";
+import { DataTable as DataTableNew } from "@/components/data-table/data-table";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { withDndColumn } from "@/components/data-table/table-utils";
 
 import { dashboardColumns } from "./columns";
 
