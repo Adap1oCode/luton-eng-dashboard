@@ -1,0 +1,686 @@
+name: Nightly Screen Performance Audit
+
+on:
+  schedule:
+    # Run daily at 3:00 AM UTC (after other nightly jobs at 1:30 AM and 2:00 AM)
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      screen_name:
+        description: 'Screen to audit (e.g., "stock-adjustments", "requisitions")'
+        required: false
+        default: 'stock-adjustments'
+      auto_fix:
+        description: 'Auto-fix high-value issues?'
+        type: boolean
+        default: true
+      auto_merge:
+        description: 'Auto-merge if code review passes?'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write # Required for creating branches, PRs, and commits
+  pull-requests: write # Required for creating PRs and merging
+
+jobs:
+  audit-and-optimize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Allow time for comprehensive audit
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Full history for branch creation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Determine which screen to audit
+      - name: Determine audit target
+        id: audit_config
+        run: |
+          SCREEN_NAME="${{ github.event.inputs.screen_name || 'stock-adjustments' }}"
+          AUTO_FIX="${{ github.event.inputs.auto_fix || 'true' }}"
+          AUTO_MERGE="${{ github.event.inputs.auto_merge || 'true' }}"
+          
+          echo "screen_name=$SCREEN_NAME" >> $GITHUB_OUTPUT
+          echo "auto_fix=$AUTO_FIX" >> $GITHUB_OUTPUT
+          echo "auto_merge=$AUTO_MERGE" >> $GITHUB_OUTPUT
+          echo "📊 Will audit: $SCREEN_NAME"
+          echo "🔧 Auto-fix: $AUTO_FIX"
+          echo "🚀 Auto-merge: $AUTO_MERGE"
+
+      # Install Cursor CLI
+      - name: Install Cursor CLI
+        run: |
+          if [ -f "$HOME/.local/bin/cursor-agent" ]; then
+            echo "✅ Cursor CLI found in cache"
+          else
+            echo "📥 Installing Cursor CLI..."
+            curl https://cursor.com/install -fsS | bash || echo "cursor_install_failed=true" >> $GITHUB_ENV
+          fi
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      # Agent 1: Run comprehensive audit
+      - name: Agent 1 - Run Full Screen Audit
+        id: audit
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping audit."
+            echo "audit_completed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          SCREEN_NAME="${{ steps.audit_config.outputs.screen_name }}"
+          
+          echo "🔍 Agent 1: Running full discovery audit for $SCREEN_NAME..."
+          
+          # Load the audit prompt template
+          AUDIT_PROMPT=$(cat <<'EOF'
+You are a senior Next.js/TypeScript reviewer. Your task is to perform a discovery-driven audit of the {SCREEN_NAME} – View screen end-to-end and identify the smallest set of changes that cut unnecessary complexity and render/data overhead — without changing behavior.
+
+**Important:** Do not assume file paths. First, find what the code actually does today. If anything is missing to complete your assessment, ask explicitly before concluding.
+
+## Objectives
+
+Map the runtime path when the user opens the /forms/{SCREEN_NAME} screen:
+- Route → SSR → API → DB/provider → client island → table → pagination/URL sync
+
+Identify and rank waste:
+- Duplicate or unnecessary transformations
+- Props/state churn
+- Wide payloads
+- N+1 reads
+- Double pagination conversions
+- Re-created column defs
+- Deep clones
+- JSON stringify/parse loops
+- Unstable keys
+- Excessive memo/effect usage
+- Client-side filtering that duplicates server logic
+- URL-sync feedback loops
+
+Produce an 80/20, no-regression action plan (3–6 tiny changes), each ≤10 lines.
+
+## Discovery Process
+
+1. **Code sweep:** Find all files relating to the feature (routes, API handlers, providers, projections, table components, configs).
+2. **Trace:** Route → server → API → client → table.
+3. **Shape trace:** For every hop, record data shape in/out, transformations, caching, pagination conversions.
+4. **Find duplicates:** Functions (toRow, filter mapping, pagination logic).
+5. **Detect churn:** Rebuilds, remounts, effect loops, column re-creations.
+6. **List unused modules and redundant layers.**
+7. **Rank hotspots** (by render/network cost).
+8. **Draft minimal fixes** (≤10 lines each) and explain why they're safe.
+
+## Output Format
+
+The audit MUST include these sections in a markdown file:
+
+### Runtime Trace
+- Bullet chain of all hops (file, line range, input/output shape).
+
+### Dependency Map
+- How modules relate; note unused/duplicate code.
+
+### Transformation Audit
+- Every mapping or coercion (keep / inline / remove).
+
+### Payload & Query Review
+- Columns actually displayed vs API fields
+- Joins/N+1
+- Minimal select recommendation
+
+### Hotspots Ranked
+- File:line → issue → cost → minimal fix.
+
+### 80/20 Fix Plan
+- 3–6 PR-sized changes (1–10 lines each).
+- For each fix, include:
+  - **File:** path/to/file.ts
+  - **Lines:** 42-45
+  - **Issue:** Brief description
+  - **Impact:** HIGH/MEDIUM/LOW
+  - **Risk:** LOW/MEDIUM/HIGH
+  - **Fix:** Exact code change (≤10 lines)
+  - **Benefit:** What this improves
+
+### Guardrails & Non-Goals
+- Prevent regressions
+- List what not to touch.
+
+### Summary Statistics
+- Count of duplicates, wasted conversions, expected gains.
+
+## Rules
+
+- **Don't trust assumptions.** If you can't find a file or it's changed, note it in the report.
+- **Cite file paths + line ranges** for every finding.
+- **Prefer deletion and simplification** over abstraction.
+- **Output the full report to:** reports/audits/{SCREEN_NAME}-audit-$(date +%Y%m%d).md
+- **Only include fixes that have clear benefit or add clarity.**
+
+Start with the discovery sweep and runtime trace. Produce a complete markdown report.
+EOF
+          )
+          
+          # Replace placeholder with actual screen name
+          AUDIT_PROMPT=$(echo "$AUDIT_PROMPT" | sed "s/{SCREEN_NAME}/$SCREEN_NAME/g")
+          
+          # Create reports directory
+          mkdir -p reports/audits
+          
+          echo "🚀 Running cursor-agent for audit..."
+          cursor-agent -p "$AUDIT_PROMPT" --model auto > audit-output.txt 2>&1 || echo "audit_failed=true" >> $GITHUB_ENV
+          
+          # Check if audit report was created
+          AUDIT_REPORT="reports/audits/${SCREEN_NAME}-audit-$(date +%Y%m%d).md"
+          if [ -f "$AUDIT_REPORT" ]; then
+            echo "✅ Audit report created: $AUDIT_REPORT"
+            echo "audit_report=$AUDIT_REPORT" >> $GITHUB_OUTPUT
+            echo "audit_completed=true" >> $GITHUB_OUTPUT
+          else
+            # Try to find any audit report
+            LATEST_AUDIT=$(find reports/audits -name "*${SCREEN_NAME}*" -type f | head -1)
+            if [ -n "$LATEST_AUDIT" ]; then
+              echo "✅ Found audit report: $LATEST_AUDIT"
+              echo "audit_report=$LATEST_AUDIT" >> $GITHUB_OUTPUT
+              echo "audit_completed=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ No audit report found. Check audit-output.txt for errors."
+              echo "audit_completed=false" >> $GITHUB_OUTPUT
+              cat audit-output.txt
+            fi
+          fi
+        continue-on-error: true
+
+      # Agent 2: Analyze audit report and filter high-value fixes
+      - name: Agent 2 - Analyze Audit & Filter High-Value Fixes
+        id: analyze
+        if: steps.audit.outputs.audit_completed == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping analysis."
+            exit 0
+          fi
+
+          AUDIT_REPORT="${{ steps.audit.outputs.audit_report }}"
+          SCREEN_NAME="${{ steps.audit_config.outputs.screen_name }}"
+          
+          if [ ! -f "$AUDIT_REPORT" ]; then
+            echo "❌ Audit report not found: $AUDIT_REPORT"
+            exit 1
+          fi
+          
+          echo "📊 Agent 2: Analyzing audit report and filtering high-value fixes..."
+          
+          PROMPT="Analyze this audit report and identify the top 3-5 fixes that:
+1. Have HIGH or MEDIUM impact
+2. Have LOW risk
+3. Add clear benefit or clarity
+4. Are ≤10 lines each
+5. Can be safely auto-fixed
+
+Audit Report:
+\`\`\`
+$(cat "$AUDIT_REPORT")
+\`\`\`
+
+For each selected fix, output in this exact format:
+FIX_START
+FILE: path/to/file.ts
+LINES: 42-45
+ISSUE: Brief description
+IMPACT: HIGH|MEDIUM|LOW
+RISK: LOW|MEDIUM|HIGH
+FIX_CODE:
+[exact code change here, ≤10 lines]
+FIX_END
+
+Only include fixes that meet ALL criteria above. If no fixes meet the criteria, output: NO_SAFE_FIXES"
+
+          echo "🚀 Running cursor-agent for analysis..."
+          ANALYSIS=$(cursor-agent -p "$PROMPT" --model auto 2>&1 || echo "Analysis failed")
+          
+          echo "$ANALYSIS" > analysis-output.txt
+          
+          # Extract fixes
+          if echo "$ANALYSIS" | grep -q "NO_SAFE_FIXES"; then
+            echo "ℹ️ No safe, high-value fixes identified"
+            echo "has_fixes=false" >> $GITHUB_OUTPUT
+          elif echo "$ANALYSIS" | grep -q "FIX_START"; then
+            echo "✅ High-value fixes identified"
+            echo "$ANALYSIS" > selected-fixes.txt
+            echo "has_fixes=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Could not parse fixes from analysis"
+            echo "has_fixes=false" >> $GITHUB_OUTPUT
+            cat analysis-output.txt
+          fi
+        continue-on-error: true
+
+      # Agent 3: Auto-fix high-value issues (if enabled)
+      - name: Agent 3 - Auto-Fix High-Value Issues
+        id: fix
+        if: steps.analyze.outputs.has_fixes == 'true' && steps.audit_config.outputs.auto_fix == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping auto-fix."
+            exit 0
+          fi
+
+          SCREEN_NAME="${{ steps.audit_config.outputs.screen_name }}"
+          
+          echo "🔧 Agent 3: Auto-fixing high-value issues..."
+          
+          if [ ! -f "selected-fixes.txt" ]; then
+            echo "❌ Selected fixes file not found"
+            exit 1
+          fi
+          
+          FIXES=$(cat selected-fixes.txt)
+          
+          PROMPT="Apply these fixes to the codebase. Each fix is clearly marked with FILE, LINES, and FIX_CODE.
+
+$FIXES
+
+Rules:
+1. Only apply fixes that are marked
+2. Make exact changes as specified in FIX_CODE
+3. Don't change anything else
+4. Verify the file exists before making changes
+5. If a file doesn't exist, skip that fix and note it
+
+After applying fixes, output a summary of what was changed."
+
+          echo "🚀 Running cursor-agent to apply fixes..."
+          cursor-agent -p "$PROMPT" --model auto > fix-output.txt 2>&1 || echo "fix_failed=true" >> $GITHUB_ENV
+          
+          # Check if changes were made
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "✅ Changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            git status --short
+          else
+            echo "ℹ️ No changes made"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # Create branch for audit + fixes
+      - name: Create audit branch
+        id: branch
+        if: steps.audit.outputs.audit_completed == 'true'
+        run: |
+          SCREEN_NAME="${{ steps.audit_config.outputs.screen_name }}"
+          BRANCH_NAME="audit/${SCREEN_NAME}-$(date +%Y%m%d-%H%M%S)"
+          echo "🌿 Creating branch: $BRANCH_NAME"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Branch created: $BRANCH_NAME"
+
+      # Commit audit report and fixes
+      - name: Commit audit report and fixes
+        if: steps.audit.outputs.audit_completed == 'true'
+        run: |
+          git config core.hooksPath /dev/null
+          git add reports/audits/ || true
+          
+          if [ "${{ steps.fix.outputs.has_changes }}" = "true" ]; then
+            git add -A
+            git commit -m "audit: ${{ steps.audit_config.outputs.screen_name }} performance audit + fixes [auto]
+
+- Full audit report: ${{ steps.audit.outputs.audit_report }}
+- Auto-fixed high-value issues
+- See PR description for details" || echo "commit_failed=true" >> $GITHUB_ENV
+          else
+            git commit -m "audit: ${{ steps.audit_config.outputs.screen_name }} performance audit [report-only]
+
+- Full audit report: ${{ steps.audit.outputs.audit_report }}
+- No auto-fixes applied (see report for manual fixes)" || echo "commit_failed=true" >> $GITHUB_ENV
+          fi
+        continue-on-error: true
+
+      # Push branch
+      - name: Push branch
+        if: steps.audit.outputs.audit_completed == 'true'
+        run: |
+          git push origin "${{ steps.branch.outputs.branch_name }}" || echo "push_failed=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      # Create PR with audit report
+      - name: Create Pull Request
+        id: pr
+        if: steps.audit.outputs.audit_completed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.branch.outputs.branch_name }}';
+            const screenName = '${{ steps.audit_config.outputs.screen_name }}';
+            const auditReport = '${{ steps.audit.outputs.audit_report }}';
+            const hasFixes = '${{ steps.fix.outputs.has_changes }}' === 'true';
+            
+            // Read audit report
+            const fs = require('fs');
+            let auditContent = 'Audit report not found';
+            try {
+              auditContent = fs.readFileSync(auditReport, 'utf8');
+            } catch (e) {
+              auditContent = `Could not read audit report: ${auditReport}`;
+            }
+            
+            // Extract key sections from audit
+            const extractSection = (content, sectionName) => {
+              const regex = new RegExp(`### ${sectionName}[\\s\\S]*?(?=###|$)`, 'i');
+              const match = content.match(regex);
+              return match ? match[0].substring(0, 2000) : 'Section not found';
+            };
+            
+            const hotspots = extractSection(auditContent, 'Hotspots Ranked');
+            const fixPlan = extractSection(auditContent, '80/20 Fix Plan');
+            const summary = extractSection(auditContent, 'Summary Statistics');
+            
+            const prBody = `## 🔍 Performance Audit: ${screenName}
+
+            **Audit Date:** ${new Date().toISOString().split('T')[0]}
+            **Screen:** \`/forms/${screenName}\`
+            **Auto-Fixes Applied:** ${hasFixes ? '✅ Yes' : '❌ No'}
+            
+            ### 📊 Audit Report
+            
+            Full audit report: \`${auditReport}\`
+            
+            ### 🔥 Key Hotspots
+            
+            ${hotspots}
+            
+            ### 🎯 80/20 Fix Plan
+            
+            ${fixPlan}
+            
+            ### 📈 Summary Statistics
+            
+            ${summary}
+            
+            ### ✅ Review Checklist
+            
+            - [ ] Review audit report for accuracy
+            - [ ] Verify auto-fixes (if any) are safe
+            - [ ] Test screen performance improvements
+            - [ ] Check that no functionality was broken
+            - [ ] Merge if changes look good
+            
+            ---
+            *Auto-generated by nightly-screen-audit workflow*
+            
+            <details>
+            <summary>Full Audit Report</summary>
+            
+            \`\`\`markdown
+            ${auditContent.substring(0, 50000)} // Limit to avoid PR size limits
+            \`\`\`
+            
+            </details>`;
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔍 Audit: ${screenName} performance optimization [${new Date().toISOString().split('T')[0]}]`,
+              head: branchName,
+              base: 'main',
+              body: prBody,
+              draft: false
+            });
+            
+            console.log(`✅ PR created: ${pr.data.html_url}`);
+            return pr.data.number;
+        continue-on-error: true
+
+      # Agent 4: Code Review of PR changes
+      - name: Agent 4 - Code Review PR Changes
+        id: code_review
+        if: steps.audit.outputs.audit_completed == 'true' && steps.pr.outputs.result != ''
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "⚠️ CURSOR_API_KEY not set. Skipping code review."
+            echo "review_status=SKIPPED" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PR_NUMBER="${{ steps.pr.outputs.result }}"
+          SCREEN_NAME="${{ steps.audit_config.outputs.screen_name }}"
+          
+          echo "🔍 Agent 4: Starting code review of PR #$PR_NUMBER..."
+          
+          # Get PR diff using GitHub API
+          PR_DIFF=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | \
+            jq -r '.diff_url' | xargs curl -s -H "Accept: application/vnd.github.v3.diff")
+          
+          # Limit diff size to avoid token limits
+          PR_DIFF_SUMMARY=$(echo "$PR_DIFF" | head -1500)
+          
+          # Get audit report context
+          AUDIT_REPORT="${{ steps.audit.outputs.audit_report }}"
+          AUDIT_CONTEXT=""
+          if [ -f "$AUDIT_REPORT" ]; then
+            AUDIT_CONTEXT=$(head -1000 "$AUDIT_REPORT" | tail -500)
+          fi
+          
+          PROMPT="Review this PR for code quality and safety. This PR contains performance optimizations for the ${SCREEN_NAME} screen.
+
+Context from audit:
+\`\`\`
+${AUDIT_CONTEXT}
+\`\`\`
+
+PR Changes:
+\`\`\`diff
+${PR_DIFF_SUMMARY}
+\`\`\`
+
+Check:
+1. Are the changes safe and correct?
+2. Do they match the audit recommendations?
+3. Is there any risk of breaking functionality?
+4. Are there any suspicious changes (logic changes, new features)?
+5. Are the fixes minimal and focused (≤10 lines each)?
+6. Will these changes improve performance/clarity as intended?
+
+Provide a code review assessment: APPROVED, NEEDS_CHANGES, or REJECTED.
+
+If APPROVED, also confirm:
+- All changes are safe
+- No functionality broken
+- Performance improvements are valid
+- Ready to merge
+
+If NEEDS_CHANGES or REJECTED, explain what's wrong."
+
+          echo "🚀 Running cursor-agent for code review..."
+          REVIEW_RESULT=$(cursor-agent -p "$PROMPT" --model auto 2>&1 || echo "Review failed")
+          
+          echo "📝 Review result:"
+          echo "$REVIEW_RESULT"
+          
+          # Save review for next agent
+          echo "$REVIEW_RESULT" > code-review.txt
+          
+          # Determine review status
+          if echo "$REVIEW_RESULT" | grep -qi "APPROVED"; then
+            echo "review_status=APPROVED" >> $GITHUB_OUTPUT
+            echo "✅ Code Review: APPROVED"
+          elif echo "$REVIEW_RESULT" | grep -qi "REJECTED"; then
+            echo "review_status=REJECTED" >> $GITHUB_OUTPUT
+            echo "❌ Code Review: REJECTED"
+          else
+            echo "review_status=NEEDS_CHANGES" >> $GITHUB_OUTPUT
+            echo "⚠️ Code Review: NEEDS_CHANGES"
+          fi
+        continue-on-error: true
+
+      # Agent 5: Post code review to PR
+      - name: Agent 5 - Post Code Review to PR
+        if: steps.audit.outputs.audit_completed == 'true' && steps.pr.outputs.result != '' && steps.code_review.outputs.review_status != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.result }};
+            const reviewStatus = '${{ steps.code_review.outputs.review_status }}';
+            const autoMerge = '${{ steps.audit_config.outputs.auto_merge }}' === 'true';
+            const fs = require('fs');
+            
+            let reviewText = 'Review failed';
+            try {
+              reviewText = fs.readFileSync('code-review.txt', 'utf8');
+            } catch (e) {
+              reviewText = 'Could not read review file';
+            }
+            
+            const emoji = reviewStatus === 'APPROVED' ? '✅' : 
+                         reviewStatus === 'REJECTED' ? '❌' : '⚠️';
+            
+            const comment = `## ${emoji} Code Review (Agent 4)
+            
+            **Status:** ${reviewStatus}
+            
+            ${reviewText}
+            
+            ---
+            *Auto-generated by nightly-screen-audit workflow*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+            
+            console.log(`✅ Posted code review to PR #${prNumber}`);
+            
+            // Post review as PR review (not just comment)
+            if (reviewStatus === 'APPROVED') {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: '✅ Auto-approved by AI code review agent. All changes are safe and ready to merge.'
+              });
+              console.log(`✅ Approved PR #${prNumber}`);
+            } else if (reviewStatus === 'REJECTED') {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'REQUEST_CHANGES',
+                body: `❌ Changes requested by AI code review agent.\n\n${reviewText}`
+              });
+              console.log(`❌ Requested changes on PR #${prNumber}`);
+            }
+        continue-on-error: true
+
+      # Agent 6: Auto-merge if approved and enabled
+      - name: Agent 6 - Auto-Merge PR
+        if: steps.audit.outputs.audit_completed == 'true' && steps.pr.outputs.result != '' && steps.code_review.outputs.review_status == 'APPROVED' && steps.audit_config.outputs.auto_merge == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.result }};
+            const screenName = '${{ steps.audit_config.outputs.screen_name }}';
+            
+            console.log(`🚀 Auto-merging PR #${prNumber}...`);
+            
+            // Wait a bit for CI checks to start (if any)
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Check if PR is mergeable
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            if (pr.data.mergeable === false) {
+              console.log(`⚠️ PR #${prNumber} is not mergeable (may have conflicts). Skipping auto-merge.`);
+              return;
+            }
+            
+            // Merge PR
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: 'squash',
+                commit_title: `audit: ${screenName} performance optimization [auto-merged]`,
+                commit_message: `Auto-merged by nightly-screen-audit workflow after AI code review approval.
+
+- Screen: ${screenName}
+- Audit report: ${{ steps.audit.outputs.audit_report }}
+- Code review: APPROVED
+- Auto-fixes applied: ${{ steps.fix.outputs.has_changes }}`
+              });
+              
+              console.log(`✅ Successfully merged PR #${prNumber}`);
+              
+              // Post merge comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: '✅ **Auto-merged** by workflow after AI code review approval.'
+              });
+            } catch (error) {
+              console.log(`⚠️ Could not auto-merge PR #${prNumber}: ${error.message}`);
+              console.log('PR may require manual merge or has merge conflicts.');
+            }
+        continue-on-error: true
+
+      # Summary
+      - name: Summary
+        run: |
+          echo "## Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.audit.outputs.audit_completed }}" = "true" ]; then
+            echo "✅ **Audit completed successfully**" >> $GITHUB_STEP_SUMMARY
+            echo "- Screen: \`${{ steps.audit_config.outputs.screen_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Report: \`${{ steps.audit.outputs.audit_report }}\`" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.fix.outputs.has_changes }}" = "true" ]; then
+              echo "- Auto-fixes: ✅ Applied" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Auto-fixes: ❌ None applied" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "- Branch: \`${{ steps.branch.outputs.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- PR: #${{ steps.pr.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.code_review.outputs.review_status }}" != "" ]; then
+              echo "- Code Review: ${{ steps.code_review.outputs.review_status }}" >> $GITHUB_STEP_SUMMARY
+              if [ "${{ steps.code_review.outputs.review_status }}" = "APPROVED" ] && [ "${{ steps.audit_config.outputs.auto_merge }}" = "true" ]; then
+                echo "- Auto-merge: ✅ Attempted" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          else
+            echo "❌ **Audit failed or incomplete**" >> $GITHUB_STEP_SUMMARY
+            echo "Check workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
