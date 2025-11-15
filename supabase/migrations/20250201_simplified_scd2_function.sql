@@ -311,3 +311,4 @@ GRANT EXECUTE ON FUNCTION public.fn_user_entry_patch_scd2(uuid, text, boolean, i
 
 
 
+

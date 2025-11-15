@@ -178,3 +178,4 @@ WHERE card_uid = '<CARD_UID>'::uuid
 
 
 
+
