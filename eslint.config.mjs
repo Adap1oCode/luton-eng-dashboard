@@ -33,6 +33,8 @@ export default [
       "next-env.d.ts",
       "src/tests/**",
       "monitor-vercel.cjs",
+      "temp_*.tsx",
+      "temp_*.txt",
       // Temporarily ignore files with react-hooks/exhaustive-deps comments until plugin installed
       "src/app/(main)/forms/requisitions/add-item-section.tsx",
       "src/app/(main)/forms/requisitions/hooks/use-requisition-form.ts",

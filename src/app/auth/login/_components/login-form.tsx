@@ -59,6 +59,75 @@ function getErrorMessage(err: unknown): string {
   return "Please try again.";
 }
 
+/**
+ * Verify session is ready and get default homepage if needed.
+ * Polls /api/me/role with retries to ensure cookies are propagated to server.
+ * 
+ * @param supabase - Supabase client instance
+ * @param next - The next path to redirect to (or "/dashboard" if default)
+ * @returns The redirect path (either next or defaultHomepage from API)
+ */
+async function verifySessionAndGetRedirectPath(
+  supabase: ReturnType<typeof supabaseBrowser>,
+  next: string
+): Promise<string> {
+  // First, verify session exists client-side
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    throw new Error("Session not available after login");
+  }
+
+  // Always verify session is accessible server-side by polling /api/me/role
+  // This ensures cookies are propagated before we redirect
+  const maxRetries = 5;
+  const retryDelay = 200; // ms
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch("/api/me/role", {
+        cache: "no-store",
+        credentials: "include", // Ensure cookies are sent
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        
+        // If we need the default homepage, use it; otherwise use the provided next path
+        if (next === "/dashboard" && data.defaultHomepage) {
+          return data.defaultHomepage;
+        }
+        
+        // Session is verified, return the next path
+        return next;
+      }
+      
+      // If not the last attempt, wait before retrying
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    } catch (error) {
+      // If not the last attempt, wait before retrying
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else {
+        // On final failure, if we were trying to get default homepage, fallback to /dashboard
+        // Otherwise, still return next (session might be ready but API call failed)
+        if (next === "/dashboard") {
+          console.warn("Failed to fetch default homepage after login, using /dashboard fallback:", error);
+          return "/dashboard";
+        }
+        // For non-dashboard paths, assume session is ready (cookies might be propagated)
+        // The server-side protectRoute will handle authentication
+        return next;
+      }
+    }
+  }
+  
+  // If all retries failed, return next path (server-side will handle auth check)
+  // If next was /dashboard, we already handled that in the catch block
+  return next;
+}
+
 // -----------------------------
 // Component
 // -----------------------------
@@ -111,8 +180,8 @@ export function LoginFormV1() {
       // With password → regular sign-in
       if (password.length >= 6) {
         try {
+          const s = supabaseBrowser();
           const { result, responseTime } = await measureApiResponse(async () => {
-            const s = supabaseBrowser();
             return await s.auth.signInWithPassword({ email, password });
           });
 
@@ -144,23 +213,15 @@ export function LoginFormV1() {
 
           toast.success("Logged in", { description: "Welcome back!" });
           
-          // If no explicit next param, fetch user's default homepage
-          let redirectPath = next;
-          if (next === "/dashboard") {
-            try {
-              const res = await fetch("/api/me/role");
-              if (res.ok) {
-                const data = await res.json();
-                if (data.defaultHomepage) {
-                  redirectPath = data.defaultHomepage;
-                }
-              }
-            } catch {
-              // Fallback to /dashboard on error
-            }
+          // Verify session is ready and get redirect path (with retries for cookie propagation)
+          try {
+            const redirectPath = await verifySessionAndGetRedirectPath(s, next);
+            window.location.href = redirectPath;
+          } catch (error) {
+            // If session verification fails, still try to redirect (user might be logged in)
+            console.error("Session verification failed, attempting redirect anyway:", error);
+            window.location.href = next;
           }
-          
-          window.location.href = redirectPath;
           return;
         } catch (error) {
           trackAuthError(error as Error, "password_login");
